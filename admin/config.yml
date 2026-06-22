@@ -1,0 +1,116 @@
+backend:
+  name: github
+  repo: SEU_USUARIO/oseupsico
+  branch: master
+
+media_folder: assets
+public_folder: assets
+
+locale: pt
+
+collections:
+  - name: configuracoes
+    label: Configurações do Site
+    files:
+
+      - name: geral
+        label: Textos e Conteúdo
+        file: data/config.json
+        format: json
+        fields:
+          - label: Marca
+            name: brand
+            widget: object
+            fields:
+              - { label: Nome do site, name: name, widget: string }
+              - { label: Tagline, name: tagline, widget: string }
+              - { label: WhatsApp (só números com DDI), name: whatsapp, widget: string }
+              - { label: Mensagem padrão do WhatsApp, name: whatsappMessage, widget: string }
+              - { label: Instagram (URL completa), name: instagram, widget: string }
+
+          - label: Hero (seção principal)
+            name: hero
+            widget: object
+            fields:
+              - { label: Eyebrow (texto pequeno acima), name: eyebrow, widget: string }
+              - { label: Título principal, name: headline, widget: string }
+              - { label: Subtítulo, name: subheadline, widget: text }
+              - { label: Botão CTA, name: cta, widget: string }
+              - { label: Texto abaixo do botão, name: ctaSub, widget: string }
+              - { label: Linha de confiança, name: trust, widget: string }
+
+          - label: Como Funciona
+            name: howItWorks
+            widget: object
+            fields:
+              - { label: Título, name: title, widget: string }
+              - { label: Subtítulo, name: subtitle, widget: string }
+              - label: Passos
+                name: steps
+                widget: list
+                fields:
+                  - { label: Ícone (emoji), name: icon, widget: string }
+                  - { label: Título, name: title, widget: string }
+                  - { label: Texto, name: text, widget: text }
+
+          - label: Benefícios
+            name: benefits
+            widget: object
+            fields:
+              - { label: Título, name: title, widget: string }
+              - { label: Subtítulo, name: subtitle, widget: string }
+              - label: Itens
+                name: items
+                widget: list
+                fields:
+                  - { label: Ícone (emoji), name: icon, widget: string }
+                  - { label: Título, name: title, widget: string }
+                  - { label: Texto, name: text, widget: text }
+
+          - label: Especialidades
+            name: specialties
+            widget: object
+            fields:
+              - { label: Título, name: title, widget: string }
+              - { label: Subtítulo, name: subtitle, widget: string }
+              - label: Itens
+                name: items
+                widget: list
+                fields:
+                  - { label: Ícone (emoji), name: icon, widget: string }
+                  - { label: Título, name: title, widget: string }
+
+          - label: Depoimentos
+            name: testimonials
+            widget: object
+            fields:
+              - { label: Título, name: title, widget: string }
+              - { label: Subtítulo, name: subtitle, widget: string }
+              - label: Depoimentos
+                name: items
+                widget: list
+                fields:
+                  - { label: Texto, name: text, widget: text }
+                  - { label: Nome, name: name, widget: string }
+                  - { label: Cidade, name: city, widget: string }
+
+          - label: FAQ
+            name: faq
+            widget: object
+            fields:
+              - { label: Título, name: title, widget: string }
+              - label: Perguntas
+                name: items
+                widget: list
+                fields:
+                  - { label: Pergunta, name: question, widget: string }
+                  - { label: Resposta, name: answer, widget: text }
+
+          - label: CTA Final
+            name: ctaFinal
+            widget: object
+            fields:
+              - { label: Título, name: headline, widget: string }
+              - { label: Subtítulo, name: subheadline, widget: text }
+              - { label: Botão, name: cta, widget: string }
+              - { label: Nota, name: note, widget: string }
