@@ -39,6 +39,11 @@ collections:
               - { label: Botão CTA, name: cta, widget: string }
               - { label: Texto abaixo do botão, name: ctaSub, widget: string }
               - { label: Linha de confiança, name: trust, widget: string }
+              - label: "Foto de destaque — proporção 1:1 (quadrada), mínimo 600×600px, JPG ou PNG"
+                name: photo
+                widget: image
+                required: false
+                hint: "Proporção recomendada: 1:1 (quadrada). Tamanho mínimo: 600×600px. Use foto de pessoa em ambiente acolhedor."
 
           - label: Como Funciona
             name: howItWorks
@@ -94,6 +99,11 @@ collections:
                   - { label: Texto, name: text, widget: text }
                   - { label: Nome, name: name, widget: string }
                   - { label: Cidade, name: city, widget: string }
+                  - label: "Foto do autor — proporção 1:1 (quadrada), mínimo 200×200px, JPG ou PNG"
+                    name: photo
+                    widget: image
+                    required: false
+                    hint: "Proporção recomendada: 1:1 (quadrada). Tamanho mínimo: 200×200px. Rosto centralizado na imagem."
 
           - label: FAQ
             name: faq

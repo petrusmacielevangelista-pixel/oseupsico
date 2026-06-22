@@ -708,6 +708,12 @@ ul { list-style: none; }
   flex-shrink: 0;
 }
 
+.testimonial-card__avatar--photo {
+  object-fit: cover;
+  background: none;
+  display: block;
+}
+
 .testimonial-card__name {
   font-weight: 600;
   color: var(--white);

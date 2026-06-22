@@ -97,19 +97,24 @@
     set('#testimonials-subtitle', t.subtitle || '');
     const grid = document.querySelector('#testimonials-grid');
     if (!grid || !t.items) return;
-    grid.innerHTML = t.items.map(item => `
-      <article class="testimonial-card fade-up" role="article">
-        <div class="testimonial-card__stars" aria-label="5 estrelas">★★★★★</div>
-        <p class="testimonial-card__text">"${item.text}"</p>
-        <div class="testimonial-card__author">
-          <div class="testimonial-card__avatar" aria-hidden="true">${item.name.charAt(0)}</div>
-          <div>
-            <div class="testimonial-card__name">${item.name}</div>
-            <div class="testimonial-card__city">${item.city}</div>
+    grid.innerHTML = t.items.map(item => {
+      const avatar = item.photo
+        ? `<img class="testimonial-card__avatar testimonial-card__avatar--photo" src="${item.photo}" alt="${item.name}" loading="lazy" />`
+        : `<div class="testimonial-card__avatar" aria-hidden="true">${item.name.charAt(0)}</div>`;
+      return `
+        <article class="testimonial-card fade-up" role="article">
+          <div class="testimonial-card__stars" aria-label="5 estrelas">★★★★★</div>
+          <p class="testimonial-card__text">"${item.text}"</p>
+          <div class="testimonial-card__author">
+            ${avatar}
+            <div>
+              <div class="testimonial-card__name">${item.name}</div>
+              <div class="testimonial-card__city">${item.city}</div>
+            </div>
           </div>
-        </div>
-      </article>
-    `).join('');
+        </article>
+      `;
+    }).join('');
     observe();
   }
 
