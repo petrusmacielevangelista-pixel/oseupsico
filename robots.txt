@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://oseupsico.com.br/sitemap.xml
