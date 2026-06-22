@@ -5,24 +5,110 @@
     "keywords": "psicólogo online, terapia online, encontrar psicólogo, saúde mental, psicologia online Brasil",
     "canonical": "https://oseupsico.com.br"
   },
+  "ctaFinal": {
+    "headline": "Sua jornada começa com uma mensagem.",
+    "subheadline": "Fale com nossa equipe agora e encontre o psicólogo ideal para você. É simples, rápido e acolhedor.",
+    "cta": "Falar com a equipe no WhatsApp",
+    "note": "Resposta em minutos • Sem compromisso • 100% online"
+  },
+  "howItWorks": {
+    "title": "Como funciona?",
+    "subtitle": "Do primeiro contato à sua primeira sessão em menos de 24 horas.",
+    "steps": [
+      {
+        "icon": "💬",
+        "title": "Fale com a gente",
+        "text": "Entre em contato pelo WhatsApp e conte um pouco sobre o que está sentindo e o que busca na terapia."
+      },
+      {
+        "icon": "🔍",
+        "title": "Fazemos o match",
+        "text": "Nossa equipe analisa seu perfil e indica o psicólogo mais adequado à sua necessidade e disponibilidade."
+      },
+      {
+        "icon": "📅",
+        "title": "Agende sua sessão",
+        "text": "Você escolhe o melhor horário e realiza a sessão online, de onde estiver, com segurança e sigilo."
+      }
+    ]
+  },
   "brand": {
     "name": "O Seu Psico",
     "tagline": "Encontre seu psicólogo online",
     "instagram": "https://instagram.com/oseupsico",
-    "whatsapp": "5511999999999",
+    "whatsapp": "5511945556826",
     "whatsappMessage": "Olá! Vim pelo site O Seu Psico e gostaria de encontrar um psicólogo.",
     "colors": {
-      "yellow": "#F5C518",
-      "yellowDark": "#D4A800",
       "yellowLight": "#FFF8DC",
-      "black": "#1A1A1A",
-      "offBlack": "#2C2C2C",
       "white": "#FFFFFF",
+      "textLight": "#888888",
+      "yellowDark": "#D4A800",
+      "border": "#E8E8E8",
+      "offBlack": "#2C2C2C",
+      "yellow": "#F5C518",
       "offWhite": "#FAFAFA",
       "textMid": "#555555",
-      "textLight": "#888888",
-      "border": "#E8E8E8"
+      "black": "#1A1A1A"
     }
+  },
+  "testimonials": {
+    "title": "Histórias reais de transformação",
+    "subtitle": "Quem já encontrou o seu psicólogo com a gente.",
+    "items": [
+      {
+        "text": "Em menos de um dia fui apresentada a uma psicóloga incrível. O processo foi tão fácil que mal acreditei. Já faz 6 meses e minha vida mudou completamente.",
+        "name": "Ana C.",
+        "city": "São Paulo, SP",
+        "photo": ""
+      },
+      {
+        "text": "Eu tinha muita resistência em buscar terapia. A equipe do O Seu Psico me acolheu com tanta paciência que me senti seguro desde o primeiro contato.",
+        "name": "Rafael M.",
+        "city": "Belo Horizonte, MG",
+        "photo": ""
+      },
+      {
+        "text": "Morava em uma cidade pequena e achei que nunca conseguiria fazer terapia de qualidade. O Seu Psico resolveu isso em uma conversa.",
+        "name": "Juliana S.",
+        "city": "Uberlândia, MG",
+        "photo": ""
+      },
+      {
+        "text": "O match foi perfeito. Parece que conhecem o paciente antes mesmo de conversar com o psicólogo. Recomendo demais.",
+        "name": "Marcos T.",
+        "city": "Rio de Janeiro, RJ",
+        "photo": ""
+      }
+    ]
+  },
+  "faq": {
+    "title": "Perguntas frequentes",
+    "items": [
+      {
+        "question": "O Seu Psico é uma clínica de psicologia?",
+        "answer": "Não. Somos uma plataforma que conecta pessoas que buscam terapia a psicólogos qualificados e verificados. Nosso papel é facilitar esse encontro e garantir que ele seja o mais adequado possível para você."
+      },
+      {
+        "question": "Os psicólogos são verificados?",
+        "answer": "Sim. Todos os profissionais passam por um processo de verificação que inclui conferência do CRP ativo, análise de formação e experiência clínica antes de integrar nossa rede."
+      },
+      {
+        "question": "Como é feito o match com o psicólogo?",
+        "answer": "Nossa equipe faz uma triagem inicial pelo WhatsApp para entender suas necessidades, objetivos e preferências de horário. Com base nisso, indicamos o profissional mais adequado ao seu perfil."
+      },
+      {
+        "question": "Quanto tempo leva para começar?",
+        "answer": "Em geral, do primeiro contato à primeira sessão agendada leva menos de 24 horas. Nossa prioridade é que você comece o quanto antes."
+      },
+      {
+        "question": "Como funcionam as sessões?",
+        "answer": "As sessões são realizadas online, por videoconferência (Google Meet ou Zoom), com duração de 50 minutos. Você acessa de qualquer lugar, com conforto e privacidade."
+      },
+      {
+        "question": "E se eu não me identificar com o psicólogo indicado?",
+        "answer": "Não tem problema. Nossa equipe realiza um novo match sem nenhum custo adicional. O mais importante é que você encontre o profissional certo para a sua jornada."
+      }
+    ]
   },
   "hero": {
     "eyebrow": "Plataforma de psicologia online",
@@ -33,66 +119,78 @@
     "trust": "Mais de 50 psicólogos cadastrados • Atendimento em todo o Brasil",
     "photo": ""
   },
-  "howItWorks": {
-    "title": "Como funciona?",
-    "subtitle": "Do primeiro contato à sua primeira sessão em menos de 24 horas.",
-    "steps": [
-      { "icon": "💬", "title": "Fale com a gente", "text": "Entre em contato pelo WhatsApp e conte um pouco sobre o que está sentindo e o que busca na terapia." },
-      { "icon": "🔍", "title": "Fazemos o match", "text": "Nossa equipe analisa seu perfil e indica o psicólogo mais adequado à sua necessidade e disponibilidade." },
-      { "icon": "📅", "title": "Agende sua sessão", "text": "Você escolhe o melhor horário e realiza a sessão online, de onde estiver, com segurança e sigilo." }
+  "specialties": {
+    "title": "Para o que você precisa de ajuda?",
+    "subtitle": "Nossa rede de psicólogos atende uma ampla variedade de demandas.",
+    "items": [
+      {
+        "icon": "😰",
+        "title": "Ansiedade e estresse"
+      },
+      {
+        "icon": "🌧️",
+        "title": "Depressão"
+      },
+      {
+        "icon": "❤️",
+        "title": "Relacionamentos"
+      },
+      {
+        "icon": "🔍",
+        "title": "Autoconhecimento"
+      },
+      {
+        "icon": "🔥",
+        "title": "Burnout"
+      },
+      {
+        "icon": "👨‍👩‍👧",
+        "title": "Família"
+      },
+      {
+        "icon": "💼",
+        "title": "Carreira e trabalho"
+      },
+      {
+        "icon": "📋",
+        "title": "Avaliação psicológica"
+      }
     ]
   },
   "benefits": {
     "title": "Por que O Seu Psico?",
     "subtitle": "Cuidamos de cada detalhe para que você foque no que importa: o seu bem-estar.",
     "items": [
-      { "icon": "✅", "title": "Psicólogos verificados", "text": "Todos os profissionais passam por um processo criterioso de verificação de CRP e experiência antes de entrar na plataforma." },
-      { "icon": "🌍", "title": "Atendimento em todo o Brasil", "text": "Não importa onde você mora. Conectamos você ao profissional ideal, sem fronteiras geográficas." },
-      { "icon": "🔒", "title": "Sigilo garantido", "text": "Suas sessões e informações são 100% confidenciais. O que fica na terapia, fica na terapia." },
-      { "icon": "⚡", "title": "Agilidade no início", "text": "Nada de meses esperando. Do contato à primeira sessão, em menos de 24 horas." },
-      { "icon": "🤝", "title": "Match personalizado", "text": "Não é sorteio. Nossa equipe considera seu perfil, objetivos e necessidades para indicar o profissional certo." },
-      { "icon": "💛", "title": "Suporte humano", "text": "Você não enfrenta isso sozinho. Nossa equipe está disponível para tirar dúvidas e oferecer suporte em todo o processo." }
+      {
+        "icon": "✅",
+        "title": "Psicólogos verificados",
+        "text": "Todos os profissionais passam por um processo criterioso de verificação de CRP e experiência antes de entrar na plataforma."
+      },
+      {
+        "icon": "🌍",
+        "title": "Atendimento em todo o Brasil",
+        "text": "Não importa onde você mora. Conectamos você ao profissional ideal, sem fronteiras geográficas."
+      },
+      {
+        "icon": "🔒",
+        "title": "Sigilo garantido",
+        "text": "Suas sessões e informações são 100% confidenciais. O que fica na terapia, fica na terapia."
+      },
+      {
+        "icon": "⚡",
+        "title": "Agilidade no início",
+        "text": "Nada de meses esperando. Do contato à primeira sessão, em menos de 24 horas."
+      },
+      {
+        "icon": "🤝",
+        "title": "Match personalizado",
+        "text": "Não é sorteio. Nossa equipe considera seu perfil, objetivos e necessidades para indicar o profissional certo."
+      },
+      {
+        "icon": "💛",
+        "title": "Suporte humano",
+        "text": "Você não enfrenta isso sozinho. Nossa equipe está disponível para tirar dúvidas e oferecer suporte em todo o processo."
+      }
     ]
-  },
-  "specialties": {
-    "title": "Para o que você precisa de ajuda?",
-    "subtitle": "Nossa rede de psicólogos atende uma ampla variedade de demandas.",
-    "items": [
-      { "icon": "😰", "title": "Ansiedade e estresse" },
-      { "icon": "🌧️", "title": "Depressão" },
-      { "icon": "❤️", "title": "Relacionamentos" },
-      { "icon": "🔍", "title": "Autoconhecimento" },
-      { "icon": "🔥", "title": "Burnout" },
-      { "icon": "👨‍👩‍👧", "title": "Família" },
-      { "icon": "💼", "title": "Carreira e trabalho" },
-      { "icon": "📋", "title": "Avaliação psicológica" }
-    ]
-  },
-  "testimonials": {
-    "title": "Histórias reais de transformação",
-    "subtitle": "Quem já encontrou o seu psicólogo com a gente.",
-    "items": [
-      { "text": "Em menos de um dia fui apresentada a uma psicóloga incrível. O processo foi tão fácil que mal acreditei. Já faz 6 meses e minha vida mudou completamente.", "name": "Ana C.", "city": "São Paulo, SP", "photo": "" },
-      { "text": "Eu tinha muita resistência em buscar terapia. A equipe do O Seu Psico me acolheu com tanta paciência que me senti seguro desde o primeiro contato.", "name": "Rafael M.", "city": "Belo Horizonte, MG", "photo": "" },
-      { "text": "Morava em uma cidade pequena e achei que nunca conseguiria fazer terapia de qualidade. O Seu Psico resolveu isso em uma conversa.", "name": "Juliana S.", "city": "Uberlândia, MG", "photo": "" },
-      { "text": "O match foi perfeito. Parece que conhecem o paciente antes mesmo de conversar com o psicólogo. Recomendo demais.", "name": "Marcos T.", "city": "Rio de Janeiro, RJ", "photo": "" }
-    ]
-  },
-  "faq": {
-    "title": "Perguntas frequentes",
-    "items": [
-      { "question": "O Seu Psico é uma clínica de psicologia?", "answer": "Não. Somos uma plataforma que conecta pessoas que buscam terapia a psicólogos qualificados e verificados. Nosso papel é facilitar esse encontro e garantir que ele seja o mais adequado possível para você." },
-      { "question": "Os psicólogos são verificados?", "answer": "Sim. Todos os profissionais passam por um processo de verificação que inclui conferência do CRP ativo, análise de formação e experiência clínica antes de integrar nossa rede." },
-      { "question": "Como é feito o match com o psicólogo?", "answer": "Nossa equipe faz uma triagem inicial pelo WhatsApp para entender suas necessidades, objetivos e preferências de horário. Com base nisso, indicamos o profissional mais adequado ao seu perfil." },
-      { "question": "Quanto tempo leva para começar?", "answer": "Em geral, do primeiro contato à primeira sessão agendada leva menos de 24 horas. Nossa prioridade é que você comece o quanto antes." },
-      { "question": "Como funcionam as sessões?", "answer": "As sessões são realizadas online, por videoconferência (Google Meet ou Zoom), com duração de 50 minutos. Você acessa de qualquer lugar, com conforto e privacidade." },
-      { "question": "E se eu não me identificar com o psicólogo indicado?", "answer": "Não tem problema. Nossa equipe realiza um novo match sem nenhum custo adicional. O mais importante é que você encontre o profissional certo para a sua jornada." }
-    ]
-  },
-  "ctaFinal": {
-    "headline": "Sua jornada começa com uma mensagem.",
-    "subheadline": "Fale com nossa equipe agora e encontre o psicólogo ideal para você. É simples, rápido e acolhedor.",
-    "cta": "Falar com a equipe no WhatsApp",
-    "note": "Resposta em minutos • Sem compromisso • 100% online"
   }
 }
