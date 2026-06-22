@@ -1,7 +1,8 @@
 backend:
   name: github
-  repo: SEU_USUARIO/oseupsico
+  repo: petrusmacielevangelista-pixel/oseupsico
   branch: master
+  base_url: https://oseupsico.com.br
 
 media_folder: assets
 public_folder: assets
