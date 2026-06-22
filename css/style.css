@@ -1031,12 +1031,13 @@ ul { list-style: none; }
 
 .mobile-nav .btn--outline-black {
   color: var(--white);
-  border-color: rgba(255,255,255,0.4);
+  border-color: rgba(255,255,255,0.5);
 }
 
 .mobile-nav .btn--outline-black:hover {
   background: rgba(255,255,255,0.1);
   color: var(--white);
+  border-color: var(--white);
 }
 
 /* ── Responsive ── */
@@ -1049,8 +1050,22 @@ ul { list-style: none; }
   :root { --section-pad: 64px; }
 
   .navbar__links { display: none; }
-  .navbar__cta { display: none; }
   .navbar__burger { display: flex; }
+
+  .navbar__cta {
+    gap: 6px;
+  }
+
+  .btn--nav {
+    padding: 7px 10px;
+    font-size: 0.75rem;
+    gap: 5px;
+  }
+
+  .btn--nav svg {
+    width: 13px;
+    height: 13px;
+  }
 
   .hero__inner { grid-template-columns: 1fr; text-align: center; padding: 60px 0 80px; gap: 48px; }
   .hero__subheadline { margin: 0 auto 40px; }
