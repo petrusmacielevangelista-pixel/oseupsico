@@ -230,6 +230,17 @@ ul { list-style: none; }
 
 .navbar__links a:hover { color: var(--black); }
 
+.navbar__cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn--nav {
+  padding: 10px 18px;
+  font-size: 0.85rem;
+}
+
 .navbar__burger {
   display: none;
   flex-direction: column;
