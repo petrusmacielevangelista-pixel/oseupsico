@@ -1113,9 +1113,17 @@ ul { list-style: none; }
 }
 
 @media (max-width: 480px) {
-  .specialties__grid { grid-template-columns: 1fr 1fr; }
+  .specialties__grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .specialty-pill { padding: 14px 12px; gap: 8px; font-size: 0.85rem; }
+  .specialty-pill__icon { font-size: 1.1rem; }
   .hero__headline { font-size: 2.1rem; }
   .btn--lg { font-size: 1rem; padding: 16px 28px; }
+}
+
+/* previne overflow horizontal global no mobile */
+@media (max-width: 768px) {
+  html, body { overflow-x: hidden; max-width: 100%; }
+  .container { padding: 0 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
