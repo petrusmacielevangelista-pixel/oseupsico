@@ -1050,6 +1050,7 @@ ul { list-style: none; }
   :root { --section-pad: 64px; }
 
   .navbar__links { display: none; }
+  .navbar__logo { display: none; }
   .navbar__burger { display: flex; }
 
   .navbar__cta {
