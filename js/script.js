@@ -221,6 +221,29 @@
     });
   }, { threshold: 0.5 });
 
+  // ── Conversion tracking ────────────────────────────────────────
+  function initTracking() {
+    document.querySelectorAll('.js-wa').forEach(el => {
+      el.addEventListener('click', function () {
+        if (typeof gtag === 'function') {
+          gtag('event', 'whatsapp_click', {
+            event_category: 'conversao',
+            event_label: this.closest('section')?.id || this.closest('nav') ? 'navbar' : 'pagina',
+          });
+          gtag('event', 'conversion', { send_to: 'AW-CONVERSION_ID/CONVERSION_LABEL' });
+        }
+      });
+    });
+
+    document.querySelectorAll('.js-ig').forEach(el => {
+      el.addEventListener('click', function () {
+        if (typeof gtag === 'function') {
+          gtag('event', 'instagram_click', { event_category: 'engajamento' });
+        }
+      });
+    });
+  }
+
   // ── Init ───────────────────────────────────────────────────────
   function init() {
     renderNavbar();
@@ -232,6 +255,7 @@
     renderFaq();
     renderCta();
     initNavbar();
+    initTracking();
     observe();
 
     const statsBar = document.querySelector('.stats-bar');
