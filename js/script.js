@@ -230,7 +230,7 @@
             event_category: 'conversao',
             event_label: this.closest('section')?.id || this.closest('nav') ? 'navbar' : 'pagina',
           });
-          gtag('event', 'conversion', { send_to: 'AW-CONVERSION_ID/CONVERSION_LABEL' });
+          gtag('event', 'conversion', { send_to: 'AW-18384131981' });
         }
       });
     });
