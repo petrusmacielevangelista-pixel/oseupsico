@@ -226,9 +226,11 @@
     document.querySelectorAll('.js-wa').forEach(el => {
       el.addEventListener('click', function () {
         if (typeof gtag === 'function') {
+          const inNav = !!this.closest('nav, .mobile-nav');
+          const section = this.closest('section');
           gtag('event', 'whatsapp_click', {
             event_category: 'conversao',
-            event_label: this.closest('section')?.id || this.closest('nav') ? 'navbar' : 'pagina',
+            event_label: inNav ? 'navbar' : (section?.id || 'pagina'),
           });
           gtag('event', 'conversion', { send_to: 'AW-18384131981' });
         }
