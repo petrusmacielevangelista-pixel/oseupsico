@@ -52,31 +52,37 @@
     }
   },
   "testimonials": {
-    "title": "Histórias reais de transformação",
-    "subtitle": "Quem já encontrou o seu psicólogo com a gente.",
+    "title": "O que dizem nossos pacientes",
+    "subtitle": "Avaliações verificadas no Google.",
     "items": [
       {
-        "text": "Em menos de um dia fui apresentada a uma psicóloga incrível. O processo foi tão fácil que mal acreditei. Já faz 6 meses e minha vida mudou completamente.",
-        "name": "Ana C.",
-        "city": "São Paulo, SP",
+        "text": "O Seu Psico foi a experiência mais legal e eficiente que já tive. Depois de muita resistência em fazer terapia, O Seu Psico me auxiliou perfeitamente!",
+        "name": "Gabriella O. Duarte",
+        "city": "Google Meu Negócio ★★★★★",
         "photo": ""
       },
       {
-        "text": "Eu tinha muita resistência em buscar terapia. A equipe do O Seu Psico me acolheu com tanta paciência que me senti seguro desde o primeiro contato.",
-        "name": "Rafael M.",
-        "city": "Belo Horizonte, MG",
+        "text": "Um ótimo profissional, excelente escuta!!! Sempre me sentir muito acolhida, foi a melhor experiência que eu poderia ter, sempre minha indicação!!",
+        "name": "Gabriele Oliveira Trajano",
+        "city": "Google Meu Negócio ★★★★★",
         "photo": ""
       },
       {
-        "text": "Morava em uma cidade pequena e achei que nunca conseguiria fazer terapia de qualidade. O Seu Psico resolveu isso em uma conversa.",
-        "name": "Juliana S.",
-        "city": "Uberlândia, MG",
+        "text": "O Seu Psico mudou completamente meu modo de ver a vida, para melhor! Me aproximou muito da minha melhor versão e me ajudou na prática a resolver várias questões pessoais que fizeram minha vida fluir muito melhor! Recomendo fortemente!",
+        "name": "Daniel de Souza Paula",
+        "city": "Google Meu Negócio ★★★★★",
         "photo": ""
       },
       {
-        "text": "O match foi perfeito. Parece que conhecem o paciente antes mesmo de conversar com o psicólogo. Recomendo demais.",
-        "name": "Marcos T.",
-        "city": "Rio de Janeiro, RJ",
+        "text": "Excelente profissional! Dedicado, íntegro e acolhedor. Super indico!",
+        "name": "Rachel Villari",
+        "city": "Google Meu Negócio ★★★★★",
+        "photo": ""
+      },
+      {
+        "text": "Foi muito agradável e construtiva, me ajudou muito e recomendo sempre.",
+        "name": "Renan Poloniato Vila Real",
+        "city": "Google Meu Negócio ★★★★★",
         "photo": ""
       }
     ]
