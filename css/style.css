@@ -374,7 +374,7 @@ ul { list-style: none; }
 
 .hero__trust {
   font-size: 0.8rem;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.72);
   letter-spacing: 0.06em;
 }
 
@@ -938,8 +938,8 @@ ul { list-style: none; }
   flex-wrap: wrap;
 }
 
-.footer__copy { font-size: 0.78rem; color: rgba(255,255,255,0.3); }
-.footer__disclaimer { font-size: 0.78rem; color: rgba(255,255,255,0.25); max-width: 420px; text-align: right; }
+.footer__copy { font-size: 0.78rem; color: rgba(255,255,255,0.6); }
+.footer__disclaimer { font-size: 0.78rem; color: rgba(255,255,255,0.55); max-width: 420px; text-align: right; }
 
 /* ── Floating WA ── */
 .whatsapp-float {
@@ -1158,4 +1158,64 @@ ul { list-style: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   .fade-up { opacity: 1; transform: none; }
+}
+
+/* ── Dark mode ──
+   Hero, depoimentos, CTA final e rodapé já são escuros por padrão.
+   Este bloco escurece apenas as seções claras (fundo branco/off-white). */
+@media (prefers-color-scheme: dark) {
+  body { background: #121212; color: #EDEDED; }
+
+  .section--off { background: #1A1A1A; }
+
+  .section-header h2 { color: #F2F2F2; }
+  .section-header p { color: rgba(255,255,255,0.55); }
+
+  .navbar.scrolled {
+    background: rgba(18,18,18,0.94);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.08);
+  }
+  .navbar__links a { color: rgba(255,255,255,0.6); }
+  .navbar__links a:hover { color: var(--white); }
+  .navbar__burger span { background: var(--white); }
+  .navbar.scrolled .btn--outline-black {
+    color: var(--white);
+    border-color: rgba(255,255,255,0.4);
+  }
+  .navbar.scrolled .btn--outline-black:hover {
+    background: rgba(255,255,255,0.1);
+  }
+
+  .how-step {
+    background: #1D1D1D;
+    border-color: rgba(255,255,255,0.1);
+  }
+  .how-step__title { color: #F2F2F2; }
+  .how-step__text { color: rgba(255,255,255,0.55); }
+
+  .benefit-card {
+    background: #1D1D1D;
+    border-color: rgba(255,255,255,0.1);
+  }
+  .benefit-card:hover { background: rgba(245,197,24,0.06); }
+  .benefit-card__title { color: #F2F2F2; }
+  .benefit-card__text { color: rgba(255,255,255,0.55); }
+
+  .specialty-pill {
+    background: #1D1D1D;
+    border-color: rgba(255,255,255,0.1);
+    color: #F2F2F2;
+  }
+  .specialty-pill:hover { color: var(--black); }
+
+  .faq-item {
+    background: #1D1D1D;
+    border-color: rgba(255,255,255,0.1);
+  }
+  .faq-item__question { color: #F2F2F2; }
+  .faq-item__answer p { color: rgba(255,255,255,0.55); }
+
+  .footer { background: #161616; }
+  .footer__logo-name { color: var(--white); }
+  .footer__col-title { color: var(--white); }
 }
