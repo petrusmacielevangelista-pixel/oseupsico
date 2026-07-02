@@ -152,6 +152,26 @@
         }
       });
     });
+
+    injectFaqSchema(f.items);
+  }
+
+  function injectFaqSchema(items) {
+    document.querySelector('#faq-schema')?.remove();
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: items.map(item => ({
+        '@type': 'Question',
+        name: item.question,
+        acceptedAnswer: { '@type': 'Answer', text: item.answer },
+      })),
+    };
+    const script = document.createElement('script');
+    script.id = 'faq-schema';
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify(schema);
+    document.head.appendChild(script);
   }
 
   function renderCta() {
