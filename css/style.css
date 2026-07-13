@@ -389,6 +389,8 @@ ul { list-style: none; }
   position: relative;
   width: 340px;
   height: 340px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 24px rgba(245,197,24,0.08), 0 0 0 48px rgba(245,197,24,0.04);
 }
 
 .hero__logo-circle {
@@ -399,7 +401,6 @@ ul { list-style: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 0 24px rgba(245,197,24,0.08), 0 0 0 48px rgba(245,197,24,0.04);
   animation: float-logo 4s ease-in-out infinite;
   will-change: transform;
 }
@@ -412,8 +413,8 @@ ul { list-style: none; }
 }
 
 @keyframes float-logo {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-16px); }
+  0%, 100% { transform: translateY(0) translateZ(0); }
+  50% { transform: translateY(-16px) translateZ(0); }
 }
 
 /* Floating cards around logo */
@@ -422,7 +423,7 @@ ul { list-style: none; }
   background: var(--white);
   border-radius: var(--radius-md);
   padding: 14px 18px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -455,8 +456,8 @@ ul { list-style: none; }
 .hero__float-card .fc-icon { font-size: 20px; }
 
 @keyframes float-card {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  0%, 100% { transform: translateY(0) translateZ(0); }
+  50% { transform: translateY(-8px) translateZ(0); }
 }
 
 /* ── Stats Bar ── */
