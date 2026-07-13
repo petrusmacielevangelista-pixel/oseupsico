@@ -4,8 +4,6 @@
    Tipografia: Syne (display) + Inter (corpo)
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
-
 /* ── Tokens ── */
 :root {
   --yellow:        #F5C518;
@@ -331,6 +329,7 @@ ul { list-style: none; }
   background: var(--yellow);
   box-shadow: 0 0 8px var(--yellow);
   animation: pulse-dot 2.2s infinite;
+  will-change: opacity;
 }
 
 @keyframes pulse-dot {
@@ -402,6 +401,7 @@ ul { list-style: none; }
   justify-content: center;
   box-shadow: 0 0 0 24px rgba(245,197,24,0.08), 0 0 0 48px rgba(245,197,24,0.04);
   animation: float-logo 4s ease-in-out infinite;
+  will-change: transform;
 }
 
 .hero__logo-circle img {
@@ -431,6 +431,7 @@ ul { list-style: none; }
   font-weight: 600;
   color: var(--black);
   animation: float-card 5s ease-in-out infinite;
+  will-change: transform;
 }
 
 .hero__float-card:nth-child(2) {
