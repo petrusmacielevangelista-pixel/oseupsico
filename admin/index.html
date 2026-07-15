@@ -1,13 +1,61 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex" />
-  <title>Admin — O Seu Psico</title>
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <title>Admin · O Seu Psico</title>
+  <link rel="icon" href="/assets/logo.png" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #1A1A1A;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .wrap { max-width: 480px; width: 100%; text-align: center; }
+    h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; }
+    p { color: rgba(255,255,255,0.5); font-size: 0.9rem; margin-bottom: 32px; }
+    .cards { display: flex; flex-direction: column; gap: 12px; }
+    a.card {
+      display: block;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 20px 24px;
+      text-align: left;
+      text-decoration: none;
+      color: #fff;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    a.card:hover { border-color: #F5C518; background: rgba(255,255,255,0.08); }
+    .card__title { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+    .card__desc { font-size: 0.82rem; color: rgba(255,255,255,0.5); }
+  </style>
 </head>
 <body>
-  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+  <div class="wrap">
+    <h1>Painel de Gestão</h1>
+    <p>O Seu Psico</p>
+    <div class="cards">
+      <a class="card" href="/admin/cms/">
+        <div class="card__title">📝 CMS — Site institucional</div>
+        <div class="card__desc">Editar textos e conteúdo de oseupsico.com.br</div>
+      </a>
+      <a class="card" href="https://oseupsico.com.br/testes/admin/cms/">
+        <div class="card__title">📝 CMS — Plataforma de Testes</div>
+        <div class="card__desc">Editar textos e conteúdo de /testes</div>
+      </a>
+      <a class="card" href="https://oseupsico.com.br/testes/admin/">
+        <div class="card__title">📊 Painel de dados — Testes</div>
+        <div class="card__desc">Ver, filtrar e exportar resultados</div>
+      </a>
+    </div>
+  </div>
 </body>
 </html>
