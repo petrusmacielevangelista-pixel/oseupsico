@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>Psicólogos · Admin · O Seu Psico</title>
+  <link rel="icon" href="/assets/logo.png" />
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #F7F5F0; color: #1A1A1A; margin: 0; }
+    .navbar { background: #1A1A1A; color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .navbar__title { font-weight: 800; }
+    .navbar a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 0.85rem; }
+    .main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+    .login-box { max-width: 360px; margin: 80px auto; background: #fff; border-radius: 14px; padding: 32px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .login-box input { width: 100%; padding: 12px; margin-bottom: 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 0.95rem; }
+    .login-box button, .btn { background: #F5C518; border: none; border-radius: 40px; padding: 12px 24px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
+    .btn--outline { background: none; border: 1.5px solid #ddd; }
+    .btn--danger { background: #FEE2E2; color: #991B1B; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+    .tab { padding: 10px 18px; border-radius: 10px; cursor: pointer; font-size: 0.88rem; font-weight: 600; background: #fff; border: 1.5px solid #eee; }
+    .tab.active { background: #1A1A1A; color: #fff; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; }
+    th, td { text-align: left; padding: 12px 14px; font-size: 0.85rem; border-bottom: 1px solid #eee; }
+    th { background: #FAFAFA; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: #888; }
+    .badge { padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+    .badge--pendente { background: #FEF9C3; color: #854D0E; }
+    .badge--aprovado { background: #D1FAE5; color: #065F46; }
+    .badge--rejeitado { background: #FEE2E2; color: #991B1B; }
+    .badge--ativa { background: #D1FAE5; color: #065F46; }
+    .badge--inativa, .badge--suspensa { background: #FEE2E2; color: #991B1B; }
+    .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .row-actions button { font-size: 0.75rem; padding: 6px 10px; border-radius: 8px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <span class="navbar__title">O Seu Psico · Admin Psicólogos</span>
+    <a href="#" onclick="sair()">Sair →</a>
+  </nav>
+
+  <div id="login-view" class="login-box">
+    <h2 style="margin:0 0 16px;">Login Admin</h2>
+    <input type="text" id="login-usuario" placeholder="Usuário" />
+    <input type="password" id="login-senha" placeholder="Senha" />
+    <button class="btn" style="width:100%;" onclick="fazerLogin()">Entrar</button>
+    <p id="login-erro" style="color:#991B1B;font-size:0.85rem;margin-top:10px;"></p>
+  </div>
+
+  <div id="painel-view" class="main hidden">
+    <div class="tabs">
+      <div class="tab active" data-tab="cadastros" onclick="mudarTab('cadastros')">Cadastros pendentes</div>
+      <div class="tab" data-tab="licencas" onclick="mudarTab('licencas')">Licenças</div>
+      <div class="tab" data-tab="avaliacoes" onclick="mudarTab('avaliacoes')">Avaliações</div>
+      <div class="tab" data-tab="especialidades" onclick="mudarTab('especialidades')">Especialidades</div>
+    </div>
+
+    <div id="tab-cadastros">
+      <table>
+        <thead><tr><th>Nome</th><th>E-mail</th><th>CRP</th><th>Status</th><th></th></tr></thead>
+        <tbody id="tbody-cadastros"><tr><td colspan="5">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+
+    <div id="tab-licencas" class="hidden">
+      <table>
+        <thead><tr><th>Nome</th><th>Status</th><th>Válida até</th><th>Observação</th><th></th></tr></thead>
+        <tbody id="tbody-licencas"><tr><td colspan="5">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+
+    <div id="tab-avaliacoes" class="hidden">
+      <p style="font-size:0.85rem;color:#888;margin-bottom:16px;">Selecione um psicólogo pra ver e moderar as avaliações dele.</p>
+      <select id="select-psicologo-avaliacoes" onchange="carregarAvaliacoesAdmin()" style="padding:10px;border-radius:8px;border:1.5px solid #ddd;margin-bottom:16px;"></select>
+      <table>
+        <thead><tr><th>Avaliador</th><th>Nota</th><th>Comentário</th><th>Status</th><th></th></tr></thead>
+        <tbody id="tbody-avaliacoes"><tr><td colspan="5">Selecione um psicólogo acima.</td></tr></tbody>
+      </table>
+    </div>
+
+    <div id="tab-especialidades" class="hidden">
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <input type="text" id="nova-especialidade" placeholder="Nome da nova especialidade" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #ddd;" />
+        <button class="btn" onclick="adicionarEspecialidade()">Adicionar</button>
+      </div>
+      <table>
+        <thead><tr><th>Nome</th><th></th></tr></thead>
+        <tbody id="tbody-especialidades"><tr><td colspan="2">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let token = sessionStorage.getItem('psico_admin_token_psicologos');
+    let todosPsicologos = [];
+
+    if (token) mostrarPainel();
+
+    async function fazerLogin() {
+      const usuario = document.getElementById('login-usuario').value;
+      const senha = document.getElementById('login-senha').value;
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario, senha }),
+        });
+        const data = await res.json();
+        if (!data.ok) { document.getElementById('login-erro').textContent = 'Usuário ou senha incorretos.'; return; }
+        token = data.token;
+        sessionStorage.setItem('psico_admin_token_psicologos', token);
+        mostrarPainel();
+      } catch { document.getElementById('login-erro').textContent = 'Erro ao conectar.'; }
+    }
+
+    function sair() {
+      sessionStorage.removeItem('psico_admin_token_psicologos');
+      location.reload();
+    }
+
+    function mostrarPainel() {
+      document.getElementById('login-view').classList.add('hidden');
+      document.getElementById('painel-view').classList.remove('hidden');
+      carregarPsicologos();
+    }
+
+    function mudarTab(nome) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === nome));
+      ['cadastros', 'licencas', 'avaliacoes', 'especialidades'].forEach(t => document.getElementById('tab-' + t).classList.toggle('hidden', t !== nome));
+      if (nome === 'especialidades') carregarEspecialidades();
+    }
+
+    async function carregarEspecialidades() {
+      const res = await fetch('/api/especialidades');
+      const data = await res.json();
+      const tbody = document.getElementById('tbody-especialidades');
+      tbody.innerHTML = (data.especialidades || []).map(e => `
+        <tr><td>${e.nome}</td><td class="row-actions"><button class="btn--danger" onclick="excluirEspecialidade(${e.id})">🗑 Remover</button></td></tr>
+      `).join('');
+    }
+
+    async function adicionarEspecialidade() {
+      const nome = document.getElementById('nova-especialidade').value.trim();
+      if (!nome) return;
+      const res = await fetch('/api/admin/especialidades', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ nome }),
+      });
+      if (!res.ok) { alert('Erro — talvez já exista.'); return; }
+      document.getElementById('nova-especialidade').value = '';
+      carregarEspecialidades();
+    }
+
+    async function excluirEspecialidade(id) {
+      if (!confirm('Remover essa especialidade? Psicólogos que já a selecionaram mantêm o texto salvo.')) return;
+      await fetch(`/api/admin/especialidades/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+      carregarEspecialidades();
+    }
+
+    async function carregarPsicologos() {
+      const res = await fetch('/api/admin/psicologos', { headers: { Authorization: 'Bearer ' + token } });
+      if (res.status === 401) { sair(); return; }
+      const data = await res.json();
+      todosPsicologos = data.psicologos || [];
+      renderCadastros();
+      renderLicencas();
+      renderSelectAvaliacoes();
+    }
+
+    function renderCadastros() {
+      const pendentes = todosPsicologos.filter(p => p.status_aprovacao === 'pendente');
+      const tbody = document.getElementById('tbody-cadastros');
+      if (!pendentes.length) { tbody.innerHTML = '<tr><td colspan="5">Nenhum cadastro pendente.</td></tr>'; return; }
+      tbody.innerHTML = pendentes.map(p => `
+        <tr>
+          <td>${p.nome}</td>
+          <td>${p.email}</td>
+          <td>${p.crp_numero}/${p.crp_estado}</td>
+          <td><span class="badge badge--${p.status_aprovacao}">${p.status_aprovacao}</span></td>
+          <td class="row-actions">
+            <button onclick="aprovar(${p.id}, 'aprovado')">✅ Aprovar</button>
+            <button onclick="aprovar(${p.id}, 'rejeitado')">❌ Rejeitar</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function aprovar(id, status) {
+      await fetch(`/api/admin/psicologos/${id}/aprovar`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ status }),
+      });
+      carregarPsicologos();
+    }
+
+    function renderLicencas() {
+      const aprovados = todosPsicologos.filter(p => p.status_aprovacao === 'aprovado');
+      const tbody = document.getElementById('tbody-licencas');
+      if (!aprovados.length) { tbody.innerHTML = '<tr><td colspan="5">Nenhum psicólogo aprovado ainda.</td></tr>'; return; }
+      const hoje = new Date().toISOString().slice(0, 10);
+      tbody.innerHTML = aprovados.map(p => {
+        const vencida = p.licenca_validade_ate && p.licenca_validade_ate < hoje;
+        const statusVisual = vencida ? 'inativa' : p.licenca_status;
+        return `
+        <tr>
+          <td>${p.nome}</td>
+          <td><span class="badge badge--${statusVisual}">${vencida ? 'vencida' : p.licenca_status}</span></td>
+          <td>${p.licenca_validade_ate || '—'}</td>
+          <td>${p.licenca_observacoes || '—'}</td>
+          <td class="row-actions">
+            <button onclick="renovarLicenca(${p.id}, 30)">+30 dias</button>
+            <button onclick="renovarLicenca(${p.id}, 365)">+1 ano</button>
+            <button onclick="suspenderLicenca(${p.id})">Suspender</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function renovarLicenca(id, dias) {
+      const observacao = prompt('Observação (ex: forma de pagamento, referência):', '');
+      await fetch(`/api/admin/psicologos/${id}/licenca`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ acao: 'renovar', dias, observacao }),
+      });
+      carregarPsicologos();
+    }
+
+    async function suspenderLicenca(id) {
+      if (!confirm('Suspender a licença desse psicólogo? Ele some da listagem pública.')) return;
+      const observacao = prompt('Motivo da suspensão:', '');
+      await fetch(`/api/admin/psicologos/${id}/licenca`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ acao: 'suspender', observacao }),
+      });
+      carregarPsicologos();
+    }
+
+    function renderSelectAvaliacoes() {
+      const select = document.getElementById('select-psicologo-avaliacoes');
+      select.innerHTML = '<option value="">Selecione...</option>' +
+        todosPsicologos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+    }
+
+    async function carregarAvaliacoesAdmin() {
+      const id = document.getElementById('select-psicologo-avaliacoes').value;
+      const tbody = document.getElementById('tbody-avaliacoes');
+      if (!id) { tbody.innerHTML = '<tr><td colspan="5">Selecione um psicólogo acima.</td></tr>'; return; }
+      tbody.innerHTML = '<tr><td colspan="5">Carregando...</td></tr>';
+      const res = await fetch(`/api/admin/psicologos/${id}/avaliacoes`, { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      if (!data.avaliacoes || !data.avaliacoes.length) { tbody.innerHTML = '<tr><td colspan="5">Nenhuma avaliação ainda.</td></tr>'; return; }
+      const statusLabel = { pendente_verificacao: 'aguardando e-mail', publicado: 'publicado', removido_pelo_admin: 'removido' };
+      tbody.innerHTML = data.avaliacoes.map(a => `
+        <tr>
+          <td>${a.avaliador_nome}</td>
+          <td>${'⭐'.repeat(a.nota)}</td>
+          <td>${a.comentario || '—'}</td>
+          <td><span class="badge badge--${a.status === 'publicado' ? 'aprovado' : a.status === 'removido_pelo_admin' ? 'rejeitado' : 'pendente'}">${statusLabel[a.status] || a.status}</span></td>
+          <td class="row-actions">
+            ${a.status === 'publicado' ? `<button class="btn--danger" onclick="excluirAvaliacao(${a.id})">🗑 Excluir</button>` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function excluirAvaliacao(avaliacaoId) {
+      const motivo = prompt('Motivo pra excluir essa avaliação:', '');
+      if (motivo === null) return;
+      const res = await fetch(`/api/admin/avaliacoes/${avaliacaoId}`, {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ motivo }),
+      });
+      if (!res.ok) { alert('Erro ao excluir.'); return; }
+      carregarAvaliacoesAdmin();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Avaliação confirmada · O Seu Psico</title>
+  <link rel="icon" href="/assets/logo.png" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <section class="section" style="min-height:80vh;display:flex;align-items:center;">
+    <div class="container" style="max-width:480px;text-align:center;">
+      <div id="ok-view" class="hidden">
+        <div style="font-size:2.5rem;margin-bottom:16px;">✅</div>
+        <h1 style="font-family:var(--font-display);font-size:1.6rem;margin-bottom:12px;">Avaliação publicada!</h1>
+        <p style="color:#666;">Obrigado por avaliar — sua opinião já está visível no perfil do profissional.</p>
+      </div>
+      <div id="erro-view" class="hidden">
+        <div style="font-size:2.5rem;margin-bottom:16px;">⚠️</div>
+        <h1 style="font-family:var(--font-display);font-size:1.6rem;margin-bottom:12px;">Link inválido ou expirado</h1>
+        <p style="color:#666;">Esse link de confirmação já foi usado ou não é mais válido.</p>
+      </div>
+      <a href="/psicologos/" class="btn btn--yellow btn--lg" style="margin-top:24px;display:inline-flex;">Ver psicólogos →</a>
+    </div>
+  </section>
+  <script>
+    const ok = new URLSearchParams(location.search).get('ok') === '1';
+    document.getElementById(ok ? 'ok-view' : 'erro-view').classList.remove('hidden');
+  </script>
+</body>
+</html>

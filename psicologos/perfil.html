@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Perfil do Psicólogo · O Seu Psico</title>
+  <link rel="icon" href="/assets/logo.png" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar navbar--interna">
+    <div class="container">
+      <div class="navbar__inner">
+        <a href="/" class="navbar__logo">
+          <img src="/assets/logo.png" alt="O Seu Psico" class="navbar__logo-img" />
+          <span class="navbar__logo-text">O Seu Psico</span>
+        </a>
+        <a href="/psicologos/" class="navbar__back">← Ver todos</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="section">
+    <div class="container" style="max-width:720px;">
+      <div id="conteudo"><p>Carregando...</p></div>
+
+      <div id="secao-avaliar" class="hidden" style="margin-top:40px;background:#fff;border:1.5px solid #eee;border-radius:16px;padding:28px;">
+        <h2 style="font-size:1.2rem;margin-bottom:16px;">Deixe sua avaliação</h2>
+        <form id="form-avaliacao">
+          <div class="form-row">
+            <div class="form-group"><label>Seu nome *</label><input type="text" id="av-nome" required /></div>
+            <div class="form-group"><label>Seu e-mail *</label><input type="email" id="av-email" required /></div>
+          </div>
+          <div class="form-group">
+            <label>Nota *</label>
+            <div id="estrelas" style="font-size:1.8rem;cursor:pointer;">☆☆☆☆☆</div>
+            <input type="hidden" id="av-nota" value="0" />
+          </div>
+          <div class="form-group">
+            <label>Comentário (opcional)</label>
+            <textarea id="av-comentario" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea>
+          </div>
+          <button type="submit" class="btn btn--yellow">Enviar avaliação →</button>
+          <p style="font-size:0.78rem;color:#999;margin-top:10px;">Enviaremos um e-mail de confirmação — a avaliação só é publicada depois que você confirmar.</p>
+          <p id="av-erro" style="color:#991B1B;font-size:0.85rem;margin-top:10px;"></p>
+        </form>
+        <div id="av-sucesso" class="hidden" style="text-align:center;padding:20px;">
+          <div style="font-size:1.8rem;margin-bottom:8px;">📬</div>
+          <p>Enviamos um e-mail de confirmação — confira sua caixa de entrada pra publicar sua avaliação.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const id = new URLSearchParams(location.search).get('id');
+    let notaEscolhida = 0;
+
+    async function carregar() {
+      const conteudo = document.getElementById('conteudo');
+      if (!id) { conteudo.innerHTML = '<p>Psicólogo não encontrado.</p>'; return; }
+
+      try {
+        const [perfilRes, avaliacoesRes] = await Promise.all([
+          fetch(`/api/psicologos/${id}`),
+          fetch(`/api/psicologos/${id}/avaliacoes`),
+        ]);
+        const perfilData = await perfilRes.json();
+        if (!perfilData.ok) { conteudo.innerHTML = '<p>Psicólogo não encontrado ou indisponível.</p>'; return; }
+
+        const p = perfilData.psicologo;
+        const posGraduacoes = JSON.parse(p.pos_graduacoes || '[]');
+        const especialidades = JSON.parse(p.especialidades || '[]');
+        const abordagens = JSON.parse(p.abordagens || '[]');
+        const avaliacoesData = await avaliacoesRes.json();
+        const avaliacoes = avaliacoesData.avaliacoes || [];
+
+        const media = perfilData.avaliacao_media;
+        const badge5anos = p.anos_experiencia >= 5
+          ? `<div style="background:#FFF8DC;color:#7a6200;font-size:0.8rem;font-weight:700;padding:5px 12px;border-radius:20px;display:inline-block;margin-bottom:12px;">🏅 +${p.anos_experiencia} anos de experiência</div>`
+          : '';
+
+        conteudo.innerHTML = `
+          <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;">
+            <div style="width:96px;height:96px;border-radius:50%;background:#F7F5F0;overflow:hidden;flex-shrink:0;">
+              ${p.foto_url ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;" />` : ''}
+            </div>
+            <div>
+              ${badge5anos}
+              <h1 style="font-family:var(--font-display);font-size:1.6rem;margin-bottom:4px;">${p.nome}</h1>
+              <div style="color:#888;font-size:0.9rem;">${media ? '⭐ ' + media.toFixed(1) + ' (' + perfilData.total_avaliacoes + ' avaliações)' : 'Ainda sem avaliações'}</div>
+            </div>
+          </div>
+
+          ${p.bio ? `<p style="color:#444;line-height:1.7;margin-bottom:24px;">${p.bio}</p>` : ''}
+
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;">
+            ${especialidades.map(e => `<span style="background:#F7F5F0;padding:6px 14px;border-radius:20px;font-size:0.82rem;">${e}</span>`).join('')}
+          </div>
+
+          <h3 style="font-size:1.05rem;margin-bottom:10px;">Formação</h3>
+          <p style="color:#555;margin-bottom:6px;">${p.graduacao_curso || ''}${p.graduacao_instituicao ? ' — ' + p.graduacao_instituicao : ''}${p.graduacao_ano ? ' (' + p.graduacao_ano + ')' : ''}</p>
+          ${posGraduacoes.map(pg => `<p style="color:#555;margin-bottom:4px;">${pg}</p>`).join('')}
+
+          ${abordagens.length ? `<h3 style="font-size:1.05rem;margin:20px 0 8px;">Abordagens</h3><p style="color:#555;">${abordagens.join(', ')}</p>` : ''}
+
+          ${p.projetos_relevantes ? `<h3 style="font-size:1.05rem;margin:20px 0 8px;">Projetos relevantes</h3><p style="color:#555;">${p.projetos_relevantes}</p>` : ''}
+
+          <h3 style="font-size:1.05rem;margin:28px 0 12px;">Avaliações</h3>
+          ${avaliacoes.length ? avaliacoes.map(a => `
+            <div style="border-bottom:1px solid #eee;padding:12px 0;">
+              <div>${'⭐'.repeat(a.nota)}</div>
+              ${a.comentario ? `<p style="color:#555;margin-top:4px;">${a.comentario}</p>` : ''}
+              <p style="color:#999;font-size:0.78rem;margin-top:4px;">${a.avaliador_nome}</p>
+            </div>
+          `).join('') : '<p style="color:#999;">Ainda não há avaliações públicas.</p>'}
+        `;
+
+        document.getElementById('secao-avaliar').classList.remove('hidden');
+      } catch {
+        conteudo.innerHTML = '<p>Erro ao carregar perfil.</p>';
+      }
+    }
+    carregar();
+
+    document.getElementById('estrelas').addEventListener('click', (e) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pos = (e.clientX - rect.left) / rect.width;
+      notaEscolhida = Math.max(1, Math.min(5, Math.ceil(pos * 5)));
+      document.getElementById('av-nota').value = notaEscolhida;
+      document.getElementById('estrelas').textContent = '★'.repeat(notaEscolhida) + '☆'.repeat(5 - notaEscolhida);
+    });
+
+    document.getElementById('form-avaliacao').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const erroEl = document.getElementById('av-erro');
+      erroEl.textContent = '';
+
+      if (notaEscolhida < 1) { erroEl.textContent = 'Escolha uma nota de 1 a 5 estrelas.'; return; }
+
+      try {
+        const res = await fetch(`/api/psicologos/${id}/avaliacoes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nome: document.getElementById('av-nome').value.trim(),
+            email: document.getElementById('av-email').value.trim(),
+            nota: notaEscolhida,
+            comentario: document.getElementById('av-comentario').value.trim() || null,
+          }),
+        });
+        const data = await res.json();
+        if (!data.ok) { erroEl.textContent = data.error || 'Erro ao enviar avaliação.'; return; }
+        document.getElementById('form-avaliacao').classList.add('hidden');
+        document.getElementById('av-sucesso').classList.remove('hidden');
+      } catch {
+        erroEl.textContent = 'Erro de conexão. Tente novamente.';
+      }
+    });
+  </script>
+</body>
+</html>

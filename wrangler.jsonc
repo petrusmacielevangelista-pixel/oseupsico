@@ -8,6 +8,13 @@
     "directory": ".",
     "binding": "ASSETS"
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "oseupsico-psicologos-db",
+      "database_id": "a598c4c9-7ab6-4759-aecb-260d9b30ffda"
+    }
+  ],
   "observability": {
     "enabled": true
   },

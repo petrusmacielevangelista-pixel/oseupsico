@@ -1221,3 +1221,45 @@ ul { list-style: none; }
   .footer__logo-name { color: var(--white); }
   .footer__col-title { color: var(--white); }
 }
+
+/* ── Plataforma de Psicólogos — utilitários de formulário/página interna ── */
+.hidden { display: none !important; }
+
+.navbar--interna {
+  position: static;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 0;
+}
+
+.navbar__back {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-mid);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+.navbar__back:hover { color: var(--black); }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 640px) { .form-row { grid-template-columns: 1fr; } }
+
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--black); margin-bottom: 8px; }
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--black);
+  background: var(--white);
+  transition: border-color var(--transition);
+  outline: none;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus { border-color: var(--yellow); }

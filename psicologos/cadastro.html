@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadastro de Psicólogo · O Seu Psico</title>
+  <link rel="icon" href="/assets/logo.png" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar navbar--interna">
+    <div class="container">
+      <div class="navbar__inner">
+        <a href="/" class="navbar__logo">
+          <img src="/assets/logo.png" alt="O Seu Psico" class="navbar__logo-img" />
+          <span class="navbar__logo-text">O Seu Psico</span>
+        </a>
+        <a href="/psicologos/" class="navbar__back">← Ver psicólogos</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="section">
+    <div class="container" style="max-width:640px;">
+      <h1 style="font-family:var(--font-display);font-size:1.8rem;margin-bottom:8px;">Cadastre-se como psicólogo parceiro</h1>
+      <p style="color:#666;margin-bottom:32px;">Seu perfil fica visível pra pacientes depois de aprovado e com a licença ativa.</p>
+
+      <form id="form-cadastro" style="background:#fff;border:1.5px solid #eee;border-radius:16px;padding:32px;" novalidate>
+
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-weight:600;margin-bottom:6px;">Foto de perfil</label>
+          <input type="file" id="foto" accept="image/jpeg,image/png,image/webp" />
+          <p style="font-size:0.78rem;color:#999;margin-top:4px;">JPG, PNG ou WEBP — máx. 5MB.</p>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Nome completo *</label><input type="text" id="nome" required /></div>
+          <div class="form-group"><label>E-mail *</label><input type="email" id="email" required /></div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Senha *</label><input type="password" id="senha" required minlength="8" /></div>
+          <div class="form-group"><label>Telefone / WhatsApp *</label><input type="tel" id="telefone" required /></div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Número do CRP *</label><input type="text" id="crp_numero" required /></div>
+          <div class="form-group">
+            <label>Estado do CRP *</label>
+            <select id="crp_estado" required>
+              <option value="">Selecione</option>
+              <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option>
+              <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
+              <option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option>
+              <option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+              <option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option>
+              <option>SE</option><option>TO</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Bio / apresentação</label>
+          <textarea id="bio" rows="4" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea>
+        </div>
+
+        <h3 style="margin:28px 0 12px;font-size:1.05rem;">Formação</h3>
+        <div class="form-row">
+          <div class="form-group"><label>Graduação (curso)</label><input type="text" id="graduacao_curso" /></div>
+          <div class="form-group"><label>Instituição</label><input type="text" id="graduacao_instituicao" /></div>
+        </div>
+        <div class="form-group" style="max-width:160px;"><label>Ano de formação</label><input type="number" id="graduacao_ano" min="1960" max="2026" /></div>
+
+        <div class="form-group">
+          <label>Pós-graduações (uma por linha, ex: "Especialização em TCC — PUC, 2018")</label>
+          <textarea id="pos_graduacoes" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Anos de experiência</label>
+          <input type="number" id="anos_experiencia" min="0" max="60" style="max-width:160px;" />
+        </div>
+
+        <div class="form-group">
+          <label>Projetos relevantes (opcional)</label>
+          <textarea id="projetos_relevantes" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea>
+        </div>
+
+        <h3 style="margin:28px 0 12px;font-size:1.05rem;">Especialidades</h3>
+        <div id="especialidades-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">Carregando...</div>
+
+        <div class="form-group">
+          <label>Abordagens (separadas por vírgula — ex: TCC, ACT)</label>
+          <input type="text" id="abordagens" />
+        </div>
+
+        <button type="submit" class="btn btn--yellow btn--lg" style="width:100%;margin-top:16px;">Enviar cadastro →</button>
+        <p id="msg-erro" style="color:#991B1B;font-size:0.85rem;margin-top:12px;"></p>
+        <p style="font-size:0.8rem;color:#999;margin-top:16px;">Seu cadastro passa por uma análise antes de ficar visível publicamente.</p>
+      </form>
+
+      <div id="msg-sucesso" class="hidden" style="background:#D1FAE5;border-radius:16px;padding:32px;text-align:center;">
+        <div style="font-size:2rem;margin-bottom:12px;">✅</div>
+        <h2 style="margin-bottom:8px;">Cadastro enviado!</h2>
+        <p>Vamos analisar seu CRP e seu perfil. Você será avisado quando estiver aprovado.</p>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    (async function carregarEspecialidades() {
+      try {
+        const res = await fetch('/api/especialidades');
+        const data = await res.json();
+        const el = document.getElementById('especialidades-lista');
+        el.innerHTML = (data.especialidades || []).map(e => `
+          <label style="display:flex;align-items:center;gap:6px;background:#F7F5F0;padding:8px 14px;border-radius:20px;font-size:0.85rem;cursor:pointer;">
+            <input type="checkbox" value="${e.nome}" class="chk-especialidade" /> ${e.nome}
+          </label>
+        `).join('');
+      } catch {
+        document.getElementById('especialidades-lista').textContent = 'Erro ao carregar especialidades.';
+      }
+    })();
+
+    document.getElementById('form-cadastro').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const erroEl = document.getElementById('msg-erro');
+      erroEl.textContent = '';
+
+      const especialidades = [...document.querySelectorAll('.chk-especialidade:checked')].map(c => c.value);
+      const posGraduacoes = document.getElementById('pos_graduacoes').value.split('\n').map(s => s.trim()).filter(Boolean);
+      const abordagens = document.getElementById('abordagens').value.split(',').map(s => s.trim()).filter(Boolean);
+
+      const form = new FormData();
+      form.set('nome', document.getElementById('nome').value.trim());
+      form.set('email', document.getElementById('email').value.trim());
+      form.set('senha', document.getElementById('senha').value);
+      form.set('telefone', document.getElementById('telefone').value.trim());
+      form.set('crp_numero', document.getElementById('crp_numero').value.trim());
+      form.set('crp_estado', document.getElementById('crp_estado').value);
+      form.set('bio', document.getElementById('bio').value.trim());
+      form.set('graduacao_curso', document.getElementById('graduacao_curso').value.trim());
+      form.set('graduacao_instituicao', document.getElementById('graduacao_instituicao').value.trim());
+      form.set('graduacao_ano', document.getElementById('graduacao_ano').value);
+      form.set('pos_graduacoes', JSON.stringify(posGraduacoes));
+      form.set('anos_experiencia', document.getElementById('anos_experiencia').value);
+      form.set('projetos_relevantes', document.getElementById('projetos_relevantes').value.trim());
+      form.set('especialidades', JSON.stringify(especialidades));
+      form.set('abordagens', JSON.stringify(abordagens));
+
+      const foto = document.getElementById('foto').files[0];
+      if (foto) form.set('foto', foto);
+
+      try {
+        const res = await fetch('/api/psicologos/cadastro', { method: 'POST', body: form });
+        const data = await res.json();
+        if (!data.ok) { erroEl.textContent = data.error || 'Erro ao enviar cadastro.'; return; }
+        document.getElementById('form-cadastro').classList.add('hidden');
+        document.getElementById('msg-sucesso').classList.remove('hidden');
+      } catch {
+        erroEl.textContent = 'Erro de conexão. Tente novamente.';
+      }
+    });
+  </script>
+</body>
+</html>

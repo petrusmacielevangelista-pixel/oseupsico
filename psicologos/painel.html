@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel do Psicólogo · O Seu Psico</title>
+  <link rel="icon" href="/assets/logo.png" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar navbar--interna">
+    <div class="container">
+      <div class="navbar__inner">
+        <a href="/" class="navbar__logo">
+          <img src="/assets/logo.png" alt="O Seu Psico" class="navbar__logo-img" />
+          <span class="navbar__logo-text">O Seu Psico</span>
+        </a>
+        <a href="#" id="link-sair" class="navbar__back hidden" onclick="sair()">Sair →</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="section">
+    <div class="container" style="max-width:520px;">
+
+      <div id="login-view">
+        <h1 style="font-family:var(--font-display);font-size:1.6rem;margin-bottom:20px;">Entrar</h1>
+        <div class="form-group"><label>E-mail</label><input type="email" id="login-email" /></div>
+        <div class="form-group"><label>Senha</label><input type="password" id="login-senha" /></div>
+        <button class="btn btn--yellow" onclick="fazerLogin()">Entrar →</button>
+        <p id="login-erro" style="color:#991B1B;font-size:0.85rem;margin-top:12px;"></p>
+        <p style="margin-top:20px;font-size:0.88rem;color:#666;">Ainda não tem cadastro? <a href="/psicologos/cadastro.html">Cadastre-se aqui</a>.</p>
+      </div>
+
+      <div id="painel-view" class="hidden">
+        <div id="status-box" style="margin-bottom:24px;"></div>
+        <h2 style="font-size:1.2rem;margin-bottom:16px;">Meu perfil</h2>
+        <div class="form-group"><label>Bio</label><textarea id="edit-bio" rows="4" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea></div>
+        <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="edit-telefone" /></div>
+        <div class="form-group"><label>Anos de experiência</label><input type="number" id="edit-anos" style="max-width:160px;" /></div>
+        <div class="form-group"><label>Projetos relevantes</label><textarea id="edit-projetos" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea></div>
+        <button class="btn btn--yellow" onclick="salvarPerfil()">Salvar alterações →</button>
+        <p id="salvar-msg" style="font-size:0.85rem;margin-top:12px;"></p>
+      </div>
+
+    </div>
+  </section>
+
+  <script>
+    let token = sessionStorage.getItem('psico_token_psicologo');
+    if (token) mostrarPainel();
+
+    async function fazerLogin() {
+      const email = document.getElementById('login-email').value.trim();
+      const senha = document.getElementById('login-senha').value;
+      try {
+        const res = await fetch('/api/psicologos/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, senha }),
+        });
+        const data = await res.json();
+        if (!data.ok) { document.getElementById('login-erro').textContent = data.error || 'Erro ao entrar.'; return; }
+        token = data.token;
+        sessionStorage.setItem('psico_token_psicologo', token);
+        mostrarPainel();
+      } catch { document.getElementById('login-erro').textContent = 'Erro de conexão.'; }
+    }
+
+    function sair() {
+      sessionStorage.removeItem('psico_token_psicologo');
+      location.reload();
+    }
+
+    async function mostrarPainel() {
+      document.getElementById('login-view').classList.add('hidden');
+      document.getElementById('painel-view').classList.remove('hidden');
+      document.getElementById('link-sair').classList.remove('hidden');
+
+      const res = await fetch('/api/psicologos/me', { headers: { Authorization: 'Bearer ' + token } });
+      if (res.status === 401) { sair(); return; }
+      const data = await res.json();
+      const p = data.psicologo;
+
+      const hoje = new Date().toISOString().slice(0, 10);
+      const licencaOk = p.licenca_validade_ate && p.licenca_validade_ate >= hoje;
+      const statusBox = document.getElementById('status-box');
+
+      let statusHtml = '';
+      if (p.status_aprovacao === 'pendente') {
+        statusHtml = `<div style="background:#FEF9C3;color:#854D0E;padding:14px 18px;border-radius:12px;">⏳ Seu cadastro ainda está em análise.</div>`;
+      } else if (p.status_aprovacao === 'rejeitado') {
+        statusHtml = `<div style="background:#FEE2E2;color:#991B1B;padding:14px 18px;border-radius:12px;">❌ Seu cadastro não foi aprovado. Entre em contato pra mais informações.</div>`;
+      } else if (!licencaOk) {
+        statusHtml = `<div style="background:#FEE2E2;color:#991B1B;padding:14px 18px;border-radius:12px;">⚠️ Sua licença está inativa/vencida — seu perfil não aparece na busca pública. Entre em contato pra regularizar.</div>`;
+      } else {
+        statusHtml = `<div style="background:#D1FAE5;color:#065F46;padding:14px 18px;border-radius:12px;">✅ Perfil ativo e visível publicamente até ${p.licenca_validade_ate}.</div>`;
+      }
+      statusBox.innerHTML = statusHtml;
+
+      document.getElementById('edit-bio').value = p.bio || '';
+      document.getElementById('edit-telefone').value = p.telefone || '';
+      document.getElementById('edit-anos').value = p.anos_experiencia || '';
+      document.getElementById('edit-projetos').value = p.projetos_relevantes || '';
+    }
+
+    async function salvarPerfil() {
+      const msg = document.getElementById('salvar-msg');
+      msg.textContent = 'Salvando...';
+      msg.style.color = '#666';
+      try {
+        const res = await fetch('/api/psicologos/me', {
+          method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({
+            bio: document.getElementById('edit-bio').value.trim(),
+            telefone: document.getElementById('edit-telefone').value.trim(),
+            anos_experiencia: Number(document.getElementById('edit-anos').value) || null,
+            projetos_relevantes: document.getElementById('edit-projetos').value.trim(),
+          }),
+        });
+        const data = await res.json();
+        msg.textContent = data.ok ? 'Salvo com sucesso!' : (data.error || 'Erro ao salvar.');
+        msg.style.color = data.ok ? '#065F46' : '#991B1B';
+      } catch { msg.textContent = 'Erro de conexão.'; msg.style.color = '#991B1B'; }
+    }
+  </script>
+</body>
+</html>
