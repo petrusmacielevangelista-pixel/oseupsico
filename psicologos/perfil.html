@@ -25,6 +25,27 @@
     <div class="container" style="max-width:720px;">
       <div id="conteudo"><p>Carregando...</p></div>
 
+      <div id="secao-agendar" class="hidden" style="margin-top:32px;background:#fff;border:1.5px solid #eee;border-radius:16px;padding:28px;">
+        <h2 style="font-size:1.2rem;margin-bottom:16px;">Agendar horário</h2>
+        <div id="horarios-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">Carregando horários...</div>
+
+        <form id="form-agendar" class="hidden">
+          <p style="font-size:0.9rem;color:#555;margin-bottom:16px;">Horário selecionado: <strong id="horario-selecionado-texto"></strong></p>
+          <div class="form-row">
+            <div class="form-group"><label>Seu nome *</label><input type="text" id="ag-nome" required /></div>
+            <div class="form-group"><label>Seu e-mail *</label><input type="email" id="ag-email" required /></div>
+          </div>
+          <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="ag-telefone" /></div>
+          <button type="submit" class="btn btn--yellow">Confirmar horário →</button>
+          <p style="font-size:0.78rem;color:#999;margin-top:10px;">Enviaremos um e-mail de confirmação — o horário só é reservado depois que você confirmar.</p>
+          <p id="ag-erro" style="color:#991B1B;font-size:0.85rem;margin-top:10px;"></p>
+        </form>
+        <div id="ag-sucesso" class="hidden" style="text-align:center;padding:20px;">
+          <div style="font-size:1.8rem;margin-bottom:8px;">📬</div>
+          <p>Enviamos um e-mail de confirmação — confira sua caixa de entrada pra garantir seu horário.</p>
+        </div>
+      </div>
+
       <div id="secao-avaliar" class="hidden" style="margin-top:40px;background:#fff;border:1.5px solid #eee;border-radius:16px;padding:28px;">
         <h2 style="font-size:1.2rem;margin-bottom:16px;">Deixe sua avaliação</h2>
         <form id="form-avaliacao">
@@ -110,19 +131,72 @@
           <h3 style="font-size:1.05rem;margin:28px 0 12px;">Avaliações</h3>
           ${avaliacoes.length ? avaliacoes.map(a => `
             <div style="border-bottom:1px solid #eee;padding:12px 0;">
-              <div>${'⭐'.repeat(a.nota)}</div>
+              <div>${'⭐'.repeat(a.nota)} ${a.verificado ? '<span style="background:#D1FAE5;color:#065F46;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:6px;">✓ Paciente verificado</span>' : ''}</div>
               ${a.comentario ? `<p style="color:#555;margin-top:4px;">${a.comentario}</p>` : ''}
               <p style="color:#999;font-size:0.78rem;margin-top:4px;">${a.avaliador_nome}</p>
             </div>
           `).join('') : '<p style="color:#999;">Ainda não há avaliações públicas.</p>'}
         `;
 
+        document.getElementById('secao-agendar').classList.remove('hidden');
         document.getElementById('secao-avaliar').classList.remove('hidden');
+        carregarHorarios();
       } catch {
         conteudo.innerHTML = '<p>Erro ao carregar perfil.</p>';
       }
     }
     carregar();
+
+    let horarioSelecionado = null;
+
+    async function carregarHorarios() {
+      const el = document.getElementById('horarios-lista');
+      try {
+        const res = await fetch(`/api/psicologos/${id}/horarios-disponiveis`);
+        const data = await res.json();
+        const horarios = data.horarios || [];
+        if (!horarios.length) { el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Nenhum horário disponível nos próximos dias.</p>'; return; }
+        el.innerHTML = horarios.slice(0, 30).map(h => {
+          const dt = new Date(h.replace(' ', 'T'));
+          const label = dt.toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+          return `<button type="button" class="btn btn--outline" style="font-size:0.82rem;padding:8px 14px;" onclick="selecionarHorario('${h}', this)">${label}</button>`;
+        }).join('');
+      } catch {
+        el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Erro ao carregar horários.</p>';
+      }
+    }
+
+    function selecionarHorario(horario, btn) {
+      horarioSelecionado = horario;
+      document.querySelectorAll('#horarios-lista button').forEach(b => b.style.background = '');
+      btn.style.background = 'var(--yellow-light)';
+      const dt = new Date(horario.replace(' ', 'T'));
+      document.getElementById('horario-selecionado-texto').textContent = dt.toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' });
+      document.getElementById('form-agendar').classList.remove('hidden');
+    }
+
+    document.getElementById('form-agendar').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const erroEl = document.getElementById('ag-erro');
+      erroEl.textContent = '';
+      try {
+        const res = await fetch(`/api/psicologos/${id}/agendar`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nome: document.getElementById('ag-nome').value.trim(),
+            email: document.getElementById('ag-email').value.trim(),
+            telefone: document.getElementById('ag-telefone').value.trim(),
+            data_hora: horarioSelecionado,
+          }),
+        });
+        const data = await res.json();
+        if (!data.ok) { erroEl.textContent = data.error || 'Erro ao agendar.'; return; }
+        document.getElementById('form-agendar').classList.add('hidden');
+        document.getElementById('ag-sucesso').classList.remove('hidden');
+      } catch {
+        erroEl.textContent = 'Erro de conexão. Tente novamente.';
+      }
+    });
 
     document.getElementById('estrelas').addEventListener('click', (e) => {
       const rect = e.currentTarget.getBoundingClientRect();

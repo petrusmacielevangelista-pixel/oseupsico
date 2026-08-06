@@ -42,6 +42,30 @@
         <div class="form-group"><label>Projetos relevantes</label><textarea id="edit-projetos" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea></div>
         <button class="btn btn--yellow" onclick="salvarPerfil()">Salvar alterações →</button>
         <p id="salvar-msg" style="font-size:0.85rem;margin-top:12px;"></p>
+
+        <h2 style="font-size:1.2rem;margin:36px 0 16px;">Minha agenda</h2>
+        <p style="font-size:0.85rem;color:#666;margin-bottom:16px;">Defina os horários recorrentes em que você atende. Pacientes verão vagas dos próximos 14 dias.</p>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Dia da semana</label>
+            <select id="disp-dia">
+              <option value="1">Segunda</option><option value="2">Terça</option><option value="3">Quarta</option>
+              <option value="4">Quinta</option><option value="5">Sexta</option><option value="6">Sábado</option><option value="0">Domingo</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Duração da sessão (min)</label><input type="number" id="disp-duracao" value="50" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Das</label><input type="time" id="disp-inicio" value="09:00" /></div>
+          <div class="form-group"><label>Até</label><input type="time" id="disp-fim" value="12:00" /></div>
+        </div>
+        <button class="btn btn--outline" onclick="adicionarDisponibilidade()">+ Adicionar horário</button>
+
+        <div id="lista-disponibilidades" style="margin-top:20px;"></div>
+
+        <h3 style="font-size:1.05rem;margin:32px 0 12px;">Próximos agendamentos confirmados</h3>
+        <div id="lista-agendamentos"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
       </div>
 
     </div>
@@ -102,6 +126,55 @@
       document.getElementById('edit-telefone').value = p.telefone || '';
       document.getElementById('edit-anos').value = p.anos_experiencia || '';
       document.getElementById('edit-projetos').value = p.projetos_relevantes || '';
+
+      carregarDisponibilidades();
+      carregarAgendamentos();
+    }
+
+    const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+    async function carregarDisponibilidades() {
+      const res = await fetch('/api/psicologos/me/disponibilidades', { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      const el = document.getElementById('lista-disponibilidades');
+      if (!data.disponibilidades?.length) { el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Nenhum horário cadastrado ainda.</p>'; return; }
+      el.innerHTML = data.disponibilidades.map(d => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#F7F5F0;border-radius:10px;margin-bottom:8px;font-size:0.88rem;">
+          <span>${DIAS[d.dia_semana]}, ${d.hora_inicio}–${d.hora_fim} (sessões de ${d.duracao_minutos}min)</span>
+          <button style="border:none;background:none;color:#991B1B;cursor:pointer;" onclick="removerDisponibilidade(${d.id})">Remover</button>
+        </div>
+      `).join('');
+    }
+
+    async function adicionarDisponibilidade() {
+      await fetch('/api/psicologos/me/disponibilidades', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({
+          dia_semana: Number(document.getElementById('disp-dia').value),
+          hora_inicio: document.getElementById('disp-inicio').value,
+          hora_fim: document.getElementById('disp-fim').value,
+          duracao_minutos: Number(document.getElementById('disp-duracao').value) || 50,
+        }),
+      });
+      carregarDisponibilidades();
+    }
+
+    async function removerDisponibilidade(id) {
+      await fetch(`/api/psicologos/me/disponibilidades/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+      carregarDisponibilidades();
+    }
+
+    async function carregarAgendamentos() {
+      const res = await fetch('/api/psicologos/me/agendamentos', { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      const el = document.getElementById('lista-agendamentos');
+      if (!data.agendamentos?.length) { el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Nenhum agendamento confirmado ainda.</p>'; return; }
+      el.innerHTML = data.agendamentos.map(a => `
+        <div style="padding:10px 14px;background:#F7F5F0;border-radius:10px;margin-bottom:8px;font-size:0.88rem;">
+          <strong>${new Date(a.data_hora.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</strong>
+          — ${a.paciente_nome} ${a.paciente_telefone ? '(' + a.paciente_telefone + ')' : ''}
+        </div>
+      `).join('');
     }
 
     async function salvarPerfil() {

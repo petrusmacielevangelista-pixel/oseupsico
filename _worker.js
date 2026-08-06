@@ -84,10 +84,16 @@ async function initDB(db) {
       nota INTEGER NOT NULL,
       comentario TEXT,
       status TEXT NOT NULL DEFAULT 'pendente_verificacao',
+      agendamento_id INTEGER,
       criado_em TEXT DEFAULT (datetime('now')),
       UNIQUE(psicologo_id, avaliador_email)
     )`
   ).run();
+
+  // Migração incremental — quem já tinha a tabela criada antes do campo
+  // agendamento_id existir. CREATE TABLE IF NOT EXISTS não adiciona coluna
+  // em tabela já existente, então garantimos aqui (idempotente).
+  try { await db.prepare('ALTER TABLE avaliacoes ADD COLUMN agendamento_id INTEGER').run(); } catch {}
 
   await db.prepare(
     `CREATE TABLE IF NOT EXISTS avaliacoes_log (
@@ -106,6 +112,45 @@ async function initDB(db) {
       token TEXT NOT NULL UNIQUE,
       expira_em TEXT NOT NULL,
       usado_em TEXT
+    )`
+  ).run();
+
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS pacientes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      telefone TEXT,
+      email_verificado INTEGER NOT NULL DEFAULT 0,
+      email_verificado_em TEXT,
+      criado_em TEXT DEFAULT (datetime('now'))
+    )`
+  ).run();
+
+  // Horários recorrentes que o psicólogo disponibiliza (ex: toda
+  // segunda das 9h às 12h). dia_semana: 0=domingo ... 6=sábado.
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS disponibilidades (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      psicologo_id INTEGER NOT NULL,
+      dia_semana INTEGER NOT NULL,
+      hora_inicio TEXT NOT NULL,
+      hora_fim TEXT NOT NULL,
+      duracao_minutos INTEGER NOT NULL DEFAULT 50,
+      ativo INTEGER NOT NULL DEFAULT 1,
+      criado_em TEXT DEFAULT (datetime('now'))
+    )`
+  ).run();
+
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS agendamentos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      psicologo_id INTEGER NOT NULL,
+      paciente_id INTEGER NOT NULL,
+      data_hora TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pendente_verificacao',
+      criado_em TEXT DEFAULT (datetime('now')),
+      UNIQUE(psicologo_id, data_hora)
     )`
   ).run();
 
@@ -188,6 +233,42 @@ async function enviarEmailConfirmacaoAvaliacao(env, avaliacao, linkConfirmacao) 
       from: 'O Seu Psico <naoresponder@oseupsico.com.br>',
       to: [avaliacao.avaliador_email],
       subject: 'Confirme sua avaliação · O Seu Psico',
+      html,
+    }),
+  });
+}
+
+async function enviarEmailConfirmacaoAgendamento(env, paciente, dataHora, linkConfirmacao) {
+  const dataFormatada = new Date(dataHora.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' });
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 0;">
+    <tr><td align="center">
+      <table width="500" cellpadding="0" cellspacing="0" style="max-width:500px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+        <tr><td style="background:#1A1A1A;padding:28px;text-align:center;">
+          <div style="font-size:20px;font-weight:800;color:#fff;">O Seu <span style="color:#F5C518;">Psico</span></div>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 12px;">Olá, ${paciente.nome}!</p>
+          <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 20px;">Confirme seu horário: <strong>${dataFormatada}</strong>.</p>
+          <table cellpadding="0" cellspacing="0"><tr><td style="background:#F5C518;border-radius:40px;padding:14px 28px;">
+            <a href="${linkConfirmacao}" style="font-size:15px;font-weight:700;color:#1A1A1A;text-decoration:none;">Confirmar agendamento →</a>
+          </td></tr></table>
+          <p style="font-size:12px;color:#999;margin:20px 0 0;">Se você não solicitou esse agendamento, ignore este e-mail — ele expira em 24h e o horário fica livre de novo.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: 'O Seu Psico <naoresponder@oseupsico.com.br>',
+      to: [paciente.email],
+      subject: 'Confirme seu agendamento · O Seu Psico',
       html,
     }),
   });
@@ -401,6 +482,156 @@ export default {
       return json({ ok: true, psicologo: p, avaliacao_media: media, total_avaliacoes: avals.length });
     }
 
+    /* ══════════════ API: Agenda / Disponibilidades (psicólogo autenticado) ══════════════ */
+
+    if (pathname === '/api/psicologos/me/disponibilidades' && request.method === 'GET') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { results } = await env.DB.prepare(
+        'SELECT * FROM disponibilidades WHERE psicologo_id = ? AND ativo = 1 ORDER BY dia_semana, hora_inicio'
+      ).bind(psicologoId).all();
+      return json({ ok: true, disponibilidades: results });
+    }
+
+    if (pathname === '/api/psicologos/me/disponibilidades' && request.method === 'POST') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { dia_semana, hora_inicio, hora_fim, duracao_minutos } = await request.json();
+      if (dia_semana === undefined || !hora_inicio || !hora_fim) {
+        return json({ ok: false, error: 'Dados obrigatórios ausentes.' }, 400);
+      }
+      await env.DB.prepare(
+        `INSERT INTO disponibilidades (psicologo_id, dia_semana, hora_inicio, hora_fim, duracao_minutos)
+         VALUES (?, ?, ?, ?, ?)`
+      ).bind(psicologoId, dia_semana, hora_inicio, hora_fim, duracao_minutos || 50).run();
+      return json({ ok: true });
+    }
+
+    const dispDeleteMatch = pathname.match(/^\/api\/psicologos\/me\/disponibilidades\/(\d+)$/);
+    if (dispDeleteMatch && request.method === 'DELETE') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      await env.DB.prepare('UPDATE disponibilidades SET ativo = 0 WHERE id = ? AND psicologo_id = ?')
+        .bind(dispDeleteMatch[1], psicologoId).run();
+      return json({ ok: true });
+    }
+
+    if (pathname === '/api/psicologos/me/agendamentos' && request.method === 'GET') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { results } = await env.DB.prepare(
+        `SELECT a.id, a.data_hora, a.status, p.nome as paciente_nome, p.telefone as paciente_telefone
+         FROM agendamentos a JOIN pacientes p ON p.id = a.paciente_id
+         WHERE a.psicologo_id = ? AND a.status = 'confirmado'
+         ORDER BY a.data_hora`
+      ).bind(psicologoId).all();
+      return json({ ok: true, agendamentos: results });
+    }
+
+    /* ══════════════ API: Horários disponíveis + agendamento (público) ══════════════ */
+
+    const horariosMatch = pathname.match(/^\/api\/psicologos\/(\d+)\/horarios-disponiveis$/);
+    if (horariosMatch && request.method === 'GET') {
+      await initDB(env.DB);
+      const psicologoId = horariosMatch[1];
+      const diasAFrente = 14;
+
+      const { results: disponibilidades } = await env.DB.prepare(
+        'SELECT * FROM disponibilidades WHERE psicologo_id = ? AND ativo = 1'
+      ).bind(psicologoId).all();
+
+      const { results: ocupados } = await env.DB.prepare(
+        `SELECT data_hora FROM agendamentos WHERE psicologo_id = ? AND status IN ('confirmado', 'pendente_verificacao') AND data_hora >= datetime('now')`
+      ).bind(psicologoId).all();
+      const ocupadosSet = new Set(ocupados.map(o => o.data_hora));
+
+      const slots = [];
+      const agora = new Date();
+      for (let d = 1; d <= diasAFrente; d++) {
+        const dia = new Date(agora);
+        dia.setDate(dia.getDate() + d);
+        const diaSemana = dia.getDay();
+
+        disponibilidades.filter(disp => disp.dia_semana === diaSemana).forEach(disp => {
+          const [hIni, mIni] = disp.hora_inicio.split(':').map(Number);
+          const [hFim, mFim] = disp.hora_fim.split(':').map(Number);
+          let cursor = new Date(dia); cursor.setHours(hIni, mIni, 0, 0);
+          const fim = new Date(dia); fim.setHours(hFim, mFim, 0, 0);
+
+          while (cursor < fim) {
+            const iso = cursor.toISOString().slice(0, 16).replace('T', ' ');
+            if (!ocupadosSet.has(iso)) slots.push(iso);
+            cursor = new Date(cursor.getTime() + disp.duracao_minutos * 60000);
+          }
+        });
+      }
+
+      slots.sort();
+      return json({ ok: true, horarios: slots });
+    }
+
+    const agendarMatch = pathname.match(/^\/api\/psicologos\/(\d+)\/agendar$/);
+    if (agendarMatch && request.method === 'POST') {
+      try {
+        await initDB(env.DB);
+        const psicologoId = agendarMatch[1];
+        const { nome, email, telefone, data_hora } = await request.json();
+        if (!nome || !email || !data_hora) return json({ ok: false, error: 'Dados obrigatórios ausentes.' }, 400);
+
+        let paciente = await env.DB.prepare('SELECT id FROM pacientes WHERE email = ?').bind(email).first();
+        if (!paciente) {
+          const r = await env.DB.prepare('INSERT INTO pacientes (nome, email, telefone) VALUES (?, ?, ?)')
+            .bind(nome, email, telefone || null).run();
+          paciente = { id: r.meta.last_row_id };
+        }
+
+        const result = await env.DB.prepare(
+          `INSERT INTO agendamentos (psicologo_id, paciente_id, data_hora, status) VALUES (?, ?, ?, 'pendente_verificacao')`
+        ).bind(psicologoId, paciente.id, data_hora).run();
+
+        const token = gerarToken();
+        const expira = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        await env.DB.prepare(
+          `INSERT INTO tokens_verificacao (tipo, referencia_id, token, expira_em) VALUES ('agendamento', ?, ?, ?)`
+        ).bind(result.meta.last_row_id, token, expira).run();
+
+        const link = `${url.origin}/api/agendamentos/confirmar?token=${token}`;
+        await enviarEmailConfirmacaoAgendamento(env, { nome, email }, data_hora, link);
+
+        return json({ ok: true });
+      } catch (e) {
+        if (String(e.message).includes('UNIQUE')) {
+          return json({ ok: false, error: 'Esse horário acabou de ser reservado por outra pessoa — escolha outro.' }, 409);
+        }
+        return json({ ok: false, error: e.message }, 500);
+      }
+    }
+
+    if (pathname === '/api/agendamentos/confirmar' && request.method === 'GET') {
+      await initDB(env.DB);
+      const token = url.searchParams.get('token');
+      const registro = await env.DB.prepare(
+        `SELECT * FROM tokens_verificacao WHERE token = ? AND tipo = 'agendamento'`
+      ).bind(token).first();
+
+      if (!registro || registro.usado_em || new Date(registro.expira_em) < new Date()) {
+        return Response.redirect(`${url.origin}/agendamento-confirmado.html?ok=0`, 302);
+      }
+
+      await env.DB.prepare(`UPDATE agendamentos SET status = 'confirmado' WHERE id = ?`).bind(registro.referencia_id).run();
+      await env.DB.prepare(`UPDATE tokens_verificacao SET usado_em = datetime('now') WHERE id = ?`).bind(registro.id).run();
+      await env.DB.prepare(
+        `UPDATE pacientes SET email_verificado = 1, email_verificado_em = datetime('now')
+         WHERE id = (SELECT paciente_id FROM agendamentos WHERE id = ?)`
+      ).bind(registro.referencia_id).run();
+
+      return Response.redirect(`${url.origin}/agendamento-confirmado.html?ok=1`, 302);
+    }
+
     /* ══════════════ API: Avaliações ══════════════ */
 
     const avalPostMatch = pathname.match(/^\/api\/psicologos\/(\d+)\/avaliacoes$/);
@@ -414,10 +645,19 @@ export default {
           return json({ ok: false, error: 'Dados obrigatórios ausentes ou nota inválida.' }, 400);
         }
 
+        // Vincula a um agendamento concluído (sessão passada, confirmada)
+        // desse mesmo e-mail com esse psicólogo, se existir — habilita o
+        // selo de "paciente verificado" sem exigir cadastro prévio.
+        const agendamento = await env.DB.prepare(
+          `SELECT a.id FROM agendamentos a JOIN pacientes p ON p.id = a.paciente_id
+           WHERE a.psicologo_id = ? AND p.email = ? AND a.status = 'confirmado' AND a.data_hora < datetime('now')
+           ORDER BY a.data_hora DESC LIMIT 1`
+        ).bind(psicologoId, email).first();
+
         const result = await env.DB.prepare(
-          `INSERT INTO avaliacoes (psicologo_id, avaliador_nome, avaliador_email, nota, comentario)
-           VALUES (?, ?, ?, ?, ?)`
-        ).bind(psicologoId, nome, email, nota, comentario || null).run();
+          `INSERT INTO avaliacoes (psicologo_id, avaliador_nome, avaliador_email, nota, comentario, agendamento_id)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        ).bind(psicologoId, nome, email, nota, comentario || null, agendamento?.id || null).run();
 
         const token = gerarToken();
         const expira = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
@@ -441,8 +681,9 @@ export default {
     if (avalGetMatch && request.method === 'GET') {
       await initDB(env.DB);
       const { results } = await env.DB.prepare(
-        `SELECT avaliador_nome, nota, comentario, criado_em FROM avaliacoes
-         WHERE psicologo_id = ? AND status = 'publicado' ORDER BY criado_em DESC`
+        `SELECT avaliador_nome, nota, comentario, criado_em,
+                (agendamento_id IS NOT NULL) as verificado
+         FROM avaliacoes WHERE psicologo_id = ? AND status = 'publicado' ORDER BY criado_em DESC`
       ).bind(avalGetMatch[1]).all();
       return json({ ok: true, avaliacoes: results });
     }
