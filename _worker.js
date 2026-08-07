@@ -78,6 +78,7 @@ async function initDB(db) {
       licenca_validade_ate TEXT,
       licenca_valor_mensal REAL,
       licenca_observacoes TEXT,
+      hora_notificacao_diaria TEXT DEFAULT '18:00',
       criado_em TEXT DEFAULT (datetime('now')),
       aprovado_em TEXT
     )`
@@ -199,6 +200,25 @@ async function initDB(db) {
       criado_em TEXT DEFAULT (datetime('now'))
     )`
   ).run();
+
+  // Eventos de tracking do perfil público (visualização de página, clique no
+  // WhatsApp) — base pro gráfico de "visibilidade" do psicólogo e pra badge
+  // de "muito procurado".
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS eventos_perfil (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      psicologo_id INTEGER NOT NULL,
+      tipo TEXT NOT NULL,
+      criado_em TEXT DEFAULT (datetime('now'))
+    )`
+  ).run();
+  await db.prepare('CREATE INDEX IF NOT EXISTS idx_eventos_perfil_psico_data ON eventos_perfil (psicologo_id, criado_em)').run();
+
+  // Configurações globais editáveis pelo admin (chave/valor) — hoje só o
+  // limite de cliques/dia pra badge "muito procurado", mas serve pra
+  // qualquer outro parâmetro futuro sem precisar migração de schema.
+  await db.prepare(`CREATE TABLE IF NOT EXISTS configuracoes (chave TEXT PRIMARY KEY, valor TEXT)`).run();
+  await db.prepare(`INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES ('limite_muito_procurado', '5')`).run();
 
   const { results: existentes } = await db.prepare('SELECT COUNT(*) as n FROM especialidades_catalogo').all();
   if (existentes[0].n === 0) {
@@ -388,6 +408,100 @@ async function enviarEmailRedefinirSenha(env, psicologo, linkRedefinir) {
       subject: 'Redefinir sua senha · O Seu Psico',
       html,
     }),
+  });
+}
+
+async function enviarEmailBasico(env, { destinatario, assunto, tituloBotao, linkBotao, paragrafos }) {
+  const corpo = paragrafos.map(p => `<p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 16px;">${p}</p>`).join('');
+  const botao = linkBotao ? `
+    <table cellpadding="0" cellspacing="0"><tr><td style="background:#F5C518;border-radius:40px;padding:14px 28px;">
+      <a href="${linkBotao}" style="font-size:15px;font-weight:700;color:#1A1A1A;text-decoration:none;">${tituloBotao} →</a>
+    </td></tr></table>` : '';
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 0;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+        <tr><td style="background:#1A1A1A;padding:28px;text-align:center;">
+          <div style="font-size:20px;font-weight:800;color:#fff;">O Seu <span style="color:#F5C518;">Psico</span></div>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          ${corpo}
+          ${botao}
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: 'O Seu Psico <naoresponder@oseupsico.com.br>', to: [destinatario], subject: assunto, html }),
+  });
+}
+
+async function enviarEmailNovoAgendamentoPsicologo(env, psicologo, paciente, dataHora) {
+  const dataFormatada = new Date(dataHora.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' });
+  await enviarEmailBasico(env, {
+    destinatario: psicologo.email,
+    assunto: 'Novo agendamento confirmado · O Seu Psico',
+    paragrafos: [
+      `Olá, ${psicologo.nome.split(' ')[0]}!`,
+      `Você tem um novo agendamento confirmado com <strong>${paciente.nome}</strong> pra <strong>${dataFormatada}</strong>.`,
+      paciente.telefone ? `Telefone: ${paciente.telefone}` : '',
+    ].filter(Boolean),
+    tituloBotao: 'Ver minha agenda',
+    linkBotao: `${env.APP_ORIGIN || 'https://oseupsico.com.br'}/psicologos/painel.html`,
+  });
+}
+
+async function enviarEmailCancelamentoParaPsicologo(env, psicologo, pacienteNome, dataHora) {
+  const dataFormatada = new Date(dataHora.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' });
+  await enviarEmailBasico(env, {
+    destinatario: psicologo.email,
+    assunto: 'Agendamento cancelado · O Seu Psico',
+    paragrafos: [
+      `Olá, ${psicologo.nome.split(' ')[0]}.`,
+      `O agendamento com <strong>${pacienteNome}</strong> pra <strong>${dataFormatada}</strong> foi cancelado pelo paciente.`,
+    ],
+    tituloBotao: 'Ver minha agenda',
+    linkBotao: `${env.APP_ORIGIN || 'https://oseupsico.com.br'}/psicologos/painel.html`,
+  });
+}
+
+async function enviarEmailCancelamentoParaPaciente(env, paciente, psicologoNome, dataHora) {
+  const dataFormatada = new Date(dataHora.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' });
+  await enviarEmailBasico(env, {
+    destinatario: paciente.email,
+    assunto: 'Seu agendamento foi cancelado · O Seu Psico',
+    paragrafos: [
+      `Olá, ${paciente.nome.split(' ')[0]}.`,
+      `Seu agendamento com <strong>${psicologoNome}</strong> pra <strong>${dataFormatada}</strong> foi cancelado.`,
+    ],
+    tituloBotao: 'Encontrar outro horário',
+    linkBotao: `${env.APP_ORIGIN || 'https://oseupsico.com.br'}/psicologos/`,
+  });
+}
+
+async function enviarEmailResumoDiario(env, psicologo, itens) {
+  const listaHtml = itens.map(i => {
+    const hora = new Date(i.data_hora.replace(' ', 'T')).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return `<div style="padding:10px 14px;background:#F7F5F0;border-radius:10px;margin-bottom:8px;font-size:14px;color:#333;">
+      <strong>${hora}</strong> — ${i.nome}${i.descricao ? `<div style="font-size:12px;color:#888;margin-top:2px;">${i.descricao}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  await enviarEmailBasico(env, {
+    destinatario: psicologo.email,
+    assunto: 'Sua agenda de amanhã · O Seu Psico',
+    paragrafos: [
+      `Olá, ${psicologo.nome.split(' ')[0]}! Aqui está sua agenda de amanhã:`,
+      listaHtml,
+    ],
+    tituloBotao: 'Ver minha agenda completa',
+    linkBotao: `${env.APP_ORIGIN || 'https://oseupsico.com.br'}/psicologos/painel.html`,
   });
 }
 
@@ -618,7 +732,7 @@ export default {
       // que o psicólogo informe um número que não bate com a formação.
       const body = await request.json();
       const campos = ['telefone', 'bio', 'graduacao_curso', 'graduacao_instituicao', 'graduacao_ano',
-        'pos_graduacoes', 'especialidades', 'abordagens', 'projetos_relevantes'];
+        'pos_graduacoes', 'especialidades', 'abordagens', 'projetos_relevantes', 'hora_notificacao_diaria'];
       const sets = [], binds = [];
       campos.forEach(c => {
         if (body[c] !== undefined) { sets.push(`${c} = ?`); binds.push(body[c]); }
@@ -696,10 +810,25 @@ export default {
 
         // Os objetos retornados pelo D1 não são mutáveis com segurança —
         // criamos objetos novos em vez de atribuir campo direto neles.
+        // Badge "muito procurado": cliques no WhatsApp nas últimas 24h >=
+        // limite configurável pelo admin (tabela configuracoes).
+        const config = await env.DB.prepare(`SELECT valor FROM configuracoes WHERE chave = 'limite_muito_procurado'`).first();
+        const limite = Number(config?.valor) || 5;
+        const { results: cliquesRecentes } = await env.DB.prepare(
+          `SELECT psicologo_id, COUNT(*) as total FROM eventos_perfil
+           WHERE psicologo_id IN (${placeholders}) AND tipo = 'whatsapp_click' AND criado_em >= datetime('now', '-1 day')
+           GROUP BY psicologo_id`
+        ).bind(...ids).all();
+        const cliquesPorPsicologo = Object.fromEntries(cliquesRecentes.map(c => [Number(c.psicologo_id), c.total]));
+
         psicologos = results.map(p => {
           const disponibilidades = todasDisponibilidades.filter(d => Number(d.psicologo_id) === Number(p.id));
           const ocupadosSet = new Set(todosOcupados.filter(o => Number(o.psicologo_id) === Number(p.id)).map(o => o.data_hora));
-          return { ...p, proxima_vaga: proximaVagaLivre(disponibilidades, ocupadosSet) };
+          return {
+            ...p,
+            proxima_vaga: proximaVagaLivre(disponibilidades, ocupadosSet),
+            muito_procurado: (cliquesPorPsicologo[Number(p.id)] || 0) >= limite,
+          };
         });
       }
 
@@ -723,6 +852,48 @@ export default {
       const media = avals.length ? avals.reduce((s, a) => s + a.nota, 0) / avals.length : null;
 
       return json({ ok: true, psicologo: p, avaliacao_media: media, total_avaliacoes: avals.length });
+    }
+
+    // Tracking leve de visualização de perfil / clique no WhatsApp — público,
+    // sem autenticação, chamado pelo próprio perfil.html. Base do gráfico de
+    // "Visibilidade" e da badge "muito procurado".
+    const eventoMatch = pathname.match(/^\/api\/psicologos\/(\d+)\/evento$/);
+    if (eventoMatch && request.method === 'POST') {
+      try {
+        await initDB(env.DB);
+        const { tipo } = await request.json();
+        if (!['visualizacao', 'whatsapp_click'].includes(tipo)) return json({ ok: false }, 400);
+        await env.DB.prepare('INSERT INTO eventos_perfil (psicologo_id, tipo) VALUES (?, ?)').bind(eventoMatch[1], tipo).run();
+        return json({ ok: true });
+      } catch {
+        return json({ ok: true }); // tracking nunca deve quebrar a experiência do usuário
+      }
+    }
+
+    if (pathname === '/api/psicologos/me/analytics' && request.method === 'GET') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { results } = await env.DB.prepare(
+        `SELECT date(criado_em) as dia, tipo, COUNT(*) as total
+         FROM eventos_perfil
+         WHERE psicologo_id = ? AND criado_em >= datetime('now', '-7 days')
+         GROUP BY dia, tipo ORDER BY dia`
+      ).bind(psicologoId).all();
+
+      // Monta os últimos 7 dias com zero preenchido pros dias sem evento —
+      // facilita desenhar o gráfico sem o front precisar tratar buracos.
+      const dias = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        dias.push(d.toISOString().slice(0, 10));
+      }
+      const porDia = dias.map(dia => {
+        const visualizacoes = results.find(r => r.dia === dia && r.tipo === 'visualizacao')?.total || 0;
+        const whatsapp = results.find(r => r.dia === dia && r.tipo === 'whatsapp_click')?.total || 0;
+        return { dia, visualizacoes, whatsapp_clicks: whatsapp };
+      });
+      return json({ ok: true, dias: porDia });
     }
 
     /* ══════════════ API: Agenda / Disponibilidades (psicólogo autenticado) ══════════════ */
@@ -773,6 +944,25 @@ export default {
          ORDER BY a.data_hora`
       ).bind(psicologoId).all();
       return json({ ok: true, agendamentos: results });
+    }
+
+    const psicologoCancelaMatch = pathname.match(/^\/api\/psicologos\/me\/agendamentos\/(\d+)$/);
+    if (psicologoCancelaMatch && request.method === 'DELETE') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+
+      const info = await env.DB.prepare(
+        `SELECT a.data_hora, ps.nome as psicologo_nome, p.nome as paciente_nome, p.email as paciente_email
+         FROM agendamentos a JOIN psicologos ps ON ps.id = a.psicologo_id JOIN pacientes p ON p.id = a.paciente_id
+         WHERE a.id = ? AND a.psicologo_id = ? AND a.status = 'confirmado'`
+      ).bind(psicologoCancelaMatch[1], psicologoId).first();
+      if (!info) return json({ ok: false, error: 'Agendamento não encontrado.' }, 404);
+
+      await env.DB.prepare(`UPDATE agendamentos SET status = 'cancelado' WHERE id = ?`).bind(psicologoCancelaMatch[1]).run();
+      await enviarEmailCancelamentoParaPaciente(env, { nome: info.paciente_nome, email: info.paciente_email }, info.psicologo_nome, info.data_hora).catch(() => {});
+
+      return json({ ok: true });
     }
 
     if (pathname === '/api/psicologos/me/compromissos' && request.method === 'GET') {
@@ -927,6 +1117,25 @@ export default {
       return json({ ok: true, agendamentos: results });
     }
 
+    const pacienteCancelaMatch = pathname.match(/^\/api\/pacientes\/me\/agendamentos\/(\d+)$/);
+    if (pacienteCancelaMatch && request.method === 'DELETE') {
+      const pacienteId = autenticadoPaciente(request, env);
+      if (!pacienteId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+
+      const info = await env.DB.prepare(
+        `SELECT a.data_hora, ps.nome as psicologo_nome, ps.email as psicologo_email, p.nome as paciente_nome
+         FROM agendamentos a JOIN psicologos ps ON ps.id = a.psicologo_id JOIN pacientes p ON p.id = a.paciente_id
+         WHERE a.id = ? AND a.paciente_id = ? AND a.status = 'confirmado'`
+      ).bind(pacienteCancelaMatch[1], pacienteId).first();
+      if (!info) return json({ ok: false, error: 'Agendamento não encontrado.' }, 404);
+
+      await env.DB.prepare(`UPDATE agendamentos SET status = 'cancelado' WHERE id = ?`).bind(pacienteCancelaMatch[1]).run();
+      await enviarEmailCancelamentoParaPsicologo(env, { nome: info.psicologo_nome, email: info.psicologo_email }, info.paciente_nome, info.data_hora).catch(() => {});
+
+      return json({ ok: true });
+    }
+
     // Cruza com o banco do projeto Testes (participantes) pelo e-mail —
     // são dois D1 diferentes, ligados aqui só pra essa consulta de leitura.
     if (pathname === '/api/pacientes/me/testes' && request.method === 'GET') {
@@ -1042,6 +1251,21 @@ export default {
          WHERE id = (SELECT paciente_id FROM agendamentos WHERE id = ?)`
       ).bind(registro.referencia_id).run();
 
+      // Avisa o psicólogo por e-mail que tem um agendamento novo confirmado.
+      const agendamentoInfo = await env.DB.prepare(
+        `SELECT a.data_hora, a.psicologo_id, p.nome as paciente_nome, p.telefone as paciente_telefone, ps.nome as psicologo_nome, ps.email as psicologo_email
+         FROM agendamentos a JOIN pacientes p ON p.id = a.paciente_id JOIN psicologos ps ON ps.id = a.psicologo_id
+         WHERE a.id = ?`
+      ).bind(registro.referencia_id).first();
+      if (agendamentoInfo) {
+        await enviarEmailNovoAgendamentoPsicologo(
+          env,
+          { nome: agendamentoInfo.psicologo_nome, email: agendamentoInfo.psicologo_email },
+          { nome: agendamentoInfo.paciente_nome, telefone: agendamentoInfo.paciente_telefone },
+          agendamentoInfo.data_hora
+        ).catch(() => {}); // não deixa a confirmação falhar por causa do e-mail
+      }
+
       return Response.redirect(`${url.origin}/agendamento-confirmado.html?ok=1`, 302);
     }
 
@@ -1141,6 +1365,24 @@ export default {
       return json({ ok: false }, 401);
     }
 
+    if (pathname === '/api/admin/configuracoes' && request.method === 'GET') {
+      if (!autenticadoAdmin(request, env)) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { results } = await env.DB.prepare('SELECT chave, valor FROM configuracoes').all();
+      return json({ ok: true, configuracoes: Object.fromEntries(results.map(c => [c.chave, c.valor])) });
+    }
+
+    if (pathname === '/api/admin/configuracoes' && request.method === 'PUT') {
+      if (!autenticadoAdmin(request, env)) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const body = await request.json();
+      for (const [chave, valor] of Object.entries(body)) {
+        await env.DB.prepare('INSERT INTO configuracoes (chave, valor) VALUES (?, ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor')
+          .bind(chave, String(valor)).run();
+      }
+      return json({ ok: true });
+    }
+
     if (pathname === '/api/admin/psicologos' && request.method === 'GET') {
       if (!autenticadoAdmin(request, env)) return json({ ok: false }, 401);
       await initDB(env.DB);
@@ -1206,5 +1448,40 @@ export default {
     }
 
     return env.ASSETS.fetch(request);
+  },
+
+  // Roda a cada hora cheia (config em wrangler.jsonc). Pra cada psicólogo
+  // cujo horário preferido bate com a hora local atual (Brasil, UTC-3, sem
+  // horário de verão desde 2019), monta a agenda de amanhã (agendamentos
+  // confirmados + compromissos manuais) e só envia e-mail se houver algo —
+  // silêncio total nos dias vazios, como pedido.
+  async scheduled(event, env, ctx) {
+    await initDB(env.DB);
+    const agoraUTC = new Date();
+    const horaLocal = (agoraUTC.getUTCHours() - 3 + 24) % 24;
+    const horaLocalStr = String(horaLocal).padStart(2, '0') + ':00';
+
+    const { results: psicologos } = await env.DB.prepare(
+      `SELECT id, nome, email FROM psicologos
+       WHERE status_aprovacao = 'aprovado' AND licenca_validade_ate >= date('now') AND hora_notificacao_diaria = ?`
+    ).bind(horaLocalStr).all();
+
+    for (const psicologo of psicologos) {
+      const { results: agendamentosAmanha } = await env.DB.prepare(
+        `SELECT a.data_hora, p.nome, NULL as descricao
+         FROM agendamentos a JOIN pacientes p ON p.id = a.paciente_id
+         WHERE a.psicologo_id = ? AND a.status = 'confirmado' AND date(a.data_hora) = date('now', '+1 day')`
+      ).bind(psicologo.id).all();
+
+      const { results: compromissosAmanha } = await env.DB.prepare(
+        `SELECT data_hora, paciente_nome as nome, descricao
+         FROM compromissos WHERE psicologo_id = ? AND date(data_hora) = date('now', '+1 day')`
+      ).bind(psicologo.id).all();
+
+      const itens = [...agendamentosAmanha, ...compromissosAmanha].sort((a, b) => a.data_hora.localeCompare(b.data_hora));
+      if (!itens.length) continue; // agenda vazia amanhã — não envia nada
+
+      await enviarEmailResumoDiario(env, psicologo, itens).catch(() => {});
+    }
   },
 };

@@ -56,6 +56,7 @@
       <div class="tab" data-tab="licencas" onclick="mudarTab('licencas')">Licenças</div>
       <div class="tab" data-tab="avaliacoes" onclick="mudarTab('avaliacoes')">Avaliações</div>
       <div class="tab" data-tab="especialidades" onclick="mudarTab('especialidades')">Especialidades</div>
+      <div class="tab" data-tab="configuracoes" onclick="mudarTab('configuracoes')">Configurações</div>
     </div>
 
     <div id="tab-cadastros">
@@ -90,6 +91,18 @@
         <thead><tr><th>Nome</th><th></th></tr></thead>
         <tbody id="tbody-especialidades"><tr><td colspan="2">Carregando...</td></tr></tbody>
       </table>
+    </div>
+
+    <div id="tab-configuracoes" class="hidden">
+      <div style="background:#fff;border-radius:12px;padding:24px;max-width:480px;">
+        <label style="display:block;font-weight:700;margin-bottom:6px;">Limite de cliques/dia no WhatsApp pra badge "🔥 Muito procurado"</label>
+        <p style="font-size:0.82rem;color:#888;margin-bottom:14px;">Psicólogos com esse número ou mais de cliques no botão de WhatsApp nas últimas 24h ganham a badge na listagem pública.</p>
+        <div style="display:flex;gap:10px;">
+          <input type="number" id="config-limite-procurado" min="1" style="width:100px;padding:10px;border-radius:8px;border:1.5px solid #ddd;" />
+          <button class="btn" onclick="salvarConfiguracoes()">Salvar</button>
+        </div>
+        <p id="config-msg" style="font-size:0.85rem;margin-top:12px;"></p>
+      </div>
     </div>
   </div>
 
@@ -128,8 +141,26 @@
 
     function mudarTab(nome) {
       document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === nome));
-      ['cadastros', 'licencas', 'avaliacoes', 'especialidades'].forEach(t => document.getElementById('tab-' + t).classList.toggle('hidden', t !== nome));
+      ['cadastros', 'licencas', 'avaliacoes', 'especialidades', 'configuracoes'].forEach(t => document.getElementById('tab-' + t).classList.toggle('hidden', t !== nome));
       if (nome === 'especialidades') carregarEspecialidades();
+      if (nome === 'configuracoes') carregarConfiguracoes();
+    }
+
+    async function carregarConfiguracoes() {
+      const res = await fetch('/api/admin/configuracoes', { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      document.getElementById('config-limite-procurado').value = data.configuracoes?.limite_muito_procurado || 5;
+    }
+
+    async function salvarConfiguracoes() {
+      const msg = document.getElementById('config-msg');
+      const limite = document.getElementById('config-limite-procurado').value;
+      const res = await fetch('/api/admin/configuracoes', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ limite_muito_procurado: limite }),
+      });
+      msg.style.color = res.ok ? '#065F46' : '#991B1B';
+      msg.textContent = res.ok ? 'Salvo!' : 'Erro ao salvar.';
     }
 
     async function carregarEspecialidades() {

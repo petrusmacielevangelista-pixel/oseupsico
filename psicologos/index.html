@@ -86,6 +86,7 @@
       padding: 4px 10px; border-radius: 20px;
     }
     .psi-badge--verificado { background: #E0F2FE; color: #0369A1; }
+    .psi-badge--procurado { background: #FFE4E0; color: #B4230C; }
     .psi-badge--experiencia { background: #FFF3C4; color: #7a6200; }
 
     .psi-card__instituicao { font-size: 0.85rem; color: #777; margin-bottom: 14px; min-height: 1.3em; }
@@ -187,6 +188,8 @@
       const anosExperiencia = calcularAnosExperiencia(p.graduacao_ano);
       const badgeExperiencia = anosExperiencia >= 5
         ? `<span class="psi-badge psi-badge--experiencia">🏅 +${anosExperiencia} anos</span>` : '';
+      const badgeProcurado = p.muito_procurado
+        ? `<span class="psi-badge psi-badge--procurado">🔥 Muito procurado</span>` : '';
       const notaHtml = p.avaliacao_media
         ? `<span class="estrela">⭐ ${Number(p.avaliacao_media).toFixed(1)}</span> <span class="contagem">(${p.total_avaliacoes} avaliaç${p.total_avaliacoes == 1 ? 'ão' : 'ões'})</span>`
         : `<span class="contagem">Ainda sem avaliações</span>`;
@@ -211,6 +214,7 @@
           <div class="psi-card__meta">
             <span class="psi-badge psi-badge--verificado">✓ Verificado</span>
             ${badgeExperiencia}
+            ${badgeProcurado}
           </div>
           <div class="psi-card__instituicao">${p.graduacao_instituicao || ''}</div>
           ${vagaHtml}

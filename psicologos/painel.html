@@ -61,6 +61,7 @@
             <button data-painel="agenda" onclick="mostrarSecaoPainel('agenda')">🗓️ Horários de atendimento</button>
             <button data-painel="compromissos" onclick="mostrarSecaoPainel('compromissos')">📌 Compromissos</button>
             <button data-painel="agendamentos" onclick="mostrarSecaoPainel('agendamentos')">✅ Agendamentos confirmados</button>
+            <button data-painel="visibilidade" onclick="mostrarSecaoPainel('visibilidade')">📊 Visibilidade</button>
           </nav>
 
           <div class="osp-painel-content">
@@ -93,6 +94,11 @@
                 <label>Experiências de trabalho e vivências relevantes</label>
                 <p style="font-size:0.78rem;color:#999;margin:-2px 0 6px;">Resuma o máximo possível.</p>
                 <textarea id="edit-projetos" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Horário preferido pra receber sua agenda do dia seguinte por e-mail</label>
+                <select id="edit-hora-notificacao" style="max-width:160px;"></select>
+                <p style="font-size:0.78rem;color:#999;margin-top:4px;">Só enviamos se houver algo marcado — dias vazios não geram e-mail. (Em breve também por WhatsApp.)</p>
               </div>
               <button class="btn btn--yellow" onclick="salvarPerfil()">Salvar alterações →</button>
               <p id="salvar-msg" style="font-size:0.85rem;margin-top:12px;"></p>
@@ -141,6 +147,16 @@
               <h2>Próximos agendamentos confirmados</h2>
               <p style="font-size:0.85rem;margin-bottom:16px;">Reservas feitas pelo próprio paciente pelo seu perfil público, já confirmadas por e-mail.</p>
               <div id="lista-agendamentos"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
+            </div>
+
+            <div class="osp-card hidden" id="secao-visibilidade" data-secao>
+              <h2>Visibilidade nos últimos 7 dias</h2>
+              <p style="font-size:0.85rem;margin-bottom:16px;">Quantas vezes seu perfil foi acessado e quantas pessoas clicaram pra falar no WhatsApp.</p>
+              <div style="display:flex;gap:20px;margin-bottom:20px;">
+                <div><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#D4A800;margin-right:6px;"></span><span style="font-size:0.85rem;">Visualizações</span></div>
+                <div><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#25D366;margin-right:6px;"></span><span style="font-size:0.85rem;">Cliques no WhatsApp</span></div>
+              </div>
+              <div id="grafico-visibilidade" style="overflow-x:auto;"></div>
             </div>
 
           </div>
@@ -243,9 +259,19 @@
       if (p.foto_url) { fotoImg.src = p.foto_url; fotoImg.style.display = 'block'; }
       else { fotoImg.style.display = 'none'; }
 
+      const selectHora = document.getElementById('edit-hora-notificacao');
+      if (!selectHora.options.length) {
+        for (let h = 0; h < 24; h++) {
+          const v = String(h).padStart(2, '0') + ':00';
+          selectHora.innerHTML += `<option value="${v}">${v}</option>`;
+        }
+      }
+      selectHora.value = p.hora_notificacao_diaria || '18:00';
+
       carregarDisponibilidades();
       carregarAgendamentos();
       carregarCompromissos();
+      carregarVisibilidade();
     }
 
     const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -335,11 +361,50 @@
       const el = document.getElementById('lista-agendamentos');
       if (!data.agendamentos?.length) { el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Nenhum agendamento confirmado ainda.</p>'; return; }
       el.innerHTML = data.agendamentos.map(a => `
-        <div style="padding:10px 14px;background:#F7F5F0;border-radius:10px;margin-bottom:8px;font-size:0.88rem;">
-          <strong>${new Date(a.data_hora.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</strong>
-          — ${a.paciente_nome} ${a.paciente_telefone ? '(' + a.paciente_telefone + ')' : ''}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#F7F5F0;border-radius:10px;margin-bottom:8px;font-size:0.88rem;">
+          <span><strong>${new Date(a.data_hora.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</strong>
+          — ${a.paciente_nome} ${a.paciente_telefone ? '(' + a.paciente_telefone + ')' : ''}</span>
+          <button style="border:none;background:none;color:#991B1B;font-weight:700;cursor:pointer;font-size:0.82rem;" onclick="cancelarAgendamento(${a.id})">Cancelar</button>
         </div>
       `).join('');
+    }
+
+    async function cancelarAgendamento(id) {
+      if (!confirm('Cancelar esse agendamento? O paciente será avisado por e-mail.')) return;
+      await fetch(`/api/psicologos/me/agendamentos/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+      carregarAgendamentos();
+    }
+
+    async function carregarVisibilidade() {
+      const el = document.getElementById('grafico-visibilidade');
+      const res = await fetch('/api/psicologos/me/analytics', { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      const dias = data.dias || [];
+      const maiorValor = Math.max(1, ...dias.flatMap(d => [d.visualizacoes, d.whatsapp_clicks]));
+
+      const largura = 60, altura = 140, gap = 16;
+      const larguraTotal = dias.length * (largura + gap);
+      const DIAS_ABREV_SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+
+      const barras = dias.map((d, i) => {
+        const x = i * (largura + gap);
+        const hViz = Math.round((d.visualizacoes / maiorValor) * altura);
+        const hWpp = Math.round((d.whatsapp_clicks / maiorValor) * altura);
+        const diaSemana = DIAS_ABREV_SEMANA[new Date(d.dia + 'T12:00:00').getDay()];
+        const diaMes = d.dia.slice(8, 10) + '/' + d.dia.slice(5, 7);
+        return `
+          <g transform="translate(${x},0)">
+            <rect x="4" y="${altura - hViz}" width="22" height="${hViz}" rx="4" fill="#D4A800" />
+            <text x="15" y="${altura - hViz - 6}" text-anchor="middle" font-size="11" fill="#7a6200" font-weight="700">${d.visualizacoes || ''}</text>
+            <rect x="30" y="${altura - hWpp}" width="22" height="${hWpp}" rx="4" fill="#25D366" />
+            <text x="41" y="${altura - hWpp - 6}" text-anchor="middle" font-size="11" fill="#158a45" font-weight="700">${d.whatsapp_clicks || ''}</text>
+            <text x="28" y="${altura + 18}" text-anchor="middle" font-size="11" fill="#888">${diaSemana}</text>
+            <text x="28" y="${altura + 32}" text-anchor="middle" font-size="10" fill="#bbb">${diaMes}</text>
+          </g>
+        `;
+      }).join('');
+
+      el.innerHTML = `<svg width="${larguraTotal}" height="${altura + 44}" viewBox="0 0 ${larguraTotal} ${altura + 44}">${barras}</svg>`;
     }
 
     async function carregarCompromissos() {
@@ -455,6 +520,7 @@
             telefone: document.getElementById('edit-telefone').value.trim(),
             graduacao_ano: Number(document.getElementById('edit-graduacao-ano').value) || null,
             projetos_relevantes: document.getElementById('edit-projetos').value.trim(),
+            hora_notificacao_diaria: document.getElementById('edit-hora-notificacao').value,
           }),
         });
         const data = await res.json();

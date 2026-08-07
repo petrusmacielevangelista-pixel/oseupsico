@@ -253,6 +253,15 @@
           const btnWhats = document.getElementById('whatsapp-flutuante');
           btnWhats.href = `https://wa.me/${telComDDI}?text=${mensagem}`;
           btnWhats.classList.remove('hidden');
+          btnWhats.addEventListener('click', () => registrarEvento('whatsapp_click'));
+        }
+
+        // Um clique de visualização por sessão por perfil — evita inflar o
+        // contador com recarregamentos/voltar-e-avançar da mesma pessoa.
+        const jaContado = sessionStorage.getItem('psico_visto_' + id);
+        if (!jaContado) {
+          registrarEvento('visualizacao');
+          sessionStorage.setItem('psico_visto_' + id, '1');
         }
 
         preencherDadosPacienteLogado();
@@ -260,6 +269,13 @@
         heroEl.innerHTML = '<p style="color:#888;">Erro ao carregar perfil.</p>';
       }
     }
+    function registrarEvento(tipo) {
+      fetch(`/api/psicologos/${id}/evento`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo }),
+      }).catch(() => {});
+    }
+
     carregar();
 
     // Se o paciente já estiver logado em /minha-conta, pré-preenche os

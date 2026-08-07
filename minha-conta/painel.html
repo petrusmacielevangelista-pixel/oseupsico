@@ -190,16 +190,25 @@
       const data = await res.json();
       if (!data.agendamentos?.length) { el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Você ainda não tem agendamentos confirmados. <a href="/psicologos/">Encontre um psicólogo →</a></p>'; return; }
       el.innerHTML = data.agendamentos.map(a => `
-        <a href="/psicologos/perfil.html?id=${a.psicologo_id}" style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#F7F5F0;border-radius:12px;margin-bottom:10px;text-decoration:none;color:#1A1A1A;">
-          <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;background:#eee;flex-shrink:0;">
-            ${a.psicologo_foto ? `<img src="${a.psicologo_foto}" style="width:100%;height:100%;object-fit:cover;" />` : ''}
-          </div>
-          <div>
-            <strong style="font-size:0.92rem;">${a.psicologo_nome}</strong>
-            <div style="font-size:0.82rem;color:#666;">${new Date(a.data_hora.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}</div>
-          </div>
-        </a>
+        <div style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#F7F5F0;border-radius:12px;margin-bottom:10px;color:#1A1A1A;">
+          <a href="/psicologos/perfil.html?id=${a.psicologo_id}" style="display:flex;align-items:center;gap:14px;flex:1;text-decoration:none;color:#1A1A1A;">
+            <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;background:#eee;flex-shrink:0;">
+              ${a.psicologo_foto ? `<img src="${a.psicologo_foto}" style="width:100%;height:100%;object-fit:cover;" />` : ''}
+            </div>
+            <div>
+              <strong style="font-size:0.92rem;">${a.psicologo_nome}</strong>
+              <div style="font-size:0.82rem;color:#666;">${new Date(a.data_hora.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}</div>
+            </div>
+          </a>
+          <button style="border:none;background:none;color:#991B1B;font-weight:700;cursor:pointer;font-size:0.82rem;flex-shrink:0;" onclick="cancelarMeuAgendamento(${a.id})">Cancelar</button>
+        </div>
       `).join('');
+    }
+
+    async function cancelarMeuAgendamento(id) {
+      if (!confirm('Cancelar esse agendamento? O psicólogo será avisado por e-mail.')) return;
+      await fetch(`/api/pacientes/me/agendamentos/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+      carregarMeusAgendamentos();
     }
 
     const TIPO_LABEL = { rastreio: 'Rastreio', desempenho: 'Desempenho', bateria: 'Bateria' };
