@@ -54,42 +54,52 @@
       <div id="painel-view" class="hidden">
         <div id="status-box" style="margin-bottom:24px;"></div>
 
-        <div class="osp-card">
-          <h2>Meu perfil</h2>
-          <div class="form-group"><label>Bio</label><textarea id="edit-bio" rows="4" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea></div>
-          <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="edit-telefone" /></div>
-          <div class="form-group"><label>Anos de experiência</label><input type="number" id="edit-anos" style="max-width:160px;" /></div>
-          <div class="form-group"><label>Projetos relevantes</label><textarea id="edit-projetos" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea></div>
-          <button class="btn btn--yellow" onclick="salvarPerfil()">Salvar alterações →</button>
-          <p id="salvar-msg" style="font-size:0.85rem;margin-top:12px;"></p>
-        </div>
+        <div class="osp-painel-layout">
+          <nav class="osp-painel-nav">
+            <button class="ativo" data-painel="perfil" onclick="mostrarSecaoPainel('perfil')">👤 Meu perfil</button>
+            <button data-painel="agenda" onclick="mostrarSecaoPainel('agenda')">🗓️ Minha agenda</button>
+            <button data-painel="agendamentos" onclick="mostrarSecaoPainel('agendamentos')">✅ Agendamentos confirmados</button>
+          </nav>
 
-        <div class="osp-card">
-          <h2>Minha agenda</h2>
-          <p style="font-size:0.85rem;margin-bottom:16px;">Defina os horários recorrentes em que você atende. Pacientes verão vagas dos próximos 14 dias.</p>
+          <div class="osp-painel-content">
 
-          <div class="form-row">
-            <div class="form-group">
-              <label>Dia da semana</label>
-              <select id="disp-dia">
-                <option value="1">Segunda</option><option value="2">Terça</option><option value="3">Quarta</option>
-                <option value="4">Quinta</option><option value="5">Sexta</option><option value="6">Sábado</option><option value="0">Domingo</option>
-              </select>
+            <div class="osp-card" id="secao-perfil" data-secao>
+              <h2>Meu perfil</h2>
+              <div class="form-group"><label>Bio</label><textarea id="edit-bio" rows="4" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea></div>
+              <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="edit-telefone" /></div>
+              <div class="form-group"><label>Anos de experiência</label><input type="number" id="edit-anos" style="max-width:160px;" /></div>
+              <div class="form-group"><label>Projetos relevantes</label><textarea id="edit-projetos" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea></div>
+              <button class="btn btn--yellow" onclick="salvarPerfil()">Salvar alterações →</button>
+              <p id="salvar-msg" style="font-size:0.85rem;margin-top:12px;"></p>
             </div>
-            <div class="form-group"><label>Duração da sessão (min)</label><input type="number" id="disp-duracao" value="50" /></div>
-          </div>
-          <div class="form-row">
-            <div class="form-group"><label>Das</label><input type="time" id="disp-inicio" value="09:00" /></div>
-            <div class="form-group"><label>Até</label><input type="time" id="disp-fim" value="12:00" /></div>
-          </div>
-          <button class="btn btn--outline" onclick="adicionarDisponibilidade()">+ Adicionar horário</button>
 
-          <div id="lista-disponibilidades" style="margin-top:20px;"></div>
-        </div>
+            <div class="osp-card hidden" id="secao-agenda" data-secao>
+              <h2>Minha agenda</h2>
+              <p style="font-size:0.85rem;margin-bottom:16px;">Clique em um horário livre na grade pra pré-preencher, ajuste e adicione. Pacientes verão vagas dos próximos 14 dias com base nesses horários recorrentes.</p>
 
-        <div class="osp-card">
-          <h2>Próximos agendamentos confirmados</h2>
-          <div id="lista-agendamentos"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
+              <div class="osp-agenda-toolbar">
+                <div class="form-group">
+                  <label>Dia</label>
+                  <select id="disp-dia">
+                    <option value="1">Segunda</option><option value="2">Terça</option><option value="3">Quarta</option>
+                    <option value="4">Quinta</option><option value="5">Sexta</option><option value="6">Sábado</option><option value="0">Domingo</option>
+                  </select>
+                </div>
+                <div class="form-group"><label>Das</label><input type="time" id="disp-inicio" value="09:00" /></div>
+                <div class="form-group"><label>Até</label><input type="time" id="disp-fim" value="12:00" /></div>
+                <div class="form-group"><label>Sessão (min)</label><input type="number" id="disp-duracao" value="50" style="max-width:90px;" /></div>
+                <button class="btn btn--yellow" onclick="adicionarDisponibilidade()" style="height:44px;">+ Adicionar</button>
+              </div>
+
+              <div class="osp-calendar" id="calendario" style="overflow-x:auto;"></div>
+            </div>
+
+            <div class="osp-card hidden" id="secao-agendamentos" data-secao>
+              <h2>Próximos agendamentos confirmados</h2>
+              <div id="lista-agendamentos"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
+            </div>
+
+          </div>
         </div>
       </div>
 
@@ -119,6 +129,11 @@
     function sair() {
       sessionStorage.removeItem('psico_token_psicologo');
       location.reload();
+    }
+
+    function mostrarSecaoPainel(nome) {
+      document.querySelectorAll('[data-secao]').forEach(el => el.classList.toggle('hidden', el.id !== 'secao-' + nome));
+      document.querySelectorAll('.osp-painel-nav button').forEach(b => b.classList.toggle('ativo', b.dataset.painel === nome));
     }
 
     function mostrarEsqueciSenha() {
@@ -151,7 +166,7 @@
       document.getElementById('esqueci-view').classList.add('hidden');
       document.getElementById('painel-view').classList.remove('hidden');
       document.getElementById('link-sair').classList.remove('hidden');
-      document.getElementById('painel-container').style.maxWidth = '640px';
+      document.getElementById('painel-container').style.maxWidth = '980px';
       document.getElementById('hero-titulo').textContent = 'Meu painel';
       document.getElementById('hero-subtitulo').textContent = 'Gerencie seu perfil, sua agenda e seus agendamentos.';
 
@@ -186,18 +201,66 @@
     }
 
     const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const DIAS_ABREV = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const CAL_HORA_INICIO = 7;   // grade cobre 07:00–21:00
+    const CAL_HORA_FIM = 21;
+    const CAL_PX_POR_HORA = 40;
+    const CAL_ALTURA = (CAL_HORA_FIM - CAL_HORA_INICIO) * CAL_PX_POR_HORA;
+
+    function minutosDoDia(hhmm) {
+      const [h, m] = hhmm.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    function montarCalendarioVazio() {
+      const cal = document.getElementById('calendario');
+      let html = `<div class="osp-calendar__corner"></div>`;
+      for (let dia = 0; dia < 7; dia++) {
+        html += `<div class="osp-calendar__day-header" style="grid-column:${dia + 2};">${DIAS_ABREV[dia]}</div>`;
+      }
+      html += `<div class="osp-calendar__hours-col" style="height:${CAL_ALTURA}px;">`;
+      for (let h = CAL_HORA_INICIO; h <= CAL_HORA_FIM; h++) {
+        html += `<div class="osp-calendar__hour-label" style="top:${(h - CAL_HORA_INICIO) * CAL_PX_POR_HORA}px;">${String(h).padStart(2, '0')}:00</div>`;
+      }
+      html += `</div>`;
+      for (let dia = 0; dia < 7; dia++) {
+        html += `<div class="osp-calendar__day-body" id="cal-dia-${dia}" style="grid-column:${dia + 2};height:${CAL_ALTURA}px;" onclick="cliqueNaGrade(event, ${dia})"></div>`;
+      }
+      cal.innerHTML = html;
+    }
+
+    function cliqueNaGrade(ev, dia) {
+      if (ev.target.closest('.osp-calendar__block')) return; // clique num bloco existente não pré-preenche
+      const rect = ev.currentTarget.getBoundingClientRect();
+      const offsetY = ev.clientY - rect.top;
+      let horaDecimal = CAL_HORA_INICIO + offsetY / CAL_PX_POR_HORA;
+      horaDecimal = Math.round(horaDecimal * 2) / 2; // arredonda pra meia hora
+      const h = Math.floor(horaDecimal);
+      const m = horaDecimal % 1 === 0 ? '00' : '30';
+      document.getElementById('disp-dia').value = dia;
+      document.getElementById('disp-inicio').value = `${String(h).padStart(2, '0')}:${m}`;
+      document.getElementById('disp-inicio').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 
     async function carregarDisponibilidades() {
+      montarCalendarioVazio();
       const res = await fetch('/api/psicologos/me/disponibilidades', { headers: { Authorization: 'Bearer ' + token } });
       const data = await res.json();
-      const el = document.getElementById('lista-disponibilidades');
-      if (!data.disponibilidades?.length) { el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Nenhum horário cadastrado ainda.</p>'; return; }
-      el.innerHTML = data.disponibilidades.map(d => `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#F7F5F0;border-radius:10px;margin-bottom:8px;font-size:0.88rem;">
-          <span>${DIAS[d.dia_semana]}, ${d.hora_inicio}–${d.hora_fim} (sessões de ${d.duracao_minutos}min)</span>
-          <button style="border:none;background:none;color:#991B1B;cursor:pointer;" onclick="removerDisponibilidade(${d.id})">Remover</button>
-        </div>
-      `).join('');
+      (data.disponibilidades || []).forEach(d => {
+        const col = document.getElementById('cal-dia-' + d.dia_semana);
+        if (!col) return;
+        const inicioMin = minutosDoDia(d.hora_inicio) - CAL_HORA_INICIO * 60;
+        const fimMin = minutosDoDia(d.hora_fim) - CAL_HORA_INICIO * 60;
+        const top = Math.max(0, inicioMin / 60 * CAL_PX_POR_HORA);
+        const altura = Math.max(18, (fimMin - inicioMin) / 60 * CAL_PX_POR_HORA);
+        const bloco = document.createElement('div');
+        bloco.className = 'osp-calendar__block';
+        bloco.style.top = top + 'px';
+        bloco.style.height = altura + 'px';
+        bloco.innerHTML = `${d.hora_inicio}–${d.hora_fim}<br>${d.duracao_minutos}min<span class="osp-calendar__remove" title="Remover">×</span>`;
+        bloco.querySelector('.osp-calendar__remove').onclick = (e) => { e.stopPropagation(); removerDisponibilidade(d.id); };
+        col.appendChild(bloco);
+      });
     }
 
     async function adicionarDisponibilidade() {

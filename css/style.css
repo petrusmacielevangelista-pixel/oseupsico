@@ -1208,6 +1208,58 @@ ul { list-style: none; }
 .osp-alert--aviso { background: #FEF9C3; color: #854D0E; border: 1px solid #FDE68A; }
 .osp-alert--info { background: #E0F2FE; color: #0369A1; border: 1px solid #BAE6FD; }
 
+/* Layout de painel com navegação lateral (sidebar no desktop, tabs horizontais no mobile) */
+.osp-painel-layout { display: flex; gap: 24px; align-items: flex-start; }
+.osp-painel-nav { display: flex; flex-direction: column; gap: 4px; width: 210px; flex-shrink: 0; position: sticky; top: 96px; }
+.osp-painel-nav button {
+  display: flex; align-items: center; gap: 10px; text-align: left; background: none; border: none;
+  padding: 12px 16px; border-radius: 12px; font-size: 0.92rem; font-weight: 700; color: #555;
+  cursor: pointer; transition: background .15s, color .15s; font-family: inherit;
+}
+.osp-painel-nav button:hover { background: #FFF8E6; color: #1A1A1A; }
+.osp-painel-nav button.ativo { background: #1A1A1A; color: #fff; }
+.osp-painel-content { flex: 1; min-width: 0; }
+@media (max-width: 820px) {
+  .osp-painel-layout { flex-direction: column; }
+  .osp-painel-nav {
+    flex-direction: row; width: 100%; overflow-x: auto; position: static; gap: 8px; padding-bottom: 4px;
+  }
+  .osp-painel-nav button { white-space: nowrap; flex-shrink: 0; }
+}
+
+/* Agenda semanal estilo calendário (Outlook-like) pra gerenciar disponibilidades recorrentes */
+.osp-agenda-toolbar {
+  display: flex; gap: 12px; flex-wrap: end; align-items: flex-end; margin-bottom: 20px;
+  background: #FAFAF7; border: 1px solid #F0EDE4; border-radius: 14px; padding: 16px;
+}
+.osp-agenda-toolbar .form-group { margin-bottom: 0; }
+.osp-calendar {
+  display: grid; grid-template-columns: 52px repeat(7, 1fr);
+  border: 1px solid #F0EDE4; border-radius: 14px; overflow: hidden; background: #fff;
+}
+.osp-calendar__corner { grid-column: 1; grid-row: 1; background: #FAFAF7; border-bottom: 1px solid #F0EDE4; }
+.osp-calendar__day-header {
+  grid-row: 1; background: #FAFAF7; border-bottom: 1px solid #F0EDE4; border-left: 1px solid #F0EDE4;
+  text-align: center; padding: 8px 2px; font-size: 0.72rem; font-weight: 700; color: #1A1A1A;
+}
+.osp-calendar__hours-col { grid-column: 1; grid-row: 2; position: relative; }
+.osp-calendar__hour-label {
+  position: absolute; right: 6px; font-size: 0.64rem; color: #999; transform: translateY(-50%); white-space: nowrap;
+}
+.osp-calendar__day-body {
+  grid-row: 2; border-left: 1px solid #F0EDE4; position: relative; cursor: pointer;
+  background-image: repeating-linear-gradient(to bottom, transparent, transparent 39px, #F5F3EC 39px, #F5F3EC 40px);
+}
+.osp-calendar__day-body:hover { background-color: #FFFDF5; }
+.osp-calendar__block {
+  position: absolute; left: 3px; right: 3px; background: #FFF3C4; border: 1px solid #F5C518; border-radius: 6px;
+  padding: 3px 6px; font-size: 0.66rem; line-height: 1.25; color: #7a6200; font-weight: 700; overflow: hidden;
+}
+.osp-calendar__block:hover { background: #FDE9A0; }
+.osp-calendar__block .osp-calendar__remove {
+  position: absolute; top: 1px; right: 3px; font-size: 0.72rem; color: #991B1B; cursor: pointer; font-weight: 800;
+}
+
 /* ── Dark mode ──
    Hero, depoimentos, CTA final e rodapé já são escuros por padrão.
    Este bloco escurece apenas as seções claras (fundo branco/off-white). */
