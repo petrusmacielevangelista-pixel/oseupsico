@@ -13,6 +13,11 @@
       "binding": "DB",
       "database_name": "oseupsico-psicologos-db",
       "database_id": "a598c4c9-7ab6-4759-aecb-260d9b30ffda"
+    },
+    {
+      "binding": "TESTES_DB",
+      "database_name": "oseupsico-testes-db",
+      "database_id": "13e0e96c-87b0-4af8-8bbd-e79e98f589d1"
     }
   ],
   "r2_buckets": [

@@ -142,6 +142,7 @@ async function initDB(db) {
       nome TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       telefone TEXT,
+      senha_hash TEXT,
       email_verificado INTEGER NOT NULL DEFAULT 0,
       email_verificado_em TEXT,
       criado_em TEXT DEFAULT (datetime('now'))
@@ -269,6 +270,19 @@ function autenticadoPsicologo(request, env) {
   try { decodificado = atob(token); } catch {}
   const [id, , pepper] = decodificado.split(':');
   if (!id || pepper !== (env.SENHA_PEPPER || '')) return null;
+  return Number(id);
+}
+
+// Token do paciente: base64("paciente:pacienteId:timestamp:senha_pepper") — o
+// prefixo "paciente" evita que um token de paciente seja aceito como se fosse
+// de psicólogo (ou vice-versa) só porque o id numérico coincide.
+function autenticadoPaciente(request, env) {
+  const auth = request.headers.get('Authorization') || '';
+  const token = auth.replace('Bearer ', '');
+  let decodificado = '';
+  try { decodificado = atob(token); } catch {}
+  const [prefixo, id, , pepper] = decodificado.split(':');
+  if (prefixo !== 'paciente' || !id || pepper !== (env.SENHA_PEPPER || '')) return null;
   return Number(id);
 }
 
@@ -803,6 +817,132 @@ export default {
       await env.DB.prepare('DELETE FROM compromissos WHERE id = ? AND psicologo_id = ?')
         .bind(compromissoMatch[1], psicologoId).run();
       return json({ ok: true });
+    }
+
+    /* ══════════════ API: Conta do paciente ══════════════
+       O paciente já podia existir sem senha (criado automaticamente ao
+       agendar ou avaliar sem conta). O cadastro aqui "reivindica" essa linha
+       existente (mesmo e-mail) definindo uma senha, em vez de duplicar. */
+
+    if (pathname === '/api/pacientes/cadastro' && request.method === 'POST') {
+      try {
+        await initDB(env.DB);
+        const { nome, email, telefone, senha } = await request.json();
+        if (!nome || !email || !senha) return json({ ok: false, error: 'Nome, e-mail e senha são obrigatórios.' }, 400);
+        if (senha.length < 6) return json({ ok: false, error: 'Senha precisa ter ao menos 6 caracteres.' }, 400);
+
+        const existente = await env.DB.prepare('SELECT id, senha_hash FROM pacientes WHERE email = ?').bind(email).first();
+        if (existente?.senha_hash) return json({ ok: false, error: 'Esse e-mail já tem uma conta — faça login.' }, 400);
+
+        const senhaHash = await hashSenha(senha, env);
+        if (existente) {
+          await env.DB.prepare('UPDATE pacientes SET nome = ?, telefone = COALESCE(?, telefone), senha_hash = ? WHERE id = ?')
+            .bind(nome, telefone || null, senhaHash, existente.id).run();
+          return json({ ok: true, id: existente.id });
+        }
+        const result = await env.DB.prepare('INSERT INTO pacientes (nome, email, telefone, senha_hash) VALUES (?, ?, ?, ?)')
+          .bind(nome, email, telefone || null, senhaHash).run();
+        return json({ ok: true, id: result.meta.last_row_id });
+      } catch (e) {
+        return json({ ok: false, error: e.message }, 500);
+      }
+    }
+
+    if (pathname === '/api/pacientes/login' && request.method === 'POST') {
+      try {
+        await initDB(env.DB);
+        const { email, senha } = await request.json();
+        const senhaHash = await hashSenha(senha, env);
+        const paciente = await env.DB.prepare('SELECT id, nome FROM pacientes WHERE email = ? AND senha_hash = ?')
+          .bind(email, senhaHash).first();
+        if (!paciente) return json({ ok: false, error: 'E-mail ou senha incorretos.' }, 401);
+        const token = btoa(`paciente:${paciente.id}:${Date.now()}:${env.SENHA_PEPPER || ''}`);
+        return json({ ok: true, token, nome: paciente.nome });
+      } catch (e) {
+        return json({ ok: false, error: e.message }, 500);
+      }
+    }
+
+    if (pathname === '/api/pacientes/esqueci-senha' && request.method === 'POST') {
+      try {
+        await initDB(env.DB);
+        const { email } = await request.json();
+        const paciente = await env.DB.prepare('SELECT id, nome, email FROM pacientes WHERE email = ? AND senha_hash IS NOT NULL').bind(email).first();
+        if (paciente) {
+          const token = gerarToken();
+          const expira = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+          await env.DB.prepare(
+            `INSERT INTO tokens_verificacao (tipo, referencia_id, token, expira_em) VALUES ('reset_senha_paciente', ?, ?, ?)`
+          ).bind(paciente.id, token, expira).run();
+          const link = `${url.origin}/minha-conta/redefinir-senha.html?token=${token}`;
+          await enviarEmailRedefinirSenha(env, paciente, link);
+        }
+        return json({ ok: true });
+      } catch (e) {
+        return json({ ok: false, error: e.message }, 500);
+      }
+    }
+
+    if (pathname === '/api/pacientes/redefinir-senha' && request.method === 'POST') {
+      try {
+        await initDB(env.DB);
+        const { token, senha } = await request.json();
+        if (!token || !senha || senha.length < 6) return json({ ok: false, error: 'Senha precisa ter ao menos 6 caracteres.' }, 400);
+        const registro = await env.DB.prepare(
+          `SELECT * FROM tokens_verificacao WHERE token = ? AND tipo = 'reset_senha_paciente'`
+        ).bind(token).first();
+        if (!registro) return json({ ok: false, error: 'Link inválido.' }, 400);
+        if (registro.usado_em) return json({ ok: false, error: 'Esse link já foi usado.' }, 400);
+        if (new Date(registro.expira_em) < new Date()) return json({ ok: false, error: 'Esse link expirou. Solicite outro.' }, 400);
+
+        const senhaHash = await hashSenha(senha, env);
+        await env.DB.prepare('UPDATE pacientes SET senha_hash = ? WHERE id = ?').bind(senhaHash, registro.referencia_id).run();
+        await env.DB.prepare(`UPDATE tokens_verificacao SET usado_em = datetime('now') WHERE id = ?`).bind(registro.id).run();
+        return json({ ok: true });
+      } catch (e) {
+        return json({ ok: false, error: e.message }, 500);
+      }
+    }
+
+    if (pathname === '/api/pacientes/me' && request.method === 'GET') {
+      const pacienteId = autenticadoPaciente(request, env);
+      if (!pacienteId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const p = await env.DB.prepare('SELECT id, nome, email, telefone FROM pacientes WHERE id = ?').bind(pacienteId).first();
+      if (!p) return json({ ok: false }, 404);
+      return json({ ok: true, paciente: p });
+    }
+
+    if (pathname === '/api/pacientes/me/agendamentos' && request.method === 'GET') {
+      const pacienteId = autenticadoPaciente(request, env);
+      if (!pacienteId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { results } = await env.DB.prepare(
+        `SELECT a.id, a.data_hora, a.status, ps.id as psicologo_id, ps.nome as psicologo_nome, ps.foto_url as psicologo_foto
+         FROM agendamentos a
+         JOIN psicologos ps ON ps.id = a.psicologo_id
+         WHERE a.paciente_id = (SELECT id FROM pacientes WHERE id = ?) AND a.status = 'confirmado'
+         ORDER BY a.data_hora DESC`
+      ).bind(pacienteId).all();
+      return json({ ok: true, agendamentos: results });
+    }
+
+    // Cruza com o banco do projeto Testes (participantes) pelo e-mail —
+    // são dois D1 diferentes, ligados aqui só pra essa consulta de leitura.
+    if (pathname === '/api/pacientes/me/testes' && request.method === 'GET') {
+      const pacienteId = autenticadoPaciente(request, env);
+      if (!pacienteId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      try {
+        const paciente = await env.DB.prepare('SELECT email FROM pacientes WHERE id = ?').bind(pacienteId).first();
+        if (!paciente || !env.TESTES_DB) return json({ ok: true, registros: [] });
+        const { results } = await env.TESTES_DB.prepare(
+          `SELECT tipo, identificador, faixa_geral, resultados, criado_em FROM participantes WHERE email = ? ORDER BY criado_em DESC`
+        ).bind(paciente.email).all();
+        return json({ ok: true, registros: results });
+      } catch (e) {
+        return json({ ok: true, registros: [], aviso: 'Não foi possível consultar os testes agora.' });
+      }
     }
 
     /* ══════════════ API: Horários disponíveis + agendamento (público) ══════════════ */

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minha conta · O Seu Psico</title>
+  <link rel="icon" href="/assets/logo.png" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar navbar--interna">
+    <div class="container">
+      <div class="navbar__inner">
+        <a href="/" class="navbar__logo">
+          <img src="/assets/logo.png" alt="O Seu Psico" class="navbar__logo-img" />
+          <span class="navbar__logo-text">O Seu Psico</span>
+        </a>
+        <a href="#" id="link-sair" class="navbar__back hidden" onclick="sair()">Sair →</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="osp-hero">
+    <div class="container">
+      <div class="osp-hero__eyebrow">👤 Minha conta</div>
+      <h1 id="hero-titulo">Minha conta</h1>
+      <p id="hero-subtitulo">Veja seus agendamentos com psicólogos e os testes que você já fez.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container" id="painel-container" style="max-width:480px;">
+
+      <div id="login-view" class="osp-card">
+        <h1 style="font-family:var(--font-display);font-size:1.4rem;color:#1A1A1A;margin-bottom:20px;">Entrar</h1>
+        <div class="form-group"><label>E-mail</label><input type="email" id="login-email" /></div>
+        <div class="form-group"><label>Senha</label><input type="password" id="login-senha" /></div>
+        <button class="btn btn--yellow" onclick="fazerLogin()">Entrar →</button>
+        <p id="login-erro" style="color:#991B1B;font-size:0.85rem;margin-top:12px;"></p>
+        <p style="margin-top:16px;font-size:0.88rem;"><a href="#" onclick="mostrarView('esqueci');return false;">Esqueceu sua senha?</a></p>
+        <p style="margin-top:8px;font-size:0.88rem;color:#666;">Ainda não tem conta? <a href="#" onclick="mostrarView('cadastro');return false;">Criar conta</a>.</p>
+      </div>
+
+      <div id="cadastro-view" class="hidden osp-card">
+        <h1 style="font-family:var(--font-display);font-size:1.4rem;color:#1A1A1A;margin-bottom:10px;">Criar conta</h1>
+        <p style="font-size:0.9rem;color:#666;margin-bottom:16px;">Se você já agendou ou avaliou um psicólogo com esse e-mail, sua conta é automaticamente ligada a esses registros.</p>
+        <div class="form-group"><label>Nome completo</label><input type="text" id="cad-nome" /></div>
+        <div class="form-group"><label>E-mail</label><input type="email" id="cad-email" /></div>
+        <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="cad-telefone" /></div>
+        <div class="form-group"><label>Senha</label><input type="password" id="cad-senha" placeholder="Mínimo 6 caracteres" /></div>
+        <button class="btn btn--yellow" onclick="fazerCadastro()">Criar conta →</button>
+        <p id="cadastro-erro" style="color:#991B1B;font-size:0.85rem;margin-top:12px;"></p>
+        <p style="margin-top:16px;font-size:0.88rem;"><a href="#" onclick="mostrarView('login');return false;">← Já tenho conta</a></p>
+      </div>
+
+      <div id="esqueci-view" class="hidden osp-card">
+        <h1 style="font-family:var(--font-display);font-size:1.4rem;color:#1A1A1A;margin-bottom:10px;">Esqueceu sua senha?</h1>
+        <p style="font-size:0.9rem;color:#666;margin-bottom:20px;">Informe seu e-mail de cadastro. Se encontrarmos uma conta, enviamos um link pra você criar uma nova senha.</p>
+        <div class="form-group"><label>E-mail</label><input type="email" id="esqueci-email" /></div>
+        <button class="btn btn--yellow" onclick="enviarEsqueciSenha()">Enviar link →</button>
+        <p id="esqueci-msg" style="font-size:0.85rem;margin-top:12px;"></p>
+        <p style="margin-top:20px;font-size:0.88rem;"><a href="#" onclick="mostrarView('login');return false;">← Voltar pro login</a></p>
+      </div>
+
+      <div id="painel-view" class="hidden">
+        <div class="osp-painel-layout">
+          <nav class="osp-painel-nav">
+            <button class="ativo" data-painel="agendamentos" onclick="mostrarSecaoPainel('agendamentos')">📅 Meus agendamentos</button>
+            <button data-painel="testes" onclick="mostrarSecaoPainel('testes')">🧠 Meus testes</button>
+          </nav>
+
+          <div class="osp-painel-content">
+            <div class="osp-card" id="secao-agendamentos" data-secao>
+              <h2>Meus agendamentos</h2>
+              <div id="lista-meus-agendamentos"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
+            </div>
+
+            <div class="osp-card hidden" id="secao-testes" data-secao>
+              <h2>Meus testes</h2>
+              <p style="font-size:0.85rem;margin-bottom:16px;">Resultados de testes psicológicos feitos em <a href="/testes/" target="_blank">oseupsico.com.br/testes</a> com esse mesmo e-mail.</p>
+              <div id="lista-meus-testes"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <script>
+    let token = sessionStorage.getItem('psico_token_paciente');
+    if (token) mostrarPainel();
+
+    function mostrarView(nome) {
+      ['login', 'cadastro', 'esqueci'].forEach(v => document.getElementById(v + '-view').classList.toggle('hidden', v !== nome));
+    }
+
+    async function fazerLogin() {
+      const email = document.getElementById('login-email').value.trim();
+      const senha = document.getElementById('login-senha').value;
+      const erroEl = document.getElementById('login-erro');
+      erroEl.textContent = '';
+      try {
+        const res = await fetch('/api/pacientes/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, senha }),
+        });
+        const data = await res.json();
+        if (!data.ok) { erroEl.textContent = data.error || 'Erro ao entrar.'; return; }
+        token = data.token;
+        sessionStorage.setItem('psico_token_paciente', token);
+        mostrarPainel();
+      } catch { erroEl.textContent = 'Erro de conexão.'; }
+    }
+
+    async function fazerCadastro() {
+      const erroEl = document.getElementById('cadastro-erro');
+      erroEl.textContent = '';
+      const nome = document.getElementById('cad-nome').value.trim();
+      const email = document.getElementById('cad-email').value.trim();
+      const telefone = document.getElementById('cad-telefone').value.trim();
+      const senha = document.getElementById('cad-senha').value;
+      if (!nome || !email || !senha) { erroEl.textContent = 'Preencha nome, e-mail e senha.'; return; }
+      try {
+        const res = await fetch('/api/pacientes/cadastro', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nome, email, telefone, senha }),
+        });
+        const data = await res.json();
+        if (!data.ok) { erroEl.textContent = data.error || 'Erro ao criar conta.'; return; }
+        const loginRes = await fetch('/api/pacientes/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, senha }),
+        });
+        const loginData = await loginRes.json();
+        if (loginData.ok) {
+          token = loginData.token;
+          sessionStorage.setItem('psico_token_paciente', token);
+          mostrarPainel();
+        } else {
+          mostrarView('login');
+        }
+      } catch { erroEl.textContent = 'Erro de conexão.'; }
+    }
+
+    async function enviarEsqueciSenha() {
+      const email = document.getElementById('esqueci-email').value.trim();
+      const msg = document.getElementById('esqueci-msg');
+      if (!email) { msg.style.color = '#991B1B'; msg.textContent = 'Informe um e-mail.'; return; }
+      try {
+        await fetch('/api/pacientes/esqueci-senha', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        msg.style.color = '#065F46';
+        msg.textContent = 'Se esse e-mail tiver conta, você vai receber um link em instantes. Confira também o spam.';
+      } catch { msg.style.color = '#991B1B'; msg.textContent = 'Erro de conexão.'; }
+    }
+
+    function sair() {
+      sessionStorage.removeItem('psico_token_paciente');
+      location.reload();
+    }
+
+    function mostrarSecaoPainel(nome) {
+      document.querySelectorAll('[data-secao]').forEach(el => el.classList.toggle('hidden', el.id !== 'secao-' + nome));
+      document.querySelectorAll('.osp-painel-nav button').forEach(b => b.classList.toggle('ativo', b.dataset.painel === nome));
+    }
+
+    async function mostrarPainel() {
+      ['login', 'cadastro', 'esqueci'].forEach(v => document.getElementById(v + '-view').classList.add('hidden'));
+      document.getElementById('painel-view').classList.remove('hidden');
+      document.getElementById('link-sair').classList.remove('hidden');
+      document.getElementById('painel-container').style.maxWidth = '760px';
+
+      const res = await fetch('/api/pacientes/me', { headers: { Authorization: 'Bearer ' + token } });
+      if (res.status === 401) { sair(); return; }
+      const data = await res.json();
+      document.getElementById('hero-titulo').textContent = `Olá, ${data.paciente.nome.split(' ')[0]}!`;
+      document.getElementById('hero-subtitulo').textContent = 'Seus agendamentos e testes, num só lugar.';
+
+      carregarMeusAgendamentos();
+      carregarMeusTestes();
+    }
+
+    async function carregarMeusAgendamentos() {
+      const el = document.getElementById('lista-meus-agendamentos');
+      const res = await fetch('/api/pacientes/me/agendamentos', { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      if (!data.agendamentos?.length) { el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Você ainda não tem agendamentos confirmados. <a href="/psicologos/">Encontre um psicólogo →</a></p>'; return; }
+      el.innerHTML = data.agendamentos.map(a => `
+        <a href="/psicologos/perfil.html?id=${a.psicologo_id}" style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#F7F5F0;border-radius:12px;margin-bottom:10px;text-decoration:none;color:#1A1A1A;">
+          <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;background:#eee;flex-shrink:0;">
+            ${a.psicologo_foto ? `<img src="${a.psicologo_foto}" style="width:100%;height:100%;object-fit:cover;" />` : ''}
+          </div>
+          <div>
+            <strong style="font-size:0.92rem;">${a.psicologo_nome}</strong>
+            <div style="font-size:0.82rem;color:#666;">${new Date(a.data_hora.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}</div>
+          </div>
+        </a>
+      `).join('');
+    }
+
+    const TIPO_LABEL = { rastreio: 'Rastreio', desempenho: 'Desempenho', bateria: 'Bateria' };
+    const FAIXA_LABEL = { minimal: 'Mínima', mild: 'Leve', moderate: 'Moderada', severe: 'Grave', good: 'Boa', poor: 'Baixa' };
+
+    async function carregarMeusTestes() {
+      const el = document.getElementById('lista-meus-testes');
+      const res = await fetch('/api/pacientes/me/testes', { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      if (!data.registros?.length) { el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Nenhum teste encontrado com esse e-mail. <a href="/testes/" target="_blank">Fazer um teste →</a></p>'; return; }
+      el.innerHTML = data.registros.map(r => {
+        const data_ = r.criado_em ? new Date(r.criado_em).toLocaleDateString('pt-BR') : '—';
+        return `
+          <div style="padding:12px 14px;background:#F7F5F0;border-radius:10px;margin-bottom:8px;font-size:0.88rem;display:flex;justify-content:space-between;align-items:center;">
+            <div><strong>${TIPO_LABEL[r.tipo] || r.tipo}</strong> — ${r.identificador}</div>
+            <div>${r.faixa_geral ? `<span class="osp-pill" style="padding:4px 10px;">${FAIXA_LABEL[r.faixa_geral] || r.faixa_geral}</span>` : ''} <span style="color:#999;">${data_}</span></div>
+          </div>
+        `;
+      }).join('');
+    }
+  </script>
+</body>
+</html>
