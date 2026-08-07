@@ -1162,6 +1162,52 @@ ul { list-style: none; }
   .fade-up { opacity: 1; transform: none; }
 }
 
+/* ── Design system "psicólogos" (osp-*) ──
+   Tema claro fixo, usado em todas as páginas do marketplace de psicólogos
+   (cadastro, painel, perfil, listagem, confirmações, admin). Todo elemento
+   tem cor explícita de propósito: o bloco de dark mode logo abaixo escurece
+   o <body> global e qualquer elemento sem cor própria herdaria o texto claro
+   dele — o que já causou bugs de contraste (texto apagado em fundo claro).
+   Ao criar uma página nova deste projeto, reutilize estas classes em vez de
+   estilo solto, pra manter a mesma linguagem visual sem precisar pedir. */
+.osp-hero {
+  background: linear-gradient(180deg, #FFFBEB 0%, #FFFFFF 100%);
+  padding: 48px 0 28px; text-align: center; border-bottom: 1px solid #F3EFE3;
+}
+.osp-hero__eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #FFF3C4; color: #7a6200; font-size: 0.78rem; font-weight: 700;
+  padding: 6px 14px; border-radius: 20px; margin-bottom: 16px;
+}
+.osp-hero h1 {
+  font-family: var(--font-display); font-weight: 800; font-size: clamp(1.6rem, 3.6vw, 2.1rem);
+  color: #1A1A1A; letter-spacing: -0.02em; margin-bottom: 8px;
+}
+.osp-hero p { color: #666; font-size: 0.98rem; max-width: 460px; margin: 0 auto; }
+
+.osp-card {
+  background: #fff; color: #1A1A1A; border-radius: 20px; padding: 32px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+  border: 1px solid #F0EDE4;
+}
+.osp-card + .osp-card { margin-top: 24px; }
+.osp-card h2 { font-family: var(--font-display); color: #1A1A1A; font-weight: 700; font-size: 1.15rem; margin-bottom: 16px; }
+.osp-card h3 { font-family: var(--font-display); color: #1A1A1A; font-weight: 700; font-size: 1.02rem; margin: 26px 0 12px; }
+.osp-card h3:first-of-type { margin-top: 6px; }
+.osp-card label { color: #333; }
+.osp-card p, .osp-card small { color: #666; }
+.osp-card a { color: #B8940A; font-weight: 600; }
+
+.osp-pill {
+  display: inline-flex; align-items: center; gap: 6px; background: #FFF8E6; color: #7a6200;
+  border: 1px solid #F3EFE3; padding: 8px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+}
+.osp-alert { border-radius: 12px; padding: 14px 18px; font-size: 0.9rem; }
+.osp-alert--sucesso { background: #ECFDF5; color: #065F46; border: 1px solid #D1FAE5; }
+.osp-alert--erro { background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; }
+.osp-alert--aviso { background: #FEF9C3; color: #854D0E; border: 1px solid #FDE68A; }
+.osp-alert--info { background: #E0F2FE; color: #0369A1; border: 1px solid #BAE6FD; }
+
 /* ── Dark mode ──
    Hero, depoimentos, CTA final e rodapé já são escuros por padrão.
    Este bloco escurece apenas as seções claras (fundo branco/off-white). */

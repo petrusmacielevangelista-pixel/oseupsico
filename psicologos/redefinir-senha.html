@@ -20,29 +20,35 @@
     </div>
   </nav>
 
+  <section class="osp-hero">
+    <div class="container">
+      <div class="osp-hero__eyebrow">🔒 Área do psicólogo</div>
+      <h1>Redefinir senha</h1>
+      <p>Crie uma nova senha pra voltar a acessar seu painel.</p>
+    </div>
+  </section>
+
   <section class="section">
     <div class="container" style="max-width:480px;">
 
-      <div id="form-view">
-        <h1 style="font-family:var(--font-display);font-size:1.6rem;margin-bottom:10px;">Criar nova senha</h1>
-        <p style="font-size:0.9rem;color:#666;margin-bottom:20px;">Escolha uma nova senha para acessar seu painel.</p>
+      <div id="form-view" class="osp-card">
         <div class="form-group"><label>Nova senha</label><input type="password" id="nova-senha" placeholder="Mínimo 6 caracteres" /></div>
         <div class="form-group"><label>Confirmar nova senha</label><input type="password" id="confirmar-senha" /></div>
         <button class="btn btn--yellow" onclick="redefinirSenha()">Salvar nova senha →</button>
         <p id="msg" style="font-size:0.85rem;margin-top:14px;"></p>
       </div>
 
-      <div id="sucesso-view" class="hidden" style="text-align:center;">
+      <div id="sucesso-view" class="hidden osp-card" style="text-align:center;">
         <div style="font-size:2.4rem;margin-bottom:10px;">✅</div>
-        <h1 style="font-family:var(--font-display);font-size:1.4rem;margin-bottom:10px;">Senha redefinida!</h1>
-        <p style="font-size:0.92rem;color:#666;margin-bottom:20px;">Já pode entrar no painel com a sua nova senha.</p>
+        <h1 style="font-family:var(--font-display);color:#1A1A1A;font-size:1.4rem;margin-bottom:10px;">Senha redefinida!</h1>
+        <p style="margin-bottom:20px;">Já pode entrar no painel com a sua nova senha.</p>
         <a href="/psicologos/painel.html" class="btn btn--yellow">Ir para o login →</a>
       </div>
 
-      <div id="invalido-view" class="hidden" style="text-align:center;">
+      <div id="invalido-view" class="hidden osp-card" style="text-align:center;">
         <div style="font-size:2.4rem;margin-bottom:10px;">⚠️</div>
-        <h1 style="font-family:var(--font-display);font-size:1.4rem;margin-bottom:10px;">Link inválido</h1>
-        <p style="font-size:0.92rem;color:#666;">Esse link é inválido ou já expirou. Solicite um novo pela tela de login.</p>
+        <h1 style="font-family:var(--font-display);color:#1A1A1A;font-size:1.4rem;margin-bottom:10px;">Link inválido</h1>
+        <p>Esse link é inválido ou já expirou. Solicite um novo pela tela de login.</p>
         <a href="/psicologos/painel.html" class="btn btn--yellow" style="margin-top:16px;">Voltar ao login →</a>
       </div>
 

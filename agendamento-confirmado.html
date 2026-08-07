@@ -8,19 +8,21 @@
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <section class="section" style="min-height:80vh;display:flex;align-items:center;">
-    <div class="container" style="max-width:480px;text-align:center;">
-      <div id="ok-view" class="hidden">
-        <div style="font-size:2.5rem;margin-bottom:16px;">✅</div>
-        <h1 style="font-family:var(--font-display);font-size:1.6rem;margin-bottom:12px;">Agendamento confirmado!</h1>
-        <p style="color:#666;">Seu horário está reservado. Enviamos os detalhes pro seu e-mail.</p>
+  <section class="osp-hero" style="min-height:80vh;display:flex;align-items:center;border-bottom:none;">
+    <div class="container" style="max-width:480px;">
+      <div class="osp-card" style="text-align:center;">
+        <div id="ok-view" class="hidden">
+          <div style="font-size:2.5rem;margin-bottom:16px;">✅</div>
+          <h1 style="font-family:var(--font-display);color:#1A1A1A;font-size:1.6rem;margin-bottom:12px;">Agendamento confirmado!</h1>
+          <p>Seu horário está reservado. Enviamos os detalhes pro seu e-mail.</p>
+        </div>
+        <div id="erro-view" class="hidden">
+          <div style="font-size:2.5rem;margin-bottom:16px;">⚠️</div>
+          <h1 style="font-family:var(--font-display);color:#1A1A1A;font-size:1.6rem;margin-bottom:12px;">Link inválido ou expirado</h1>
+          <p>Esse link de confirmação já foi usado, expirou, ou o horário não está mais disponível.</p>
+        </div>
+        <a href="/psicologos/" class="btn btn--yellow btn--lg" style="margin-top:24px;display:inline-flex;">Ver psicólogos →</a>
       </div>
-      <div id="erro-view" class="hidden">
-        <div style="font-size:2.5rem;margin-bottom:16px;">⚠️</div>
-        <h1 style="font-family:var(--font-display);font-size:1.6rem;margin-bottom:12px;">Link inválido ou expirado</h1>
-        <p style="color:#666;">Esse link de confirmação já foi usado, expirou, ou o horário não está mais disponível.</p>
-      </div>
-      <a href="/psicologos/" class="btn btn--yellow btn--lg" style="margin-top:24px;display:inline-flex;">Ver psicólogos →</a>
     </div>
   </section>
   <script>

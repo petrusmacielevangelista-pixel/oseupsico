@@ -21,11 +21,19 @@
     </div>
   </nav>
 
-  <section class="section">
-    <div class="container" style="max-width:520px;">
+  <section class="osp-hero">
+    <div class="container">
+      <div class="osp-hero__eyebrow">🔒 Área do psicólogo</div>
+      <h1 id="hero-titulo">Painel do psicólogo</h1>
+      <p id="hero-subtitulo">Entre pra gerenciar seu perfil, agenda e agendamentos.</p>
+    </div>
+  </section>
 
-      <div id="login-view">
-        <h1 style="font-family:var(--font-display);font-size:1.6rem;margin-bottom:20px;">Entrar</h1>
+  <section class="section">
+    <div class="container" id="painel-container" style="max-width:520px;">
+
+      <div id="login-view" class="osp-card">
+        <h1 style="font-family:var(--font-display);font-size:1.4rem;color:#1A1A1A;margin-bottom:20px;">Entrar</h1>
         <div class="form-group"><label>E-mail</label><input type="email" id="login-email" /></div>
         <div class="form-group"><label>Senha</label><input type="password" id="login-senha" /></div>
         <button class="btn btn--yellow" onclick="fazerLogin()">Entrar →</button>
@@ -34,8 +42,8 @@
         <p style="margin-top:8px;font-size:0.88rem;color:#666;">Ainda não tem cadastro? <a href="/psicologos/cadastro.html">Cadastre-se aqui</a>.</p>
       </div>
 
-      <div id="esqueci-view" class="hidden">
-        <h1 style="font-family:var(--font-display);font-size:1.6rem;margin-bottom:10px;">Esqueceu sua senha?</h1>
+      <div id="esqueci-view" class="hidden osp-card">
+        <h1 style="font-family:var(--font-display);font-size:1.4rem;color:#1A1A1A;margin-bottom:10px;">Esqueceu sua senha?</h1>
         <p style="font-size:0.9rem;color:#666;margin-bottom:20px;">Informe seu e-mail de cadastro. Se encontrarmos uma conta, enviamos um link pra você criar uma nova senha.</p>
         <div class="form-group"><label>E-mail</label><input type="email" id="esqueci-email" /></div>
         <button class="btn btn--yellow" onclick="enviarEsqueciSenha()">Enviar link →</button>
@@ -45,37 +53,44 @@
 
       <div id="painel-view" class="hidden">
         <div id="status-box" style="margin-bottom:24px;"></div>
-        <h2 style="font-size:1.2rem;margin-bottom:16px;">Meu perfil</h2>
-        <div class="form-group"><label>Bio</label><textarea id="edit-bio" rows="4" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea></div>
-        <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="edit-telefone" /></div>
-        <div class="form-group"><label>Anos de experiência</label><input type="number" id="edit-anos" style="max-width:160px;" /></div>
-        <div class="form-group"><label>Projetos relevantes</label><textarea id="edit-projetos" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea></div>
-        <button class="btn btn--yellow" onclick="salvarPerfil()">Salvar alterações →</button>
-        <p id="salvar-msg" style="font-size:0.85rem;margin-top:12px;"></p>
 
-        <h2 style="font-size:1.2rem;margin:36px 0 16px;">Minha agenda</h2>
-        <p style="font-size:0.85rem;color:#666;margin-bottom:16px;">Defina os horários recorrentes em que você atende. Pacientes verão vagas dos próximos 14 dias.</p>
+        <div class="osp-card">
+          <h2>Meu perfil</h2>
+          <div class="form-group"><label>Bio</label><textarea id="edit-bio" rows="4" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea></div>
+          <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="edit-telefone" /></div>
+          <div class="form-group"><label>Anos de experiência</label><input type="number" id="edit-anos" style="max-width:160px;" /></div>
+          <div class="form-group"><label>Projetos relevantes</label><textarea id="edit-projetos" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea></div>
+          <button class="btn btn--yellow" onclick="salvarPerfil()">Salvar alterações →</button>
+          <p id="salvar-msg" style="font-size:0.85rem;margin-top:12px;"></p>
+        </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>Dia da semana</label>
-            <select id="disp-dia">
-              <option value="1">Segunda</option><option value="2">Terça</option><option value="3">Quarta</option>
-              <option value="4">Quinta</option><option value="5">Sexta</option><option value="6">Sábado</option><option value="0">Domingo</option>
-            </select>
+        <div class="osp-card">
+          <h2>Minha agenda</h2>
+          <p style="font-size:0.85rem;margin-bottom:16px;">Defina os horários recorrentes em que você atende. Pacientes verão vagas dos próximos 14 dias.</p>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Dia da semana</label>
+              <select id="disp-dia">
+                <option value="1">Segunda</option><option value="2">Terça</option><option value="3">Quarta</option>
+                <option value="4">Quinta</option><option value="5">Sexta</option><option value="6">Sábado</option><option value="0">Domingo</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Duração da sessão (min)</label><input type="number" id="disp-duracao" value="50" /></div>
           </div>
-          <div class="form-group"><label>Duração da sessão (min)</label><input type="number" id="disp-duracao" value="50" /></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Das</label><input type="time" id="disp-inicio" value="09:00" /></div>
-          <div class="form-group"><label>Até</label><input type="time" id="disp-fim" value="12:00" /></div>
-        </div>
-        <button class="btn btn--outline" onclick="adicionarDisponibilidade()">+ Adicionar horário</button>
+          <div class="form-row">
+            <div class="form-group"><label>Das</label><input type="time" id="disp-inicio" value="09:00" /></div>
+            <div class="form-group"><label>Até</label><input type="time" id="disp-fim" value="12:00" /></div>
+          </div>
+          <button class="btn btn--outline" onclick="adicionarDisponibilidade()">+ Adicionar horário</button>
 
-        <div id="lista-disponibilidades" style="margin-top:20px;"></div>
+          <div id="lista-disponibilidades" style="margin-top:20px;"></div>
+        </div>
 
-        <h3 style="font-size:1.05rem;margin:32px 0 12px;">Próximos agendamentos confirmados</h3>
-        <div id="lista-agendamentos"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
+        <div class="osp-card">
+          <h2>Próximos agendamentos confirmados</h2>
+          <div id="lista-agendamentos"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
+        </div>
       </div>
 
     </div>
@@ -133,8 +148,12 @@
 
     async function mostrarPainel() {
       document.getElementById('login-view').classList.add('hidden');
+      document.getElementById('esqueci-view').classList.add('hidden');
       document.getElementById('painel-view').classList.remove('hidden');
       document.getElementById('link-sair').classList.remove('hidden');
+      document.getElementById('painel-container').style.maxWidth = '640px';
+      document.getElementById('hero-titulo').textContent = 'Meu painel';
+      document.getElementById('hero-subtitulo').textContent = 'Gerencie seu perfil, sua agenda e seus agendamentos.';
 
       const res = await fetch('/api/psicologos/me', { headers: { Authorization: 'Bearer ' + token } });
       if (res.status === 401) { sair(); return; }
@@ -147,13 +166,13 @@
 
       let statusHtml = '';
       if (p.status_aprovacao === 'pendente') {
-        statusHtml = `<div style="background:#FEF9C3;color:#854D0E;padding:14px 18px;border-radius:12px;">⏳ Seu cadastro ainda está em análise.</div>`;
+        statusHtml = `<div class="osp-alert osp-alert--aviso">⏳ Seu cadastro ainda está em análise.</div>`;
       } else if (p.status_aprovacao === 'rejeitado') {
-        statusHtml = `<div style="background:#FEE2E2;color:#991B1B;padding:14px 18px;border-radius:12px;">❌ Seu cadastro não foi aprovado. Entre em contato pra mais informações.</div>`;
+        statusHtml = `<div class="osp-alert osp-alert--erro">❌ Seu cadastro não foi aprovado. Entre em contato pra mais informações.</div>`;
       } else if (!licencaOk) {
-        statusHtml = `<div style="background:#FEE2E2;color:#991B1B;padding:14px 18px;border-radius:12px;">⚠️ Sua licença está inativa/vencida — seu perfil não aparece na busca pública. Entre em contato pra regularizar.</div>`;
+        statusHtml = `<div class="osp-alert osp-alert--erro">⚠️ Sua licença está inativa/vencida — seu perfil não aparece na busca pública. Entre em contato pra regularizar.</div>`;
       } else {
-        statusHtml = `<div style="background:#D1FAE5;color:#065F46;padding:14px 18px;border-radius:12px;">✅ Perfil ativo e visível publicamente até ${p.licenca_validade_ate}.</div>`;
+        statusHtml = `<div class="osp-alert osp-alert--sucesso">✅ Perfil ativo e visível publicamente até ${p.licenca_validade_ate}.</div>`;
       }
       statusBox.innerHTML = statusHtml;
 
