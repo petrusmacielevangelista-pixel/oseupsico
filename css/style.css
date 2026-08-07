@@ -1263,3 +1263,9 @@ ul { list-style: none; }
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus { border-color: var(--yellow); }
+
+.card-psicologo:hover {
+  border-color: var(--yellow) !important;
+  box-shadow: 0 8px 32px rgba(245,197,24,0.15);
+  transform: translateY(-4px);
+}

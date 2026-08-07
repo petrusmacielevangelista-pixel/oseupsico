@@ -44,17 +44,29 @@
         grid.innerHTML = lista.map(p => {
           const especialidades = JSON.parse(p.especialidades || '[]');
           const badge5anos = p.anos_experiencia >= 5
-            ? `<div style="background:#FFF8DC;color:#7a6200;font-size:0.75rem;font-weight:700;padding:4px 10px;border-radius:20px;display:inline-block;margin-bottom:8px;">🏅 +5 anos de experiência</div>`
+            ? `<div style="background:#FFF8DC;color:#7a6200;font-size:0.75rem;font-weight:700;padding:4px 10px;border-radius:20px;display:inline-block;margin-bottom:10px;">🏅 +${p.anos_experiencia} anos de experiência</div>`
             : '';
+          const notaHtml = p.avaliacao_media
+            ? `<span style="color:#D4A800;font-weight:700;">⭐ ${Number(p.avaliacao_media).toFixed(1)}</span> <span style="color:#888;">(${p.total_avaliacoes} avaliaç${p.total_avaliacoes == 1 ? 'ão' : 'ões'})</span>`
+            : `<span style="color:#999;">Ainda sem avaliações</span>`;
+          const pillsEspecialidades = especialidades.slice(0, 3).map(e =>
+            `<span style="background:#F7F5F0;color:#444;font-size:0.76rem;padding:4px 10px;border-radius:20px;">${e}</span>`
+          ).join('');
+
           return `
-            <a href="/psicologos/perfil.html?id=${p.id}" style="text-decoration:none;color:inherit;background:#fff;border:1.5px solid #eee;border-radius:16px;padding:20px;display:block;transition:border-color .2s;">
-              <div style="width:72px;height:72px;border-radius:50%;background:#F7F5F0;overflow:hidden;margin-bottom:12px;">
-                ${p.foto_url ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;" />` : ''}
+            <a href="/psicologos/perfil.html?id=${p.id}" class="card-psicologo" style="text-decoration:none;background:#fff;border:1.5px solid #eee;border-radius:16px;padding:20px;display:block;transition:all .2s;">
+              <div style="display:flex;gap:14px;align-items:center;margin-bottom:12px;">
+                <div style="width:64px;height:64px;border-radius:50%;background:#F7F5F0;overflow:hidden;flex-shrink:0;">
+                  ${p.foto_url ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;" />` : ''}
+                </div>
+                <div>
+                  <div style="font-weight:800;font-size:1.1rem;color:#D4A800;line-height:1.25;">${p.nome}</div>
+                  <div style="font-size:0.82rem;margin-top:2px;">${notaHtml}</div>
+                </div>
               </div>
               ${badge5anos}
-              <div style="font-weight:700;font-size:1.05rem;margin-bottom:4px;">${p.nome}</div>
-              <div style="font-size:0.85rem;color:#888;margin-bottom:8px;">${p.graduacao_curso || ''}</div>
-              <div style="font-size:0.8rem;color:#666;">${especialidades.slice(0, 3).join(' · ')}</div>
+              <div style="font-size:0.85rem;color:#666;margin-bottom:12px;">${p.graduacao_instituicao || ''}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">${pillsEspecialidades}</div>
             </a>
           `;
         }).join('');

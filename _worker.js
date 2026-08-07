@@ -470,9 +470,11 @@ export default {
     if (pathname === '/api/psicologos' && request.method === 'GET') {
       await initDB(env.DB);
       const { results } = await env.DB.prepare(
-        `SELECT id, nome, foto_url, bio, especialidades, abordagens, anos_experiencia,
-                graduacao_curso, graduacao_instituicao, graduacao_ano
-         FROM psicologos
+        `SELECT p.id, p.nome, p.foto_url, p.bio, p.especialidades, p.abordagens, p.anos_experiencia,
+                p.graduacao_curso, p.graduacao_instituicao, p.graduacao_ano,
+                (SELECT AVG(nota) FROM avaliacoes WHERE psicologo_id = p.id AND status = 'publicado') as avaliacao_media,
+                (SELECT COUNT(*) FROM avaliacoes WHERE psicologo_id = p.id AND status = 'publicado') as total_avaliacoes
+         FROM psicologos p
          WHERE status_aprovacao = 'aprovado' AND licenca_validade_ate >= date('now')
          ORDER BY criado_em DESC`
       ).all();
