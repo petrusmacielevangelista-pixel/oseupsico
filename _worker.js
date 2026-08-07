@@ -32,7 +32,28 @@ function json(data, status = 200) {
 }
 
 /* ── Banco de dados ── */
+// initDB roda ~10 comandos SQL sequenciais (criação de tabelas, migração,
+// catálogo inicial). Medido: ~1.3s toda vez que executa por completo —
+// cada instrução paga round-trip real de rede no D1, mesmo sendo
+// "IF NOT EXISTS" e virando no-op. A memoização em memória (variável de
+// módulo) não ajuda aqui porque o Workers não garante reaproveitar a
+// mesma instância entre requisições nesse volume de tráfego — cada
+// chamada mediu "nunca inicializada" mesmo em sequência imediata.
+// Solução: 1 consulta rápida (~130ms) pra checar se a tabela principal já
+// existe; só roda a criação completa na it primeira vez de verdade.
+let dbInicializada = false;
+
 async function initDB(db) {
+  if (dbInicializada) return;
+
+  const { results: tabelaExiste } = await db.prepare(
+    `SELECT name FROM sqlite_master WHERE type='table' AND name='psicologos'`
+  ).all();
+  if (tabelaExiste.length > 0) {
+    dbInicializada = true;
+    return;
+  }
+
   await db.prepare(
     `CREATE TABLE IF NOT EXISTS psicologos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -170,6 +191,8 @@ async function initDB(db) {
       await db.prepare('INSERT OR IGNORE INTO especialidades_catalogo (nome) VALUES (?)').bind(nome).run();
     }
   }
+
+  dbInicializada = true;
 }
 
 /* ── Helpers ── */
