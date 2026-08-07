@@ -710,7 +710,7 @@ export default {
     if (perfilMatch && request.method === 'GET') {
       await initDB(env.DB);
       const p = await env.DB.prepare(
-        `SELECT id, nome, foto_url, bio, especialidades, abordagens, anos_experiencia,
+        `SELECT id, nome, foto_url, bio, especialidades, abordagens, anos_experiencia, telefone,
                 graduacao_curso, graduacao_instituicao, graduacao_ano, pos_graduacoes, projetos_relevantes
          FROM psicologos
          WHERE id = ? AND status_aprovacao = 'aprovado' AND licenca_validade_ate >= date('now')`

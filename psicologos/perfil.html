@@ -64,6 +64,18 @@
     .horario-btn.selecionado { background: #1A1A1A; border-color: #1A1A1A; color: #fff; }
 
     .estrelas-input { font-size: 1.9rem; cursor: pointer; color: #D4A800; letter-spacing: 2px; }
+
+    .perfil-whatsapp-flutuante {
+      position: fixed; bottom: 24px; right: 24px; z-index: 40;
+      display: flex; align-items: center; gap: 10px; background: #25D366; color: #fff;
+      padding: 14px 20px; border-radius: 999px; text-decoration: none; font-weight: 700; font-size: 0.92rem;
+      box-shadow: 0 6px 20px rgba(37,211,102,0.4); transition: transform .15s, box-shadow .15s;
+    }
+    .perfil-whatsapp-flutuante:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(37,211,102,0.5); }
+    @media (max-width: 640px) {
+      .perfil-whatsapp-flutuante span { display: none; }
+      .perfil-whatsapp-flutuante { padding: 14px; }
+    }
   </style>
 </head>
 <body>
@@ -128,7 +140,8 @@
 
           <div>
             <div class="perfil-painel hidden" id="secao-agendar" style="position:sticky;top:88px;">
-              <h2>📅 Agendar horário</h2>
+              <h2>📅 Agendar entrevista inicial</h2>
+              <p style="font-size:0.85rem;color:#666;margin:-6px 0 14px;">Escolha um horário pra uma primeira conversa — sem compromisso, pra vocês se conhecerem.</p>
               <div id="horarios-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">Carregando horários...</div>
 
               <form id="form-agendar" class="hidden">
@@ -151,6 +164,10 @@
       </div>
     </section>
   </div>
+
+  <a id="whatsapp-flutuante" href="#" target="_blank" rel="noopener" class="perfil-whatsapp-flutuante hidden">
+    <span style="font-size:1.2rem;">💬</span> <span>Falar no WhatsApp</span>
+  </a>
 
   <script>
     const id = new URLSearchParams(location.search).get('id');
@@ -228,11 +245,41 @@
         document.getElementById('secao-agendar').classList.remove('hidden');
         document.getElementById('secao-avaliar').classList.remove('hidden');
         carregarHorarios();
+
+        if (p.telefone) {
+          const telLimpo = p.telefone.replace(/\D/g, '');
+          const telComDDI = telLimpo.length <= 11 ? '55' + telLimpo : telLimpo; // assume BR se vier sem DDI
+          const mensagem = encodeURIComponent(`Olá, ${p.nome.split(' ')[0]}! Vi seu perfil no O Seu Psico e gostaria de saber mais sobre atendimento.`);
+          const btnWhats = document.getElementById('whatsapp-flutuante');
+          btnWhats.href = `https://wa.me/${telComDDI}?text=${mensagem}`;
+          btnWhats.classList.remove('hidden');
+        }
+
+        preencherDadosPacienteLogado();
       } catch {
         heroEl.innerHTML = '<p style="color:#888;">Erro ao carregar perfil.</p>';
       }
     }
     carregar();
+
+    // Se o paciente já estiver logado em /minha-conta, pré-preenche os
+    // formulários de agendar e avaliar — evita pedir os mesmos dados de novo.
+    async function preencherDadosPacienteLogado() {
+      const tokenPaciente = sessionStorage.getItem('psico_token_paciente');
+      if (!tokenPaciente) return;
+      try {
+        const res = await fetch('/api/pacientes/me', { headers: { Authorization: 'Bearer ' + tokenPaciente } });
+        if (!res.ok) return;
+        const data = await res.json();
+        const p = data.paciente;
+        if (!p) return;
+        document.getElementById('ag-nome').value = p.nome || '';
+        document.getElementById('ag-email').value = p.email || '';
+        document.getElementById('ag-telefone').value = p.telefone || '';
+        document.getElementById('av-nome').value = p.nome || '';
+        document.getElementById('av-email').value = p.email || '';
+      } catch {}
+    }
 
     let horarioSelecionado = null;
 
