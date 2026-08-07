@@ -55,13 +55,15 @@
 
           return `
             <a href="/psicologos/perfil.html?id=${p.id}" class="card-psicologo" style="text-decoration:none;background:#fff;border:1.5px solid #eee;border-radius:16px;padding:20px;display:block;transition:all .2s;">
-              <div style="display:flex;gap:14px;align-items:center;margin-bottom:12px;">
-                <div style="width:64px;height:64px;border-radius:50%;background:#F7F5F0;overflow:hidden;flex-shrink:0;">
-                  ${p.foto_url ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;" />` : ''}
+              <div style="display:flex;gap:14px;align-items:center;margin-bottom:14px;">
+                <div style="width:64px;height:64px;border-radius:50%;padding:2px;border:1.5px solid #D4A800;flex-shrink:0;">
+                  <div style="width:100%;height:100%;border-radius:50%;background:#F7F5F0;overflow:hidden;">
+                    ${p.foto_url ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;" />` : ''}
+                  </div>
                 </div>
                 <div>
-                  <div style="font-weight:800;font-size:1.1rem;color:#D4A800;line-height:1.25;">${p.nome}</div>
-                  <div style="font-size:0.82rem;margin-top:2px;">${notaHtml}</div>
+                  <div style="font-family:var(--font-display);font-weight:700;font-size:1.15rem;color:#D4A800;line-height:1.3;letter-spacing:-0.01em;">${p.nome}</div>
+                  <div style="font-size:0.82rem;margin-top:3px;">${notaHtml}</div>
                 </div>
               </div>
               ${badge5anos}

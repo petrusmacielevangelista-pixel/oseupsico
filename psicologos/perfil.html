@@ -104,12 +104,14 @@
 
         conteudo.innerHTML = `
           <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;">
-            <div style="width:96px;height:96px;border-radius:50%;background:#F7F5F0;overflow:hidden;flex-shrink:0;">
-              ${p.foto_url ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;" />` : ''}
+            <div style="width:96px;height:96px;border-radius:50%;padding:3px;border:2px solid #D4A800;flex-shrink:0;">
+              <div style="width:100%;height:100%;border-radius:50%;background:#F7F5F0;overflow:hidden;">
+                ${p.foto_url ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;" />` : ''}
+              </div>
             </div>
             <div>
               ${badge5anos}
-              <h1 style="font-family:var(--font-display);font-size:1.6rem;margin-bottom:4px;">${p.nome}</h1>
+              <h1 style="font-family:var(--font-display);font-weight:700;font-size:1.7rem;color:#D4A800;letter-spacing:-0.01em;margin-bottom:4px;">${p.nome}</h1>
               <div style="color:#888;font-size:0.9rem;">${media ? '⭐ ' + media.toFixed(1) + ' (' + perfilData.total_avaliacoes + ' avaliações)' : 'Ainda sem avaliações'}</div>
             </div>
           </div>
