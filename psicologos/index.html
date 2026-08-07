@@ -33,6 +33,17 @@
   </section>
 
   <script>
+    function formatarVaga(horario) {
+      const dt = new Date(horario.replace(' ', 'T'));
+      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+      const amanha = new Date(hoje); amanha.setDate(amanha.getDate() + 1);
+      const dataVaga = new Date(dt); dataVaga.setHours(0, 0, 0, 0);
+      const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      if (dataVaga.getTime() === hoje.getTime()) return `hoje, ${hora}`;
+      if (dataVaga.getTime() === amanha.getTime()) return `amanhã, ${hora}`;
+      return `${dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}, ${hora}`;
+    }
+
     async function carregar() {
       const grid = document.getElementById('grid');
       try {
@@ -40,6 +51,18 @@
         const data = await res.json();
         const lista = data.psicologos || [];
         if (!lista.length) { grid.innerHTML = '<p>Nenhum psicólogo disponível no momento.</p>'; return; }
+
+        // Busca a próxima vaga de cada um em paralelo — mesmo recurso que
+        // destaca o Zocdoc entre os concorrentes: sinal de disponibilidade
+        // direto no card, sem precisar entrar no perfil.
+        const horariosPorId = {};
+        await Promise.all(lista.map(async p => {
+          try {
+            const r = await fetch(`/api/psicologos/${p.id}/horarios-disponiveis`);
+            const d = await r.json();
+            horariosPorId[p.id] = d.horarios?.[0] || null;
+          } catch { horariosPorId[p.id] = null; }
+        }));
 
         grid.innerHTML = lista.map(p => {
           const especialidades = JSON.parse(p.especialidades || '[]');
@@ -53,9 +76,14 @@
             `<span style="background:#F7F5F0;color:#444;font-size:0.76rem;padding:4px 10px;border-radius:20px;">${e}</span>`
           ).join('');
 
+          const proximaVaga = horariosPorId[p.id];
+          const vagaHtml = proximaVaga
+            ? `<div style="font-size:0.8rem;color:#065F46;background:#D1FAE5;padding:6px 10px;border-radius:8px;margin-bottom:12px;display:inline-flex;align-items:center;gap:5px;">📅 Próxima vaga: ${formatarVaga(proximaVaga)}</div>`
+            : `<div style="font-size:0.8rem;color:#888;margin-bottom:12px;">Sem vagas nos próximos dias</div>`;
+
           return `
             <a href="/psicologos/perfil.html?id=${p.id}" class="card-psicologo" style="text-decoration:none;background:#fff;border:1.5px solid #eee;border-radius:16px;padding:20px;display:block;transition:all .2s;">
-              <div style="display:flex;gap:14px;align-items:center;margin-bottom:14px;">
+              <div style="display:flex;gap:14px;align-items:center;margin-bottom:8px;">
                 <div style="width:64px;height:64px;border-radius:50%;padding:2px;border:1.5px solid #D4A800;flex-shrink:0;">
                   <div style="width:100%;height:100%;border-radius:50%;background:#F7F5F0;overflow:hidden;">
                     ${p.foto_url ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;" />` : ''}
@@ -66,8 +94,10 @@
                   <div style="font-size:0.82rem;margin-top:3px;">${notaHtml}</div>
                 </div>
               </div>
+              <div style="font-size:0.76rem;color:#0369A1;font-weight:600;margin-bottom:10px;">✓ Perfil verificado</div>
               ${badge5anos}
               <div style="font-size:0.85rem;color:#666;margin-bottom:12px;">${p.graduacao_instituicao || ''}</div>
+              ${vagaHtml}
               <div style="display:flex;flex-wrap:wrap;gap:6px;">${pillsEspecialidades}</div>
             </a>
           `;
