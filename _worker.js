@@ -327,6 +327,41 @@ async function enviarEmailConfirmacaoAgendamento(env, paciente, dataHora, linkCo
   });
 }
 
+async function enviarEmailRedefinirSenha(env, psicologo, linkRedefinir) {
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 0;">
+    <tr><td align="center">
+      <table width="500" cellpadding="0" cellspacing="0" style="max-width:500px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+        <tr><td style="background:#1A1A1A;padding:28px;text-align:center;">
+          <div style="font-size:20px;font-weight:800;color:#fff;">O Seu <span style="color:#F5C518;">Psico</span></div>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 12px;">Olá, ${psicologo.nome}!</p>
+          <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 20px;">Recebemos um pedido pra redefinir sua senha. Clique no botão abaixo pra criar uma nova.</p>
+          <table cellpadding="0" cellspacing="0"><tr><td style="background:#F5C518;border-radius:40px;padding:14px 28px;">
+            <a href="${linkRedefinir}" style="font-size:15px;font-weight:700;color:#1A1A1A;text-decoration:none;">Redefinir senha →</a>
+          </td></tr></table>
+          <p style="font-size:12px;color:#999;margin:20px 0 0;">Se você não pediu isso, ignore este e-mail — sua senha continua a mesma. Este link expira em 2 horas.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: 'O Seu Psico <naoresponder@oseupsico.com.br>',
+      to: [psicologo.email],
+      subject: 'Redefinir sua senha · O Seu Psico',
+      html,
+    }),
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -489,6 +524,48 @@ export default {
         if (!psicologo) return json({ ok: false, error: 'E-mail ou senha incorretos.' }, 401);
         const token = btoa(`${psicologo.id}:${Date.now()}:${env.SENHA_PEPPER || ''}`);
         return json({ ok: true, token, nome: psicologo.nome });
+      } catch (e) {
+        return json({ ok: false, error: e.message }, 500);
+      }
+    }
+
+    if (pathname === '/api/psicologos/esqueci-senha' && request.method === 'POST') {
+      try {
+        await initDB(env.DB);
+        const { email } = await request.json();
+        const psicologo = await env.DB.prepare('SELECT id, nome FROM psicologos WHERE email = ?').bind(email).first();
+        // Sempre responde ok, mesmo se o e-mail não existir — evita expor quais e-mails estão cadastrados.
+        if (psicologo) {
+          const token = gerarToken();
+          const expira = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+          await env.DB.prepare(
+            `INSERT INTO tokens_verificacao (tipo, referencia_id, token, expira_em) VALUES ('reset_senha', ?, ?, ?)`
+          ).bind(psicologo.id, token, expira).run();
+          const link = `${url.origin}/psicologos/redefinir-senha.html?token=${token}`;
+          await enviarEmailRedefinirSenha(env, psicologo, link);
+        }
+        return json({ ok: true });
+      } catch (e) {
+        return json({ ok: false, error: e.message }, 500);
+      }
+    }
+
+    if (pathname === '/api/psicologos/redefinir-senha' && request.method === 'POST') {
+      try {
+        await initDB(env.DB);
+        const { token, senha } = await request.json();
+        if (!token || !senha || senha.length < 6) return json({ ok: false, error: 'Senha precisa ter ao menos 6 caracteres.' }, 400);
+        const registro = await env.DB.prepare(
+          `SELECT * FROM tokens_verificacao WHERE token = ? AND tipo = 'reset_senha'`
+        ).bind(token).first();
+        if (!registro) return json({ ok: false, error: 'Link inválido.' }, 400);
+        if (registro.usado_em) return json({ ok: false, error: 'Esse link já foi usado.' }, 400);
+        if (new Date(registro.expira_em) < new Date()) return json({ ok: false, error: 'Esse link expirou. Solicite outro.' }, 400);
+
+        const senhaHash = await hashSenha(senha, env);
+        await env.DB.prepare('UPDATE psicologos SET senha_hash = ? WHERE id = ?').bind(senhaHash, registro.referencia_id).run();
+        await env.DB.prepare(`UPDATE tokens_verificacao SET usado_em = datetime('now') WHERE id = ?`).bind(registro.id).run();
+        return json({ ok: true });
       } catch (e) {
         return json({ ok: false, error: e.message }, 500);
       }

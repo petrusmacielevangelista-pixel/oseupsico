@@ -30,7 +30,17 @@
         <div class="form-group"><label>Senha</label><input type="password" id="login-senha" /></div>
         <button class="btn btn--yellow" onclick="fazerLogin()">Entrar →</button>
         <p id="login-erro" style="color:#991B1B;font-size:0.85rem;margin-top:12px;"></p>
-        <p style="margin-top:20px;font-size:0.88rem;color:#666;">Ainda não tem cadastro? <a href="/psicologos/cadastro.html">Cadastre-se aqui</a>.</p>
+        <p style="margin-top:16px;font-size:0.88rem;"><a href="#" onclick="mostrarEsqueciSenha();return false;">Esqueceu sua senha?</a></p>
+        <p style="margin-top:8px;font-size:0.88rem;color:#666;">Ainda não tem cadastro? <a href="/psicologos/cadastro.html">Cadastre-se aqui</a>.</p>
+      </div>
+
+      <div id="esqueci-view" class="hidden">
+        <h1 style="font-family:var(--font-display);font-size:1.6rem;margin-bottom:10px;">Esqueceu sua senha?</h1>
+        <p style="font-size:0.9rem;color:#666;margin-bottom:20px;">Informe seu e-mail de cadastro. Se encontrarmos uma conta, enviamos um link pra você criar uma nova senha.</p>
+        <div class="form-group"><label>E-mail</label><input type="email" id="esqueci-email" /></div>
+        <button class="btn btn--yellow" onclick="enviarEsqueciSenha()">Enviar link →</button>
+        <p id="esqueci-msg" style="font-size:0.85rem;margin-top:12px;"></p>
+        <p style="margin-top:20px;font-size:0.88rem;"><a href="#" onclick="mostrarLogin();return false;">← Voltar pro login</a></p>
       </div>
 
       <div id="painel-view" class="hidden">
@@ -94,6 +104,31 @@
     function sair() {
       sessionStorage.removeItem('psico_token_psicologo');
       location.reload();
+    }
+
+    function mostrarEsqueciSenha() {
+      document.getElementById('login-view').classList.add('hidden');
+      document.getElementById('esqueci-view').classList.remove('hidden');
+      document.getElementById('esqueci-msg').textContent = '';
+    }
+
+    function mostrarLogin() {
+      document.getElementById('esqueci-view').classList.add('hidden');
+      document.getElementById('login-view').classList.remove('hidden');
+    }
+
+    async function enviarEsqueciSenha() {
+      const email = document.getElementById('esqueci-email').value.trim();
+      const msg = document.getElementById('esqueci-msg');
+      if (!email) { msg.style.color = '#991B1B'; msg.textContent = 'Informe um e-mail.'; return; }
+      try {
+        await fetch('/api/psicologos/esqueci-senha', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        msg.style.color = '#065F46';
+        msg.textContent = 'Se esse e-mail estiver cadastrado, você vai receber um link em instantes. Confira também o spam.';
+      } catch { msg.style.color = '#991B1B'; msg.textContent = 'Erro de conexão.'; }
     }
 
     async function mostrarPainel() {

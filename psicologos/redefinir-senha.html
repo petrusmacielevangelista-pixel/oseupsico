@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Redefinir senha · O Seu Psico</title>
+  <link rel="icon" href="/assets/logo.png" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar navbar--interna">
+    <div class="container">
+      <div class="navbar__inner">
+        <a href="/" class="navbar__logo">
+          <img src="/assets/logo.png" alt="O Seu Psico" class="navbar__logo-img" />
+          <span class="navbar__logo-text">O Seu Psico</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="section">
+    <div class="container" style="max-width:480px;">
+
+      <div id="form-view">
+        <h1 style="font-family:var(--font-display);font-size:1.6rem;margin-bottom:10px;">Criar nova senha</h1>
+        <p style="font-size:0.9rem;color:#666;margin-bottom:20px;">Escolha uma nova senha para acessar seu painel.</p>
+        <div class="form-group"><label>Nova senha</label><input type="password" id="nova-senha" placeholder="Mínimo 6 caracteres" /></div>
+        <div class="form-group"><label>Confirmar nova senha</label><input type="password" id="confirmar-senha" /></div>
+        <button class="btn btn--yellow" onclick="redefinirSenha()">Salvar nova senha →</button>
+        <p id="msg" style="font-size:0.85rem;margin-top:14px;"></p>
+      </div>
+
+      <div id="sucesso-view" class="hidden" style="text-align:center;">
+        <div style="font-size:2.4rem;margin-bottom:10px;">✅</div>
+        <h1 style="font-family:var(--font-display);font-size:1.4rem;margin-bottom:10px;">Senha redefinida!</h1>
+        <p style="font-size:0.92rem;color:#666;margin-bottom:20px;">Já pode entrar no painel com a sua nova senha.</p>
+        <a href="/psicologos/painel.html" class="btn btn--yellow">Ir para o login →</a>
+      </div>
+
+      <div id="invalido-view" class="hidden" style="text-align:center;">
+        <div style="font-size:2.4rem;margin-bottom:10px;">⚠️</div>
+        <h1 style="font-family:var(--font-display);font-size:1.4rem;margin-bottom:10px;">Link inválido</h1>
+        <p style="font-size:0.92rem;color:#666;">Esse link é inválido ou já expirou. Solicite um novo pela tela de login.</p>
+        <a href="/psicologos/painel.html" class="btn btn--yellow" style="margin-top:16px;">Voltar ao login →</a>
+      </div>
+
+    </div>
+  </section>
+
+  <script>
+    const token = new URLSearchParams(location.search).get('token');
+    if (!token) {
+      document.getElementById('form-view').classList.add('hidden');
+      document.getElementById('invalido-view').classList.remove('hidden');
+    }
+
+    async function redefinirSenha() {
+      const senha = document.getElementById('nova-senha').value;
+      const confirmar = document.getElementById('confirmar-senha').value;
+      const msg = document.getElementById('msg');
+
+      if (senha.length < 6) { msg.style.color = '#991B1B'; msg.textContent = 'A senha precisa ter ao menos 6 caracteres.'; return; }
+      if (senha !== confirmar) { msg.style.color = '#991B1B'; msg.textContent = 'As senhas não coincidem.'; return; }
+
+      try {
+        const res = await fetch('/api/psicologos/redefinir-senha', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, senha }),
+        });
+        const data = await res.json();
+        if (!data.ok) { msg.style.color = '#991B1B'; msg.textContent = data.error || 'Não foi possível redefinir a senha.'; return; }
+        document.getElementById('form-view').classList.add('hidden');
+        document.getElementById('sucesso-view').classList.remove('hidden');
+      } catch { msg.style.color = '#991B1B'; msg.textContent = 'Erro de conexão.'; }
+    }
+  </script>
+</body>
+</html>
