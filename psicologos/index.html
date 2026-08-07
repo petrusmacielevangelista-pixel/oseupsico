@@ -52,18 +52,9 @@
         const lista = data.psicologos || [];
         if (!lista.length) { grid.innerHTML = '<p>Nenhum psicólogo disponível no momento.</p>'; return; }
 
-        // Busca a próxima vaga de cada um em paralelo — mesmo recurso que
-        // destaca o Zocdoc entre os concorrentes: sinal de disponibilidade
-        // direto no card, sem precisar entrar no perfil.
-        const horariosPorId = {};
-        await Promise.all(lista.map(async p => {
-          try {
-            const r = await fetch(`/api/psicologos/${p.id}/horarios-disponiveis`);
-            const d = await r.json();
-            horariosPorId[p.id] = d.horarios?.[0] || null;
-          } catch { horariosPorId[p.id] = null; }
-        }));
-
+        // A próxima vaga de cada psicólogo já vem calculada pelo servidor
+        // (p.proxima_vaga) — evita uma chamada extra por card, que deixava
+        // a listagem lenta pra carregar.
         grid.innerHTML = lista.map(p => {
           const especialidades = JSON.parse(p.especialidades || '[]');
           const badge5anos = p.anos_experiencia >= 5
@@ -76,7 +67,7 @@
             `<span style="background:#F7F5F0;color:#444;font-size:0.76rem;padding:4px 10px;border-radius:20px;">${e}</span>`
           ).join('');
 
-          const proximaVaga = horariosPorId[p.id];
+          const proximaVaga = p.proxima_vaga;
           const vagaHtml = proximaVaga
             ? `<div style="font-size:0.8rem;color:#065F46;background:#D1FAE5;padding:6px 10px;border-radius:8px;margin-bottom:12px;display:inline-flex;align-items:center;gap:5px;">📅 Próxima vaga: ${formatarVaga(proximaVaga)}</div>`
             : `<div style="font-size:0.8rem;color:#888;margin-bottom:12px;">Sem vagas nos próximos dias</div>`;

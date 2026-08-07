@@ -184,6 +184,36 @@ function gerarToken() {
   return [...crypto.getRandomValues(new Uint8Array(24))].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Calcula a primeira vaga livre a partir de uma lista de disponibilidades
+// recorrentes e um Set de horários já ocupados. Usado tanto na listagem
+// pública (calcula pra todos de uma vez, evitando N chamadas separadas)
+// quanto no endpoint de horários completos do perfil individual.
+function proximaVagaLivre(disponibilidades, ocupadosSet, diasAFrente = 14) {
+  const agora = new Date();
+  for (let d = 1; d <= diasAFrente; d++) {
+    const dia = new Date(agora);
+    dia.setDate(dia.getDate() + d);
+    const diaSemana = dia.getDay();
+
+    const dispsDoDia = disponibilidades.filter(disp => disp.dia_semana === diaSemana);
+    let melhorSlot = null;
+    for (const disp of dispsDoDia) {
+      const [hIni, mIni] = disp.hora_inicio.split(':').map(Number);
+      const [hFim, mFim] = disp.hora_fim.split(':').map(Number);
+      let cursor = new Date(dia); cursor.setHours(hIni, mIni, 0, 0);
+      const fim = new Date(dia); fim.setHours(hFim, mFim, 0, 0);
+
+      while (cursor < fim) {
+        const iso = cursor.toISOString().slice(0, 16).replace('T', ' ');
+        if (!ocupadosSet.has(iso) && (!melhorSlot || iso < melhorSlot)) melhorSlot = iso;
+        cursor = new Date(cursor.getTime() + disp.duracao_minutos * 60000);
+      }
+    }
+    if (melhorSlot) return melhorSlot;
+  }
+  return null;
+}
+
 function autenticadoAdmin(request, env) {
   const auth = request.headers.get('Authorization') || '';
   const token = auth.replace('Bearer ', '');
@@ -478,7 +508,34 @@ export default {
          WHERE status_aprovacao = 'aprovado' AND licenca_validade_ate >= date('now')
          ORDER BY criado_em DESC`
       ).all();
-      return json({ ok: true, psicologos: results });
+
+      // Calcula a "próxima vaga" de todos de uma vez (2 consultas no total,
+      // não 2×N) — antes a página fazia uma chamada extra por psicólogo pra
+      // esse mesmo cálculo, o que deixava a listagem lenta.
+      let psicologos = results;
+      if (results.length) {
+        const ids = results.map(p => p.id);
+        const placeholders = ids.map(() => '?').join(',');
+
+        const { results: todasDisponibilidades } = await env.DB.prepare(
+          `SELECT * FROM disponibilidades WHERE psicologo_id IN (${placeholders}) AND ativo = 1`
+        ).bind(...ids).all();
+
+        const { results: todosOcupados } = await env.DB.prepare(
+          `SELECT psicologo_id, data_hora FROM agendamentos
+           WHERE psicologo_id IN (${placeholders}) AND status IN ('confirmado', 'pendente_verificacao') AND data_hora >= datetime('now')`
+        ).bind(...ids).all();
+
+        // Os objetos retornados pelo D1 não são mutáveis com segurança —
+        // criamos objetos novos em vez de atribuir campo direto neles.
+        psicologos = results.map(p => {
+          const disponibilidades = todasDisponibilidades.filter(d => Number(d.psicologo_id) === Number(p.id));
+          const ocupadosSet = new Set(todosOcupados.filter(o => Number(o.psicologo_id) === Number(p.id)).map(o => o.data_hora));
+          return { ...p, proxima_vaga: proximaVagaLivre(disponibilidades, ocupadosSet) };
+        });
+      }
+
+      return json({ ok: true, psicologos });
     }
 
     const perfilMatch = pathname.match(/^\/api\/psicologos\/(\d+)$/);
