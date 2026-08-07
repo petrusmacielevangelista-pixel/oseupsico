@@ -6,6 +6,7 @@
   <title>Painel do Psicólogo · O Seu Psico</title>
   <link rel="icon" href="/assets/logo.png" />
   <link rel="stylesheet" href="/css/style.css" />
+  <script src="/psicologos/js/comprimir-foto.js"></script>
 </head>
 <body>
 
@@ -65,10 +66,33 @@
 
             <div class="osp-card" id="secao-perfil" data-secao>
               <h2>Meu perfil</h2>
+
+              <div class="form-group">
+                <label>Foto de perfil</label>
+                <div style="display:flex;align-items:center;gap:16px;margin-top:6px;">
+                  <div style="width:76px;height:76px;border-radius:50%;overflow:hidden;background:#F7F5F0;border:2px solid #F5C518;flex-shrink:0;">
+                    <img id="edit-foto-atual" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;" />
+                  </div>
+                  <div>
+                    <input type="file" id="edit-foto" accept="image/jpeg,image/png,image/webp" />
+                    <p style="font-size:0.78rem;color:#999;margin-top:4px;">Trocar a foto substitui a anterior imediatamente.</p>
+                    <p id="foto-msg" style="font-size:0.82rem;margin-top:4px;"></p>
+                  </div>
+                </div>
+              </div>
+
               <div class="form-group"><label>Bio</label><textarea id="edit-bio" rows="4" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea></div>
               <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="edit-telefone" /></div>
-              <div class="form-group"><label>Anos de experiência</label><input type="number" id="edit-anos" style="max-width:160px;" /></div>
-              <div class="form-group"><label>Projetos relevantes</label><textarea id="edit-projetos" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea></div>
+              <div class="form-group">
+                <label>Ano de formação</label>
+                <input type="number" id="edit-graduacao-ano" min="1960" max="2026" style="max-width:160px;" />
+                <p style="font-size:0.78rem;color:#999;margin-top:4px;">Calculamos automaticamente seus anos de experiência a partir daqui — não é um campo livre.</p>
+              </div>
+              <div class="form-group">
+                <label>Experiências de trabalho e vivências relevantes</label>
+                <p style="font-size:0.78rem;color:#999;margin:-2px 0 6px;">Resuma o máximo possível.</p>
+                <textarea id="edit-projetos" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea>
+              </div>
               <button class="btn btn--yellow" onclick="salvarPerfil()">Salvar alterações →</button>
               <p id="salvar-msg" style="font-size:0.85rem;margin-top:12px;"></p>
             </div>
@@ -193,8 +217,11 @@
 
       document.getElementById('edit-bio').value = p.bio || '';
       document.getElementById('edit-telefone').value = p.telefone || '';
-      document.getElementById('edit-anos').value = p.anos_experiencia || '';
+      document.getElementById('edit-graduacao-ano').value = p.graduacao_ano || '';
       document.getElementById('edit-projetos').value = p.projetos_relevantes || '';
+      const fotoImg = document.getElementById('edit-foto-atual');
+      if (p.foto_url) { fotoImg.src = p.foto_url; fotoImg.style.display = 'block'; }
+      else { fotoImg.style.display = 'none'; }
 
       carregarDisponibilidades();
       carregarAgendamentos();
@@ -294,6 +321,30 @@
       `).join('');
     }
 
+    document.getElementById('edit-foto').addEventListener('change', async (e) => {
+      const arquivo = e.target.files[0];
+      if (!arquivo) return;
+      const msg = document.getElementById('foto-msg');
+      msg.style.color = '#666';
+      msg.textContent = 'Enviando foto...';
+      try {
+        const comprimida = await comprimirFoto(arquivo);
+        const form = new FormData();
+        form.set('foto', comprimida);
+        const res = await fetch('/api/psicologos/me/foto', {
+          method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form,
+        });
+        const data = await res.json();
+        if (!data.ok) { msg.style.color = '#991B1B'; msg.textContent = data.error || 'Erro ao trocar foto.'; return; }
+        const fotoImg = document.getElementById('edit-foto-atual');
+        fotoImg.src = data.foto_url + '?_=' + Date.now();
+        fotoImg.style.display = 'block';
+        msg.style.color = '#065F46';
+        msg.textContent = 'Foto atualizada!';
+        e.target.value = '';
+      } catch { msg.style.color = '#991B1B'; msg.textContent = 'Erro de conexão.'; }
+    });
+
     async function salvarPerfil() {
       const msg = document.getElementById('salvar-msg');
       msg.textContent = 'Salvando...';
@@ -304,7 +355,7 @@
           body: JSON.stringify({
             bio: document.getElementById('edit-bio').value.trim(),
             telefone: document.getElementById('edit-telefone').value.trim(),
-            anos_experiencia: Number(document.getElementById('edit-anos').value) || null,
+            graduacao_ano: Number(document.getElementById('edit-graduacao-ano').value) || null,
             projetos_relevantes: document.getElementById('edit-projetos').value.trim(),
           }),
         });

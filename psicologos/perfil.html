@@ -177,8 +177,9 @@
         const avaliacoes = avaliacoesData.avaliacoes || [];
 
         const media = perfilData.avaliacao_media;
-        const badgeExperiencia = p.anos_experiencia >= 5
-          ? `<span class="perfil-badge perfil-badge--experiencia">🏅 +${p.anos_experiencia} anos de experiência</span>` : '';
+        const anosExperiencia = p.graduacao_ano ? (new Date().getFullYear() - Number(p.graduacao_ano)) : null;
+        const badgeExperiencia = anosExperiencia >= 5
+          ? `<span class="perfil-badge perfil-badge--experiencia">🏅 +${anosExperiencia} anos de experiência</span>` : '';
 
         document.title = `${p.nome} · O Seu Psico`;
 
@@ -211,7 +212,7 @@
 
           ${abordagens.length ? `<h3>Abordagens</h3><p>${abordagens.join(', ')}</p>` : ''}
 
-          ${p.projetos_relevantes ? `<h3>Projetos relevantes</h3><p>${p.projetos_relevantes}</p>` : ''}
+          ${p.projetos_relevantes ? `<h3>Experiências de trabalho e vivências relevantes</h3><p>${p.projetos_relevantes}</p>` : ''}
         `;
 
         document.getElementById('lista-avaliacoes').innerHTML = avaliacoes.length

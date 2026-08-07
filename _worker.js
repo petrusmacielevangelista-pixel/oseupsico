@@ -583,10 +583,13 @@ export default {
         return json({ ok: true, psicologo: p });
       }
 
-      // PUT — edita o próprio perfil (não mexe em aprovação/licença)
+      // PUT — edita o próprio perfil (não mexe em aprovação/licença).
+      // anos_experiencia NÃO é editável diretamente — é sempre calculado a
+      // partir de graduacao_ano (ver calcularAnosExperiencia), pra evitar
+      // que o psicólogo informe um número que não bate com a formação.
       const body = await request.json();
       const campos = ['telefone', 'bio', 'graduacao_curso', 'graduacao_instituicao', 'graduacao_ano',
-        'pos_graduacoes', 'especialidades', 'abordagens', 'projetos_relevantes', 'anos_experiencia'];
+        'pos_graduacoes', 'especialidades', 'abordagens', 'projetos_relevantes'];
       const sets = [], binds = [];
       campos.forEach(c => {
         if (body[c] !== undefined) { sets.push(`${c} = ?`); binds.push(body[c]); }
@@ -595,6 +598,42 @@ export default {
       binds.push(psicologoId);
       await env.DB.prepare(`UPDATE psicologos SET ${sets.join(', ')} WHERE id = ?`).bind(...binds).run();
       return json({ ok: true });
+    }
+
+    if (pathname === '/api/psicologos/me/foto' && request.method === 'POST') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      if (!env.FOTOS_BUCKET) return json({ ok: false, error: 'Upload de foto temporariamente indisponível.' }, 503);
+      await initDB(env.DB);
+      try {
+        const form = await request.formData();
+        const foto = form.get('foto');
+        if (!foto || !foto.size) return json({ ok: false, error: 'Nenhuma foto enviada.' }, 400);
+        if (foto.size > 2 * 1024 * 1024) return json({ ok: false, error: 'Foto muito grande (máx. 2MB) — o app já reduz antes de enviar, tente outra imagem.' }, 400);
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(foto.type)) {
+          return json({ ok: false, error: 'Formato de foto inválido — use JPG, PNG ou WEBP.' }, 400);
+        }
+
+        const atual = await env.DB.prepare('SELECT foto_url FROM psicologos WHERE id = ?').bind(psicologoId).first();
+
+        const ext = foto.type.split('/')[1];
+        const key = `psicologos/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+        await env.FOTOS_BUCKET.put(key, await foto.arrayBuffer(), { httpMetadata: { contentType: foto.type } });
+        const fotoUrl = `/fotos/${key}`;
+
+        await env.DB.prepare('UPDATE psicologos SET foto_url = ? WHERE id = ?').bind(fotoUrl, psicologoId).run();
+
+        // Apaga a foto antiga do R2 só depois que a nova já foi salva com
+        // sucesso no banco — evita ficar sem foto nenhuma se algo falhar no meio.
+        if (atual?.foto_url && atual.foto_url.startsWith('/fotos/')) {
+          const keyAntiga = atual.foto_url.slice('/fotos/'.length);
+          await env.FOTOS_BUCKET.delete(keyAntiga).catch(() => {});
+        }
+
+        return json({ ok: true, foto_url: fotoUrl });
+      } catch (e) {
+        return json({ ok: false, error: e.message }, 500);
+      }
     }
 
     if (pathname === '/api/psicologos' && request.method === 'GET') {

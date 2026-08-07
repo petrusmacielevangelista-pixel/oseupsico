@@ -173,10 +173,20 @@
       return `${dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}, ${hora}`;
     }
 
+    // Anos de experiência é sempre calculado a partir do ano de formação
+    // (nunca informado manualmente pelo psicólogo) — evita números que não
+    // batem com a graduação real.
+    function calcularAnosExperiencia(graduacaoAno) {
+      if (!graduacaoAno) return null;
+      const anos = new Date().getFullYear() - Number(graduacaoAno);
+      return anos >= 0 ? anos : null;
+    }
+
     function renderCard(p) {
       const especialidades = JSON.parse(p.especialidades || '[]');
-      const badgeExperiencia = p.anos_experiencia >= 5
-        ? `<span class="psi-badge psi-badge--experiencia">🏅 +${p.anos_experiencia} anos</span>` : '';
+      const anosExperiencia = calcularAnosExperiencia(p.graduacao_ano);
+      const badgeExperiencia = anosExperiencia >= 5
+        ? `<span class="psi-badge psi-badge--experiencia">🏅 +${anosExperiencia} anos</span>` : '';
       const notaHtml = p.avaliacao_media
         ? `<span class="estrela">⭐ ${Number(p.avaliacao_media).toFixed(1)}</span> <span class="contagem">(${p.total_avaliacoes} avaliaç${p.total_avaliacoes == 1 ? 'ão' : 'ões'})</span>`
         : `<span class="contagem">Ainda sem avaliações</span>`;

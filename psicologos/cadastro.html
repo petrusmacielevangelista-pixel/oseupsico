@@ -84,12 +84,8 @@
         </div>
 
         <div class="form-group">
-          <label>Anos de experiência</label>
-          <input type="number" id="anos_experiencia" min="0" max="60" style="max-width:160px;" />
-        </div>
-
-        <div class="form-group">
-          <label>Projetos relevantes (opcional)</label>
+          <label>Experiências de trabalho e vivências relevantes (opcional)</label>
+          <p style="font-size:0.78rem;color:#999;margin:-4px 0 6px;">Resuma o máximo possível.</p>
           <textarea id="projetos_relevantes" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea>
         </div>
 
@@ -114,6 +110,7 @@
     </div>
   </section>
 
+  <script src="/psicologos/js/comprimir-foto.js"></script>
   <script>
     (async function carregarEspecialidades() {
       try {
@@ -151,13 +148,12 @@
       form.set('graduacao_instituicao', document.getElementById('graduacao_instituicao').value.trim());
       form.set('graduacao_ano', document.getElementById('graduacao_ano').value);
       form.set('pos_graduacoes', JSON.stringify(posGraduacoes));
-      form.set('anos_experiencia', document.getElementById('anos_experiencia').value);
       form.set('projetos_relevantes', document.getElementById('projetos_relevantes').value.trim());
       form.set('especialidades', JSON.stringify(especialidades));
       form.set('abordagens', JSON.stringify(abordagens));
 
-      const foto = document.getElementById('foto').files[0];
-      if (foto) form.set('foto', foto);
+      const fotoOriginal = document.getElementById('foto').files[0];
+      if (fotoOriginal) form.set('foto', await comprimirFoto(fotoOriginal));
 
       try {
         const res = await fetch('/api/psicologos/cadastro', { method: 'POST', body: form });
