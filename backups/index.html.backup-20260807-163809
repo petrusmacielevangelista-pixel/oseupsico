@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Encontre seu psicólogo · O Seu Psico</title>
+  <link rel="icon" href="/assets/logo.png" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar navbar--interna">
+    <div class="container">
+      <div class="navbar__inner">
+        <a href="/" class="navbar__logo">
+          <img src="/assets/logo.png" alt="O Seu Psico" class="navbar__logo-img" />
+          <span class="navbar__logo-text">O Seu Psico</span>
+        </a>
+        <a href="/psicologos/cadastro.html" class="navbar__back">Sou psicólogo →</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="section">
+    <div class="container">
+      <h1 style="font-family:var(--font-display);font-size:2rem;margin-bottom:8px;">Encontre seu psicólogo</h1>
+      <p style="color:#666;margin-bottom:32px;">Profissionais verificados, prontos pra te acompanhar.</p>
+
+      <div id="grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;">
+        <p>Carregando...</p>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    function formatarVaga(horario) {
+      const dt = new Date(horario.replace(' ', 'T'));
+      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+      const amanha = new Date(hoje); amanha.setDate(amanha.getDate() + 1);
+      const dataVaga = new Date(dt); dataVaga.setHours(0, 0, 0, 0);
+      const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      if (dataVaga.getTime() === hoje.getTime()) return `hoje, ${hora}`;
+      if (dataVaga.getTime() === amanha.getTime()) return `amanhã, ${hora}`;
+      return `${dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}, ${hora}`;
+    }
+
+    async function carregar() {
+      const grid = document.getElementById('grid');
+      try {
+        const res = await fetch('/api/psicologos');
+        const data = await res.json();
+        const lista = data.psicologos || [];
+        if (!lista.length) { grid.innerHTML = '<p>Nenhum psicólogo disponível no momento.</p>'; return; }
+
+        // A próxima vaga de cada psicólogo já vem calculada pelo servidor
+        // (p.proxima_vaga) — evita uma chamada extra por card, que deixava
+        // a listagem lenta pra carregar.
+        grid.innerHTML = lista.map(p => {
+          const especialidades = JSON.parse(p.especialidades || '[]');
+          const badge5anos = p.anos_experiencia >= 5
+            ? `<div style="background:#FFF8DC;color:#7a6200;font-size:0.75rem;font-weight:700;padding:4px 10px;border-radius:20px;display:inline-block;margin-bottom:10px;">🏅 +${p.anos_experiencia} anos de experiência</div>`
+            : '';
+          const notaHtml = p.avaliacao_media
+            ? `<span style="color:#D4A800;font-weight:700;">⭐ ${Number(p.avaliacao_media).toFixed(1)}</span> <span style="color:#888;">(${p.total_avaliacoes} avaliaç${p.total_avaliacoes == 1 ? 'ão' : 'ões'})</span>`
+            : `<span style="color:#999;">Ainda sem avaliações</span>`;
+          const pillsEspecialidades = especialidades.slice(0, 3).map(e =>
+            `<span style="background:#F7F5F0;color:#444;font-size:0.76rem;padding:4px 10px;border-radius:20px;">${e}</span>`
+          ).join('');
+
+          const proximaVaga = p.proxima_vaga;
+          const vagaHtml = proximaVaga
+            ? `<div style="font-size:0.8rem;color:#065F46;background:#D1FAE5;padding:6px 10px;border-radius:8px;margin-bottom:12px;display:inline-flex;align-items:center;gap:5px;">📅 Próxima vaga: ${formatarVaga(proximaVaga)}</div>`
+            : `<div style="font-size:0.8rem;color:#888;margin-bottom:12px;">Sem vagas nos próximos dias</div>`;
+
+          return `
+            <a href="/psicologos/perfil.html?id=${p.id}" class="card-psicologo" style="text-decoration:none;background:#fff;border:1.5px solid #eee;border-radius:16px;padding:20px;display:block;transition:all .2s;">
+              <div style="display:flex;gap:14px;align-items:center;margin-bottom:8px;">
+                <div style="width:64px;height:64px;border-radius:50%;padding:2px;border:1.5px solid #D4A800;flex-shrink:0;">
+                  <div style="width:100%;height:100%;border-radius:50%;background:#F7F5F0;overflow:hidden;">
+                    ${p.foto_url ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;" />` : ''}
+                  </div>
+                </div>
+                <div>
+                  <div style="font-family:var(--font-display);font-weight:700;font-size:1.15rem;color:#D4A800;line-height:1.3;letter-spacing:-0.01em;">${p.nome}</div>
+                  <div style="font-size:0.82rem;margin-top:3px;">${notaHtml}</div>
+                </div>
+              </div>
+              <div style="font-size:0.76rem;color:#0369A1;font-weight:600;margin-bottom:10px;">✓ Perfil verificado</div>
+              ${badge5anos}
+              <div style="font-size:0.85rem;color:#666;margin-bottom:12px;">${p.graduacao_instituicao || ''}</div>
+              ${vagaHtml}
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">${pillsEspecialidades}</div>
+            </a>
+          `;
+        }).join('');
+      } catch {
+        grid.innerHTML = '<p>Erro ao carregar psicólogos.</p>';
+      }
+    }
+    carregar();
+  </script>
+</body>
+</html>
