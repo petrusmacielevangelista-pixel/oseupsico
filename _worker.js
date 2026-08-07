@@ -317,6 +317,20 @@ export default {
       return new Response(null, { status: 204, headers: CORS });
     }
 
+    /* ── Fotos de perfil dos psicólogos (servidas do R2 pelo próprio Worker) ── */
+    if (pathname.startsWith('/fotos/') && request.method === 'GET') {
+      if (!env.FOTOS_BUCKET) return new Response('Não encontrada.', { status: 404 });
+      const key = pathname.slice('/fotos/'.length);
+      const objeto = await env.FOTOS_BUCKET.get(key);
+      if (!objeto) return new Response('Não encontrada.', { status: 404 });
+      return new Response(objeto.body, {
+        headers: {
+          'Content-Type': objeto.httpMetadata?.contentType || 'application/octet-stream',
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      });
+    }
+
     /* ══════════════ API: Especialidades (catálogo) ══════════════ */
 
     if (pathname === '/api/especialidades' && request.method === 'GET') {
@@ -378,7 +392,9 @@ export default {
           const ext = foto.type.split('/')[1];
           const key = `psicologos/${Date.now()}-${crypto.randomUUID()}.${ext}`;
           await env.FOTOS_BUCKET.put(key, await foto.arrayBuffer(), { httpMetadata: { contentType: foto.type } });
-          fotoUrl = `https://fotos.oseupsico.com.br/${key}`;
+          // Caminho relativo servido pelo próprio Worker (rota /fotos/*) —
+          // evita precisar configurar um subdomínio/DNS novo pro bucket.
+          fotoUrl = `/fotos/${key}`;
         }
 
         const senhaHash = await hashSenha(senha, env);

@@ -15,6 +15,12 @@
       "database_id": "a598c4c9-7ab6-4759-aecb-260d9b30ffda"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "FOTOS_BUCKET",
+      "bucket_name": "oseupsico-psicologos-fotos"
+    }
+  ],
   "observability": {
     "enabled": true
   },
