@@ -184,6 +184,21 @@ async function initDB(db) {
     )`
   ).run();
 
+  // Compromissos criados manualmente pelo psicólogo direto na agenda (ex:
+  // paciente que agendou por telefone/whatsapp) — diferente de `agendamentos`,
+  // que só existe pra reservas feitas pelo próprio paciente com confirmação
+  // por e-mail. Aqui não há verificação: é a agenda pessoal do psicólogo.
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS compromissos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      psicologo_id INTEGER NOT NULL,
+      paciente_nome TEXT NOT NULL,
+      descricao TEXT,
+      data_hora TEXT NOT NULL,
+      criado_em TEXT DEFAULT (datetime('now'))
+    )`
+  ).run();
+
   const { results: existentes } = await db.prepare('SELECT COUNT(*) as n FROM especialidades_catalogo').all();
   if (existentes[0].n === 0) {
     const iniciais = ['Ansiedade', 'Depressão', 'TDAH', 'Relacionamentos', 'Autoestima', 'Luto', 'Estresse', 'Burnout', 'TEA / Autismo', 'Trauma / TEPT'];
@@ -744,6 +759,50 @@ export default {
          ORDER BY a.data_hora`
       ).bind(psicologoId).all();
       return json({ ok: true, agendamentos: results });
+    }
+
+    if (pathname === '/api/psicologos/me/compromissos' && request.method === 'GET') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { results } = await env.DB.prepare(
+        'SELECT * FROM compromissos WHERE psicologo_id = ? ORDER BY data_hora'
+      ).bind(psicologoId).all();
+      return json({ ok: true, compromissos: results });
+    }
+
+    if (pathname === '/api/psicologos/me/compromissos' && request.method === 'POST') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { paciente_nome, descricao, data_hora } = await request.json();
+      if (!paciente_nome || !data_hora) return json({ ok: false, error: 'Nome do paciente e data/hora são obrigatórios.' }, 400);
+      const result = await env.DB.prepare(
+        `INSERT INTO compromissos (psicologo_id, paciente_nome, descricao, data_hora) VALUES (?, ?, ?, ?)`
+      ).bind(psicologoId, paciente_nome, descricao || null, data_hora).run();
+      return json({ ok: true, id: result.meta.last_row_id });
+    }
+
+    const compromissoMatch = pathname.match(/^\/api\/psicologos\/me\/compromissos\/(\d+)$/);
+    if (compromissoMatch && request.method === 'PUT') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { paciente_nome, descricao, data_hora } = await request.json();
+      if (!paciente_nome || !data_hora) return json({ ok: false, error: 'Nome do paciente e data/hora são obrigatórios.' }, 400);
+      await env.DB.prepare(
+        `UPDATE compromissos SET paciente_nome = ?, descricao = ?, data_hora = ? WHERE id = ? AND psicologo_id = ?`
+      ).bind(paciente_nome, descricao || null, data_hora, compromissoMatch[1], psicologoId).run();
+      return json({ ok: true });
+    }
+
+    if (compromissoMatch && request.method === 'DELETE') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      await env.DB.prepare('DELETE FROM compromissos WHERE id = ? AND psicologo_id = ?')
+        .bind(compromissoMatch[1], psicologoId).run();
+      return json({ ok: true });
     }
 
     /* ══════════════ API: Horários disponíveis + agendamento (público) ══════════════ */

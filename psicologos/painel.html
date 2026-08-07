@@ -58,7 +58,8 @@
         <div class="osp-painel-layout">
           <nav class="osp-painel-nav">
             <button class="ativo" data-painel="perfil" onclick="mostrarSecaoPainel('perfil')">👤 Meu perfil</button>
-            <button data-painel="agenda" onclick="mostrarSecaoPainel('agenda')">🗓️ Minha agenda</button>
+            <button data-painel="agenda" onclick="mostrarSecaoPainel('agenda')">🗓️ Horários de atendimento</button>
+            <button data-painel="compromissos" onclick="mostrarSecaoPainel('compromissos')">📌 Compromissos</button>
             <button data-painel="agendamentos" onclick="mostrarSecaoPainel('agendamentos')">✅ Agendamentos confirmados</button>
           </nav>
 
@@ -98,8 +99,8 @@
             </div>
 
             <div class="osp-card hidden" id="secao-agenda" data-secao>
-              <h2>Minha agenda</h2>
-              <p style="font-size:0.85rem;margin-bottom:16px;">Clique em um horário livre na grade pra pré-preencher, ajuste e adicione. Pacientes verão vagas dos próximos 14 dias com base nesses horários recorrentes.</p>
+              <h2>Horários de atendimento</h2>
+              <p style="font-size:0.85rem;margin-bottom:16px;">Clique em um horário livre na grade pra pré-preencher, ajuste e adicione. Isso define quando pacientes podem marcar pelo seu perfil público — não são compromissos individuais (veja abaixo).</p>
 
               <div class="osp-agenda-toolbar">
                 <div class="form-group">
@@ -118,8 +119,27 @@
               <div class="osp-calendar" id="calendario" style="overflow-x:auto;"></div>
             </div>
 
+            <div class="osp-card hidden" id="secao-compromissos" data-secao>
+              <h2>Compromissos</h2>
+              <p style="font-size:0.85rem;margin-bottom:16px;">Marque aqui pacientes que agendaram por fora da plataforma (telefone, WhatsApp) ou qualquer outro compromisso.</p>
+
+              <div class="osp-agenda-toolbar" id="compromisso-form" style="flex-wrap:wrap;">
+                <input type="hidden" id="comp-id" value="" />
+                <div class="form-group"><label>Nome do paciente *</label><input type="text" id="comp-nome" placeholder="Ex: João Silva" /></div>
+                <div class="form-group"><label>Data</label><input type="date" id="comp-data" /></div>
+                <div class="form-group"><label>Hora</label><input type="time" id="comp-hora" /></div>
+                <div class="form-group" style="flex:1;min-width:180px;"><label>Descrição (opcional)</label><input type="text" id="comp-descricao" placeholder="Ex: Primeira sessão, retorno..." /></div>
+                <button class="btn btn--yellow" onclick="salvarCompromisso()" style="height:44px;" id="comp-btn-salvar">+ Adicionar</button>
+                <button class="btn btn--outline hidden" onclick="cancelarEdicaoCompromisso()" style="height:44px;" id="comp-btn-cancelar">Cancelar edição</button>
+              </div>
+              <p id="comp-erro" style="color:#991B1B;font-size:0.85rem;margin:8px 0;"></p>
+
+              <div id="lista-compromissos" style="margin-top:16px;"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
+            </div>
+
             <div class="osp-card hidden" id="secao-agendamentos" data-secao>
               <h2>Próximos agendamentos confirmados</h2>
+              <p style="font-size:0.85rem;margin-bottom:16px;">Reservas feitas pelo próprio paciente pelo seu perfil público, já confirmadas por e-mail.</p>
               <div id="lista-agendamentos"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
             </div>
 
@@ -225,6 +245,7 @@
 
       carregarDisponibilidades();
       carregarAgendamentos();
+      carregarCompromissos();
     }
 
     const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -319,6 +340,83 @@
           — ${a.paciente_nome} ${a.paciente_telefone ? '(' + a.paciente_telefone + ')' : ''}
         </div>
       `).join('');
+    }
+
+    async function carregarCompromissos() {
+      const res = await fetch('/api/psicologos/me/compromissos', { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      const el = document.getElementById('lista-compromissos');
+      if (!data.compromissos?.length) { el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Nenhum compromisso cadastrado ainda.</p>'; return; }
+      el.innerHTML = data.compromissos.map(c => `
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;padding:12px 14px;background:#F7F5F0;border-radius:10px;margin-bottom:8px;">
+          <div>
+            <strong style="font-size:0.9rem;">${new Date(c.data_hora.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</strong>
+            — <span style="font-size:0.9rem;">${c.paciente_nome}</span>
+            ${c.descricao ? `<div style="font-size:0.78rem;color:#777;margin-top:2px;">${c.descricao}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:10px;flex-shrink:0;">
+            <button style="border:none;background:none;color:#B8940A;font-weight:700;cursor:pointer;font-size:0.82rem;" onclick="editarCompromisso(${c.id})">Editar</button>
+            <button style="border:none;background:none;color:#991B1B;font-weight:700;cursor:pointer;font-size:0.82rem;" onclick="excluirCompromisso(${c.id})">Excluir</button>
+          </div>
+        </div>
+      `).join('');
+      window._compromissosCache = data.compromissos;
+    }
+
+    async function salvarCompromisso() {
+      const erroEl = document.getElementById('comp-erro');
+      erroEl.textContent = '';
+      const id = document.getElementById('comp-id').value;
+      const nome = document.getElementById('comp-nome').value.trim();
+      const data = document.getElementById('comp-data').value;
+      const hora = document.getElementById('comp-hora').value;
+      const descricao = document.getElementById('comp-descricao').value.trim();
+
+      if (!nome || !data || !hora) { erroEl.textContent = 'Preencha nome, data e hora.'; return; }
+      const data_hora = `${data} ${hora}:00`;
+
+      const url = id ? `/api/psicologos/me/compromissos/${id}` : '/api/psicologos/me/compromissos';
+      const res = await fetch(url, {
+        method: id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ paciente_nome: nome, descricao, data_hora }),
+      });
+      const resultado = await res.json();
+      if (!resultado.ok) { erroEl.textContent = resultado.error || 'Erro ao salvar.'; return; }
+
+      cancelarEdicaoCompromisso();
+      carregarCompromissos();
+    }
+
+    function editarCompromisso(id) {
+      const c = (window._compromissosCache || []).find(x => x.id === id);
+      if (!c) return;
+      const [data, horaCompleta] = c.data_hora.split(' ');
+      document.getElementById('comp-id').value = c.id;
+      document.getElementById('comp-nome').value = c.paciente_nome;
+      document.getElementById('comp-data').value = data;
+      document.getElementById('comp-hora').value = (horaCompleta || '00:00:00').slice(0, 5);
+      document.getElementById('comp-descricao').value = c.descricao || '';
+      document.getElementById('comp-btn-salvar').textContent = 'Salvar edição →';
+      document.getElementById('comp-btn-cancelar').classList.remove('hidden');
+      document.getElementById('compromisso-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function cancelarEdicaoCompromisso() {
+      document.getElementById('comp-id').value = '';
+      document.getElementById('comp-nome').value = '';
+      document.getElementById('comp-data').value = '';
+      document.getElementById('comp-hora').value = '';
+      document.getElementById('comp-descricao').value = '';
+      document.getElementById('comp-erro').textContent = '';
+      document.getElementById('comp-btn-salvar').textContent = '+ Adicionar';
+      document.getElementById('comp-btn-cancelar').classList.add('hidden');
+    }
+
+    async function excluirCompromisso(id) {
+      if (!confirm('Excluir esse compromisso?')) return;
+      await fetch(`/api/psicologos/me/compromissos/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+      carregarCompromissos();
     }
 
     document.getElementById('edit-foto').addEventListener('change', async (e) => {
