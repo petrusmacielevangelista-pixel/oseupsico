@@ -61,7 +61,7 @@
           <nav class="osp-painel-nav">
             <button class="ativo" data-painel="perfil" onclick="mostrarSecaoPainel('perfil')">👤 Meu perfil</button>
             <button data-painel="agenda" onclick="mostrarSecaoPainel('agenda')">🗓️ Agenda</button>
-            <button data-painel="agendamentos" onclick="mostrarSecaoPainel('agendamentos')">✅ Agendamentos confirmados</button>
+            <button data-painel="agendamentos" onclick="mostrarSecaoPainel('agendamentos')">✅ Entrevistas iniciais agendadas</button>
             <button data-painel="visibilidade" onclick="mostrarSecaoPainel('visibilidade')">📊 Visibilidade</button>
           </nav>
 
@@ -211,7 +211,7 @@
             </div>
 
             <div class="osp-card hidden" id="secao-agendamentos" data-secao>
-              <h2>Próximos agendamentos confirmados</h2>
+              <h2>Entrevistas iniciais agendadas</h2>
               <p style="font-size:0.85rem;margin-bottom:16px;">Reservas feitas pelo próprio paciente pelo seu perfil público, já confirmadas por e-mail.</p>
               <div id="lista-agendamentos"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
             </div>
@@ -248,13 +248,9 @@
       </div>
       <div class="form-group" id="am-recorrente-wrap">
         <label style="display:flex;align-items:center;gap:8px;font-weight:600;">
-          <input type="checkbox" id="am-recorrente" onchange="document.getElementById('am-semanas-wrap').classList.toggle('hidden', !this.checked)" />
-          Recorrente — repetir toda semana, no mesmo dia e horário
+          <input type="checkbox" id="am-recorrente" />
+          Recorrente
         </label>
-        <div id="am-semanas-wrap" class="hidden" style="margin-top:8px;">
-          <label>Repetir por quantas semanas?</label>
-          <input type="number" id="am-semanas" value="8" min="1" max="52" style="max-width:100px;" />
-        </div>
       </div>
       <div id="am-info-agendamento" class="hidden osp-alert osp-alert--info" style="margin-top:8px;"></div>
       <p id="am-erro" style="color:#991B1B;font-size:0.85rem;margin-top:8px;"></p>
@@ -812,7 +808,6 @@
           document.getElementById('am-descricao').value = '';
           document.getElementById('am-recorrente-wrap').classList.remove('hidden');
           document.getElementById('am-recorrente').checked = false;
-          document.getElementById('am-semanas-wrap').classList.add('hidden');
           document.getElementById('am-btn-excluir').classList.add('hidden');
         }
       }
@@ -832,7 +827,7 @@
       const hora = document.getElementById('am-hora').value;
       const descricao = document.getElementById('am-descricao').value.trim();
       const recorrente = document.getElementById('am-recorrente').checked;
-      const semanas = Number(document.getElementById('am-semanas').value) || 1;
+      const semanas = 52; // recorrente = repete pelo ano todo, sem perguntar quantidade
 
       if (!nome || !data || !hora) { erroEl.textContent = 'Preencha nome, data e hora.'; return; }
       const data_hora = `${data} ${hora}:00`;
