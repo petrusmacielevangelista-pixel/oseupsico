@@ -7,6 +7,8 @@
   <link rel="icon" href="/assets/logo.png" />
   <link rel="stylesheet" href="/css/style.css" />
   <script src="/psicologos/js/comprimir-foto.js"></script>
+  <script src="/psicologos/js/celular-mask.js"></script>
+  <script src="/psicologos/js/experiencias-widget.js"></script>
 </head>
 <body>
 
@@ -70,7 +72,7 @@
               <h2>Meu perfil</h2>
 
               <div class="form-group">
-                <label>Foto de perfil</label>
+                <label>Foto de perfil <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
                 <div style="display:flex;align-items:center;gap:16px;margin-top:6px;">
                   <div style="width:76px;height:76px;border-radius:50%;overflow:hidden;background:#F7F5F0;border:2px solid #F5C518;flex-shrink:0;">
                     <img id="edit-foto-atual" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;" />
@@ -83,20 +85,46 @@
                 </div>
               </div>
 
-              <div class="form-group"><label>Bio</label><textarea id="edit-bio" rows="4" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea></div>
-              <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="edit-telefone" /></div>
               <div class="form-group">
-                <label>Ano de formação</label>
-                <input type="number" id="edit-graduacao-ano" min="1960" max="2026" style="max-width:160px;" />
-                <p style="font-size:0.78rem;color:#999;margin-top:4px;">Calculamos automaticamente seus anos de experiência a partir daqui — não é um campo livre.</p>
+                <label>Bio <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
+                <textarea id="edit-bio" rows="4" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Celular/WhatsApp <span style="font-weight:400;color:#999;">(usado no botão de WhatsApp do seu perfil — o número não aparece em texto)</span></label>
+                  <input type="tel" id="edit-telefone" placeholder="(11) 91234-5678" />
+                </div>
+                <div class="form-group">
+                  <label>Data de formação <span style="font-weight:400;color:#999;">(não aparece — só usamos pra calcular sua badge de experiência)</span></label>
+                  <input type="text" id="edit-graduacao-mes-ano" placeholder="MM/AAAA" maxlength="7" style="max-width:140px;" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>CPF <span style="font-weight:400;color:#999;">(não é público — só uso interno de verificação)</span></label>
+                  <input type="text" id="edit-cpf" placeholder="000.000.000-00" />
+                </div>
+                <div class="form-group">
+                  <label>RG <span style="font-weight:400;color:#999;">(não é público — só uso interno de verificação)</span></label>
+                  <input type="text" id="edit-rg" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>CRP <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
+                <div id="edit-crp-display" style="padding:12px;background:#F7F5F0;border-radius:10px;font-weight:600;"></div>
+                <p style="font-size:0.78rem;color:#999;margin-top:4px;">Não editável por aqui — foi verificado na aprovação do seu cadastro. Fale com o suporte se precisar corrigir.</p>
+              </div>
+
+              <div class="form-group">
+                <label>Experiências de trabalho e vivências relevantes <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
+                <p style="font-size:0.78rem;color:#999;margin:-2px 0 10px;">Resuma o máximo possível. Escreva por tópicos e coloque data de início-fim.</p>
+                <div id="edit-experiencias-lista"></div>
               </div>
               <div class="form-group">
-                <label>Experiências de trabalho e vivências relevantes</label>
-                <p style="font-size:0.78rem;color:#999;margin:-2px 0 6px;">Resuma o máximo possível.</p>
-                <textarea id="edit-projetos" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea>
-              </div>
-              <div class="form-group">
-                <label>Horário preferido pra receber sua agenda do dia seguinte por e-mail</label>
+                <label>Horário preferido pra receber sua agenda do dia seguinte por e-mail <span style="font-weight:400;color:#999;">(não é público — só uso interno)</span></label>
                 <select id="edit-hora-notificacao" style="max-width:160px;"></select>
                 <p style="font-size:0.78rem;color:#999;margin-top:4px;">Só enviamos se houver algo marcado — dias vazios não geram e-mail. (Em breve também por WhatsApp.)</p>
               </div>
@@ -167,6 +195,9 @@
   </section>
 
   <script>
+    aplicarMascaraCelular(document.getElementById('edit-telefone'));
+    const widgetExperienciasPainel = criarWidgetExperiencias('edit-experiencias-lista');
+
     let token = sessionStorage.getItem('psico_token_psicologo');
     if (token) mostrarPainel();
 
@@ -253,8 +284,14 @@
 
       document.getElementById('edit-bio').value = p.bio || '';
       document.getElementById('edit-telefone').value = p.telefone || '';
-      document.getElementById('edit-graduacao-ano').value = p.graduacao_ano || '';
-      document.getElementById('edit-projetos').value = p.projetos_relevantes || '';
+      document.getElementById('edit-telefone').dispatchEvent(new Event('input')); // aplica a máscara no valor já carregado
+      document.getElementById('edit-graduacao-mes-ano').value = p.graduacao_mes_ano || '';
+      document.getElementById('edit-cpf').value = p.cpf || '';
+      document.getElementById('edit-rg').value = p.rg || '';
+      document.getElementById('edit-crp-display').textContent = p.crp_numero ? `${p.crp_numero}/${p.crp_estado}` : '—';
+      let experienciasSalvas = [];
+      try { experienciasSalvas = JSON.parse(p.experiencias || '[]'); } catch {}
+      widgetExperienciasPainel.setItens(experienciasSalvas);
       const fotoImg = document.getElementById('edit-foto-atual');
       if (p.foto_url) { fotoImg.src = p.foto_url; fotoImg.style.display = 'block'; }
       else { fotoImg.style.display = 'none'; }
@@ -512,14 +549,24 @@
       const msg = document.getElementById('salvar-msg');
       msg.textContent = 'Salvando...';
       msg.style.color = '#666';
+
+      const mesAno = document.getElementById('edit-graduacao-mes-ano').value.trim();
+      if (mesAno && !/^(0[1-9]|1[0-2])\/\d{4}$/.test(mesAno)) {
+        msg.style.color = '#991B1B';
+        msg.textContent = 'Data de formação inválida — use o formato MM/AAAA (ex: 03/2018).';
+        return;
+      }
+
       try {
         const res = await fetch('/api/psicologos/me', {
           method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
           body: JSON.stringify({
             bio: document.getElementById('edit-bio').value.trim(),
             telefone: document.getElementById('edit-telefone').value.trim(),
-            graduacao_ano: Number(document.getElementById('edit-graduacao-ano').value) || null,
-            projetos_relevantes: document.getElementById('edit-projetos').value.trim(),
+            cpf: document.getElementById('edit-cpf').value.trim(),
+            rg: document.getElementById('edit-rg').value.trim(),
+            graduacao_mes_ano: mesAno,
+            experiencias: JSON.stringify(widgetExperienciasPainel.getItens()),
             hora_notificacao_diaria: document.getElementById('edit-hora-notificacao').value,
           }),
         });

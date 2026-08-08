@@ -170,6 +170,16 @@
   </a>
 
   <script>
+    function calcularAnosExperiencia(graduacaoMesAno) {
+      if (!graduacaoMesAno) return null;
+      const [mes, ano] = graduacaoMesAno.split('/').map(Number);
+      if (!mes || !ano) return null;
+      const agora = new Date();
+      let anos = agora.getFullYear() - ano;
+      if (agora.getMonth() + 1 < mes) anos--;
+      return anos >= 0 ? anos : null;
+    }
+
     const id = new URLSearchParams(location.search).get('id');
     let notaEscolhida = 0;
 
@@ -194,7 +204,7 @@
         const avaliacoes = avaliacoesData.avaliacoes || [];
 
         const media = perfilData.avaliacao_media;
-        const anosExperiencia = p.graduacao_ano ? (new Date().getFullYear() - Number(p.graduacao_ano)) : null;
+        const anosExperiencia = calcularAnosExperiencia(p.graduacao_mes_ano);
         const badgeExperiencia = anosExperiencia >= 5
           ? `<span class="perfil-badge perfil-badge--experiencia">🏅 +${anosExperiencia} anos de experiência</span>` : '';
 
@@ -213,10 +223,26 @@
               <div class="perfil-badges">
                 <span class="perfil-badge perfil-badge--verificado">✓ Perfil verificado</span>
                 ${badgeExperiencia}
+                ${p.crp_numero ? `<span class="perfil-badge" style="background:#F0EDE4;color:#555;">CRP ${p.crp_numero}/${p.crp_estado}</span>` : ''}
               </div>
             </div>
           </div>
         `;
+
+        const anoFormacao = p.graduacao_mes_ano ? p.graduacao_mes_ano.split('/')[1] : '';
+
+        // Experiências: formato novo é uma lista estruturada (título + período);
+        // perfis antigos ainda têm só o texto livre em projetos_relevantes —
+        // mostramos qualquer um dos dois formatos que existir, sempre dentro
+        // de um único bloco (não um heading por item).
+        let experiencias = [];
+        try { experiencias = JSON.parse(p.experiencias || '[]'); } catch {}
+        const experienciasHtml = experiencias.length
+          ? `<h3>Experiências de trabalho e vivências relevantes</h3>
+             <div class="perfil-experiencias">
+               ${experiencias.map(e => `<p>• <strong>${e.titulo}</strong>${e.inicio ? ` (${e.inicio} – ${e.atual ? 'atual' : (e.fim || '')})` : ''}</p>`).join('')}
+             </div>`
+          : (p.projetos_relevantes ? `<h3>Experiências de trabalho e vivências relevantes</h3><p>${p.projetos_relevantes}</p>` : '');
 
         sobreEl.innerHTML = `
           ${p.bio ? `<h2>Sobre</h2><p>${p.bio}</p>` : ''}
@@ -224,12 +250,12 @@
           ${especialidades.length ? `<h3>Especialidades</h3><div class="perfil-tags">${especialidades.map(e => `<span class="perfil-tag">${e}</span>`).join('')}</div>` : ''}
 
           <h3>Formação</h3>
-          <p>${p.graduacao_curso || ''}${p.graduacao_instituicao ? ' — ' + p.graduacao_instituicao : ''}${p.graduacao_ano ? ' (' + p.graduacao_ano + ')' : ''}</p>
+          <p>${p.graduacao_curso || ''}${p.graduacao_instituicao ? ' — ' + p.graduacao_instituicao : ''}${anoFormacao ? ' (' + anoFormacao + ')' : ''}</p>
           ${posGraduacoes.map(pg => `<p>${pg}</p>`).join('')}
 
           ${abordagens.length ? `<h3>Abordagens</h3><p>${abordagens.join(', ')}</p>` : ''}
 
-          ${p.projetos_relevantes ? `<h3>Experiências de trabalho e vivências relevantes</h3><p>${p.projetos_relevantes}</p>` : ''}
+          ${experienciasHtml}
         `;
 
         document.getElementById('lista-avaliacoes').innerHTML = avaliacoes.length

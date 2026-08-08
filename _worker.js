@@ -62,16 +62,20 @@ async function initDB(db) {
       senha_hash TEXT NOT NULL,
       telefone TEXT,
       foto_url TEXT,
+      cpf TEXT,
+      rg TEXT,
       crp_numero TEXT NOT NULL,
       crp_estado TEXT NOT NULL,
       bio TEXT,
       graduacao_curso TEXT,
       graduacao_instituicao TEXT,
       graduacao_ano INTEGER,
+      graduacao_mes_ano TEXT,
       pos_graduacoes TEXT,
       especialidades TEXT,
       abordagens TEXT,
       projetos_relevantes TEXT,
+      experiencias TEXT,
       anos_experiencia INTEGER,
       status_aprovacao TEXT NOT NULL DEFAULT 'pendente',
       licenca_status TEXT NOT NULL DEFAULT 'inativa',
@@ -633,19 +637,20 @@ export default {
         const posGraduacoes = form.get('pos_graduacoes') || '[]';
         const especialidades = form.get('especialidades') || '[]';
         const abordagens = form.get('abordagens') || '[]';
+        const experiencias = form.get('experiencias') || '[]';
 
         const result = await env.DB.prepare(
           `INSERT INTO psicologos
-           (nome, email, senha_hash, telefone, foto_url, crp_numero, crp_estado, bio,
-            graduacao_curso, graduacao_instituicao, graduacao_ano, pos_graduacoes,
-            especialidades, abordagens, projetos_relevantes, anos_experiencia)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           (nome, email, senha_hash, telefone, foto_url, cpf, rg, crp_numero, crp_estado, bio,
+            graduacao_curso, graduacao_instituicao, graduacao_mes_ano, pos_graduacoes,
+            especialidades, abordagens, experiencias)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
-          nome, email, senhaHash, form.get('telefone') || null, fotoUrl, crpNumero, crpEstado,
+          nome, email, senhaHash, form.get('telefone') || null, fotoUrl,
+          form.get('cpf') || null, form.get('rg') || null, crpNumero, crpEstado,
           form.get('bio') || null, form.get('graduacao_curso') || null, form.get('graduacao_instituicao') || null,
-          form.get('graduacao_ano') ? Number(form.get('graduacao_ano')) : null, posGraduacoes,
-          especialidades, abordagens, form.get('projetos_relevantes') || null,
-          form.get('anos_experiencia') ? Number(form.get('anos_experiencia')) : null
+          form.get('graduacao_mes_ano') || null, posGraduacoes,
+          especialidades, abordagens, experiencias
         ).run();
 
         return json({ ok: true, id: result.meta.last_row_id });
@@ -728,11 +733,13 @@ export default {
 
       // PUT — edita o próprio perfil (não mexe em aprovação/licença).
       // anos_experiencia NÃO é editável diretamente — é sempre calculado a
-      // partir de graduacao_ano (ver calcularAnosExperiencia), pra evitar
+      // partir de graduacao_mes_ano (ver calcularAnosExperiencia), pra evitar
       // que o psicólogo informe um número que não bate com a formação.
+      // crp_numero/crp_estado também não são editáveis aqui — foram
+      // verificados pelo admin na aprovação; mudar exigiria nova checagem.
       const body = await request.json();
-      const campos = ['telefone', 'bio', 'graduacao_curso', 'graduacao_instituicao', 'graduacao_ano',
-        'pos_graduacoes', 'especialidades', 'abordagens', 'projetos_relevantes', 'hora_notificacao_diaria'];
+      const campos = ['telefone', 'bio', 'cpf', 'rg', 'graduacao_curso', 'graduacao_instituicao', 'graduacao_mes_ano',
+        'pos_graduacoes', 'especialidades', 'abordagens', 'experiencias', 'hora_notificacao_diaria'];
       const sets = [], binds = [];
       campos.forEach(c => {
         if (body[c] !== undefined) { sets.push(`${c} = ?`); binds.push(body[c]); }
@@ -782,8 +789,8 @@ export default {
     if (pathname === '/api/psicologos' && request.method === 'GET') {
       await initDB(env.DB);
       const { results } = await env.DB.prepare(
-        `SELECT p.id, p.nome, p.foto_url, p.bio, p.especialidades, p.abordagens, p.anos_experiencia,
-                p.graduacao_curso, p.graduacao_instituicao, p.graduacao_ano,
+        `SELECT p.id, p.nome, p.foto_url, p.bio, p.especialidades, p.abordagens,
+                p.graduacao_curso, p.graduacao_instituicao, p.graduacao_mes_ano,
                 (SELECT AVG(nota) FROM avaliacoes WHERE psicologo_id = p.id AND status = 'publicado') as avaliacao_media,
                 (SELECT COUNT(*) FROM avaliacoes WHERE psicologo_id = p.id AND status = 'publicado') as total_avaliacoes
          FROM psicologos p
@@ -839,8 +846,9 @@ export default {
     if (perfilMatch && request.method === 'GET') {
       await initDB(env.DB);
       const p = await env.DB.prepare(
-        `SELECT id, nome, foto_url, bio, especialidades, abordagens, anos_experiencia, telefone,
-                graduacao_curso, graduacao_instituicao, graduacao_ano, pos_graduacoes, projetos_relevantes
+        `SELECT id, nome, foto_url, bio, especialidades, abordagens, telefone, crp_numero, crp_estado,
+                graduacao_curso, graduacao_instituicao, graduacao_mes_ano, pos_graduacoes,
+                experiencias, projetos_relevantes
          FROM psicologos
          WHERE id = ? AND status_aprovacao = 'aprovado' AND licenca_validade_ate >= date('now')`
       ).bind(perfilMatch[1]).first();
