@@ -69,7 +69,10 @@
           <div class="osp-painel-content">
 
             <div class="osp-card" id="secao-perfil" data-secao>
-              <h2>Meu perfil</h2>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h2 style="margin-bottom:0;">Meu perfil</h2>
+                <a href="#" id="link-ver-perfil" target="_blank" style="font-size:0.85rem;font-weight:700;color:#B8940A;text-decoration:none;">Visualizar o meu perfil →</a>
+              </div>
 
               <div class="form-group">
                 <label>Foto de perfil <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
@@ -325,6 +328,7 @@
       }
       statusBox.innerHTML = statusHtml;
 
+      document.getElementById('link-ver-perfil').href = `/psicologos/perfil.html?id=${p.id}`;
       document.getElementById('edit-bio').value = p.bio || '';
       document.getElementById('edit-telefone').value = p.telefone || '';
       document.getElementById('edit-telefone').dispatchEvent(new Event('input')); // aplica a máscara no valor já carregado
