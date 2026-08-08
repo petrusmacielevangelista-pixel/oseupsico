@@ -63,7 +63,8 @@
     .horario-btn:hover { border-color: #D4A800; }
     .horario-btn.selecionado { background: #1A1A1A; border-color: #1A1A1A; color: #fff; }
 
-    .estrelas-input { font-size: 1.9rem; cursor: pointer; color: #D4A800; letter-spacing: 2px; }
+    .estrelas-input { font-size: 1.9rem; color: #D4A800; }
+    .estrelas-input span { cursor: pointer; padding: 0 2px; display: inline-block; }
 
     .perfil-whatsapp-flutuante {
       position: fixed; bottom: 24px; right: 24px; z-index: 40;
@@ -120,7 +121,9 @@
                 </div>
                 <div class="form-group">
                   <label>Nota *</label>
-                  <div id="estrelas" class="estrelas-input">☆☆☆☆☆</div>
+                  <div id="estrelas" class="estrelas-input">
+                    <span data-nota="1">☆</span><span data-nota="2">☆</span><span data-nota="3">☆</span><span data-nota="4">☆</span><span data-nota="5">☆</span>
+                  </div>
                   <input type="hidden" id="av-nota" value="0" />
                 </div>
                 <div class="form-group">
@@ -373,12 +376,18 @@
       }
     });
 
+    function pintarEstrelas(nota) {
+      document.querySelectorAll('#estrelas span').forEach(s => {
+        s.textContent = Number(s.dataset.nota) <= nota ? '★' : '☆';
+      });
+    }
+
     document.getElementById('estrelas').addEventListener('click', (e) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const pos = (e.clientX - rect.left) / rect.width;
-      notaEscolhida = Math.max(1, Math.min(5, Math.ceil(pos * 5)));
+      const span = e.target.closest('span[data-nota]');
+      if (!span) return;
+      notaEscolhida = Number(span.dataset.nota);
       document.getElementById('av-nota').value = notaEscolhida;
-      document.getElementById('estrelas').textContent = '★'.repeat(notaEscolhida) + '☆'.repeat(5 - notaEscolhida);
+      pintarEstrelas(notaEscolhida);
     });
 
     document.getElementById('form-avaliacao').addEventListener('submit', async (e) => {
