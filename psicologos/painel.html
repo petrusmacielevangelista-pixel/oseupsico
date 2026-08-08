@@ -103,6 +103,32 @@
 
               <div class="form-row">
                 <div class="form-group">
+                  <label>Graduação (curso) <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
+                  <input type="text" id="edit-graduacao-curso" placeholder="Ex: Psicologia" />
+                </div>
+                <div class="form-group">
+                  <label>Instituição <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
+                  <input type="text" id="edit-graduacao-instituicao" placeholder="Ex: Universidade de São Paulo (USP)" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Pós-graduações (uma por linha, ex: "Especialização em TCC — PUC, 2018") <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
+                <textarea id="edit-pos-graduacoes" rows="3" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label>Especialidades <span style="font-weight:400;color:#999;">(aparecem no seu perfil público e nos filtros da listagem)</span></label>
+                <div id="edit-especialidades-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">Carregando...</div>
+              </div>
+
+              <div class="form-group">
+                <label>Abordagens (separadas por vírgula — ex: TCC, ACT) <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
+                <input type="text" id="edit-abordagens" />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
                   <label>CPF <span style="font-weight:400;color:#999;">(não é público — só uso interno de verificação)</span></label>
                   <input type="text" id="edit-cpf" placeholder="000.000.000-00" />
                 </div>
@@ -252,6 +278,23 @@
       } catch { msg.style.color = '#991B1B'; msg.textContent = 'Erro de conexão.'; }
     }
 
+    async function carregarEspecialidadesPainel(especialidadesSalvasJson) {
+      let selecionadas = [];
+      try { selecionadas = JSON.parse(especialidadesSalvasJson || '[]'); } catch {}
+      const el = document.getElementById('edit-especialidades-lista');
+      try {
+        const res = await fetch('/api/especialidades');
+        const data = await res.json();
+        el.innerHTML = (data.especialidades || []).map(e => `
+          <label style="display:flex;align-items:center;gap:6px;background:#FFF8E6;color:#7a6200;border:1px solid #F3EFE3;padding:8px 14px;border-radius:20px;font-size:0.85rem;font-weight:600;cursor:pointer;">
+            <input type="checkbox" value="${e.nome}" class="chk-edit-especialidade" ${selecionadas.includes(e.nome) ? 'checked' : ''} /> ${e.nome}
+          </label>
+        `).join('');
+      } catch {
+        el.textContent = 'Erro ao carregar especialidades.';
+      }
+    }
+
     async function mostrarPainel() {
       document.getElementById('login-view').classList.add('hidden');
       document.getElementById('esqueci-view').classList.add('hidden');
@@ -286,6 +329,15 @@
       document.getElementById('edit-telefone').value = p.telefone || '';
       document.getElementById('edit-telefone').dispatchEvent(new Event('input')); // aplica a máscara no valor já carregado
       document.getElementById('edit-graduacao-mes-ano').value = p.graduacao_mes_ano || '';
+      document.getElementById('edit-graduacao-curso').value = p.graduacao_curso || '';
+      document.getElementById('edit-graduacao-instituicao').value = p.graduacao_instituicao || '';
+      let posGraduacoesSalvas = [];
+      try { posGraduacoesSalvas = JSON.parse(p.pos_graduacoes || '[]'); } catch {}
+      document.getElementById('edit-pos-graduacoes').value = posGraduacoesSalvas.join('\n');
+      let abordagensSalvas = [];
+      try { abordagensSalvas = JSON.parse(p.abordagens || '[]'); } catch {}
+      document.getElementById('edit-abordagens').value = abordagensSalvas.join(', ');
+      await carregarEspecialidadesPainel(p.especialidades);
       document.getElementById('edit-cpf').value = p.cpf || '';
       document.getElementById('edit-rg').value = p.rg || '';
       document.getElementById('edit-crp-display').textContent = p.crp_numero ? `${p.crp_numero}/${p.crp_estado}` : '—';
@@ -557,6 +609,10 @@
         return;
       }
 
+      const especialidades = [...document.querySelectorAll('.chk-edit-especialidade:checked')].map(c => c.value);
+      const posGraduacoes = document.getElementById('edit-pos-graduacoes').value.split('\n').map(s => s.trim()).filter(Boolean);
+      const abordagens = document.getElementById('edit-abordagens').value.split(',').map(s => s.trim()).filter(Boolean);
+
       try {
         const res = await fetch('/api/psicologos/me', {
           method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
@@ -566,6 +622,11 @@
             cpf: document.getElementById('edit-cpf').value.trim(),
             rg: document.getElementById('edit-rg').value.trim(),
             graduacao_mes_ano: mesAno,
+            graduacao_curso: document.getElementById('edit-graduacao-curso').value.trim(),
+            graduacao_instituicao: document.getElementById('edit-graduacao-instituicao').value.trim(),
+            pos_graduacoes: JSON.stringify(posGraduacoes),
+            especialidades: JSON.stringify(especialidades),
+            abordagens: JSON.stringify(abordagens),
             experiencias: JSON.stringify(widgetExperienciasPainel.getItens()),
             hora_notificacao_diaria: document.getElementById('edit-hora-notificacao').value,
           }),
