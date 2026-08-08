@@ -199,7 +199,6 @@
         const p = perfilData.psicologo;
         const posGraduacoes = JSON.parse(p.pos_graduacoes || '[]');
         const especialidades = JSON.parse(p.especialidades || '[]');
-        const abordagens = JSON.parse(p.abordagens || '[]');
         const avaliacoesData = await avaliacoesRes.json();
         const avaliacoes = avaliacoesData.avaliacoes || [];
 
@@ -253,7 +252,7 @@
           <p>${p.graduacao_curso || ''}${p.graduacao_instituicao ? ' — ' + p.graduacao_instituicao : ''}${anoFormacao ? ' (' + anoFormacao + ')' : ''}</p>
           ${posGraduacoes.map(pg => `<p>${pg}</p>`).join('')}
 
-          ${abordagens.length ? `<h3>Abordagens</h3><p>${abordagens.join(', ')}</p>` : ''}
+          ${p.abordagem ? `<h3>Abordagem</h3><p>${p.abordagem}</p>` : ''}
 
           ${experienciasHtml}
         `;

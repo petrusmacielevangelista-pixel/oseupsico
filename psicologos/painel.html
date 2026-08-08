@@ -123,8 +123,8 @@
               </div>
 
               <div class="form-group">
-                <label>Abordagens (separadas por vírgula — ex: TCC, ACT) <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
-                <input type="text" id="edit-abordagens" />
+                <label>Abordagem (ex: TCC) <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
+                <input type="text" id="edit-abordagem" placeholder="Escolha a abordagem principal" />
               </div>
 
               <div class="form-row">
@@ -334,9 +334,7 @@
       let posGraduacoesSalvas = [];
       try { posGraduacoesSalvas = JSON.parse(p.pos_graduacoes || '[]'); } catch {}
       document.getElementById('edit-pos-graduacoes').value = posGraduacoesSalvas.join('\n');
-      let abordagensSalvas = [];
-      try { abordagensSalvas = JSON.parse(p.abordagens || '[]'); } catch {}
-      document.getElementById('edit-abordagens').value = abordagensSalvas.join(', ');
+      document.getElementById('edit-abordagem').value = p.abordagem || '';
       await carregarEspecialidadesPainel(p.especialidades);
       document.getElementById('edit-cpf').value = p.cpf || '';
       document.getElementById('edit-rg').value = p.rg || '';
@@ -611,7 +609,6 @@
 
       const especialidades = [...document.querySelectorAll('.chk-edit-especialidade:checked')].map(c => c.value);
       const posGraduacoes = document.getElementById('edit-pos-graduacoes').value.split('\n').map(s => s.trim()).filter(Boolean);
-      const abordagens = document.getElementById('edit-abordagens').value.split(',').map(s => s.trim()).filter(Boolean);
 
       try {
         const res = await fetch('/api/psicologos/me', {
@@ -626,7 +623,7 @@
             graduacao_instituicao: document.getElementById('edit-graduacao-instituicao').value.trim(),
             pos_graduacoes: JSON.stringify(posGraduacoes),
             especialidades: JSON.stringify(especialidades),
-            abordagens: JSON.stringify(abordagens),
+            abordagem: document.getElementById('edit-abordagem').value.trim(),
             experiencias: JSON.stringify(widgetExperienciasPainel.getItens()),
             hora_notificacao_diaria: document.getElementById('edit-hora-notificacao').value,
           }),
