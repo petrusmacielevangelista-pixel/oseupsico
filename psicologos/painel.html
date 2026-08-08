@@ -60,7 +60,7 @@
         <div class="osp-painel-layout">
           <nav class="osp-painel-nav">
             <button class="ativo" data-painel="perfil" onclick="mostrarSecaoPainel('perfil')">👤 Meu perfil</button>
-            <button data-painel="agenda" onclick="mostrarSecaoPainel('agenda')">🗓️ Horários de atendimento</button>
+            <button data-painel="agenda" onclick="mostrarSecaoPainel('agenda')">🗓️ Agenda</button>
             <button data-painel="compromissos" onclick="mostrarSecaoPainel('compromissos')">📌 Compromissos</button>
             <button data-painel="agendamentos" onclick="mostrarSecaoPainel('agendamentos')">✅ Agendamentos confirmados</button>
             <button data-painel="visibilidade" onclick="mostrarSecaoPainel('visibilidade')">📊 Visibilidade</button>
@@ -99,7 +99,7 @@
                   <input type="tel" id="edit-telefone" placeholder="(11) 91234-5678" />
                 </div>
                 <div class="form-group">
-                  <label>Data de formação (Mês e ano do término da data que você se formou) <span style="font-weight:400;color:#999;">(não aparece — só usamos pra calcular sua badge de experiência)</span></label>
+                  <label>Data de formação (Mês e ano da conclusão da sua formação profissional) <span style="font-weight:400;color:#999;">(não aparece — só usamos pra calcular sua badge de experiência)</span></label>
                   <input type="text" id="edit-graduacao-mes-ano" placeholder="MM/AAAA" maxlength="7" style="max-width:140px;" />
                 </div>
               </div>
@@ -161,25 +161,37 @@
               <p id="salvar-msg" style="font-size:0.85rem;margin-top:12px;"></p>
             </div>
 
-            <div class="osp-card hidden" id="secao-agenda" data-secao>
-              <h2>Horários de atendimento</h2>
-              <p style="font-size:0.85rem;margin-bottom:16px;">Clique em um horário livre na grade pra pré-preencher, ajuste e adicione. Isso define quando pacientes podem marcar pelo seu perfil público — não são compromissos individuais (veja abaixo).</p>
+            <div class="hidden" id="secao-agenda" data-secao>
 
-              <div class="osp-agenda-toolbar">
-                <div class="form-group">
-                  <label>Dia</label>
-                  <select id="disp-dia">
-                    <option value="1">Segunda</option><option value="2">Terça</option><option value="3">Quarta</option>
-                    <option value="4">Quinta</option><option value="5">Sexta</option><option value="6">Sábado</option><option value="0">Domingo</option>
-                  </select>
-                </div>
-                <div class="form-group"><label>Das</label><input type="time" id="disp-inicio" value="09:00" /></div>
-                <div class="form-group"><label>Até</label><input type="time" id="disp-fim" value="12:00" /></div>
-                <div class="form-group"><label>Sessão (min)</label><input type="number" id="disp-duracao" value="50" style="max-width:90px;" /></div>
-                <button class="btn btn--yellow" onclick="adicionarDisponibilidade()" style="height:44px;">+ Adicionar</button>
+              <div class="osp-card">
+                <h2>Agenda — próximos 14 dias</h2>
+                <p style="font-size:0.85rem;margin-bottom:16px;">Agendamentos confirmados por pacientes e compromissos que você criou, com datas reais. Feriados nacionais aparecem marcados e ficam bloqueados pra agendamento público automaticamente.</p>
+                <div id="agenda-dias"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
               </div>
 
-              <div class="osp-calendar" id="calendario" style="overflow-x:auto;"></div>
+              <div class="osp-card">
+                <h2>Horários recorrentes de atendimento</h2>
+                <p style="font-size:0.85rem;margin-bottom:16px;">Clique em um horário livre na grade pra pré-preencher, ajuste e adicione (ou clique num bloco já existente pra editar). Isso define quando pacientes podem marcar pelo seu perfil público — não são compromissos individuais (veja a aba Compromissos).</p>
+
+                <div class="osp-agenda-toolbar">
+                  <input type="hidden" id="disp-id" value="" />
+                  <div class="form-group">
+                    <label>Dia</label>
+                    <select id="disp-dia">
+                      <option value="1">Segunda</option><option value="2">Terça</option><option value="3">Quarta</option>
+                      <option value="4">Quinta</option><option value="5">Sexta</option><option value="6">Sábado</option><option value="0">Domingo</option>
+                    </select>
+                  </div>
+                  <div class="form-group"><label>Das</label><input type="time" id="disp-inicio" value="09:00" /></div>
+                  <div class="form-group"><label>Até</label><input type="time" id="disp-fim" value="12:00" /></div>
+                  <div class="form-group"><label>Sessão (min)</label><input type="number" id="disp-duracao" value="50" style="max-width:90px;" /></div>
+                  <button class="btn btn--yellow" onclick="salvarDisponibilidade()" style="height:44px;" id="disp-btn-salvar">+ Adicionar</button>
+                  <button class="btn btn--outline hidden" onclick="cancelarEdicaoDisponibilidade()" style="height:44px;" id="disp-btn-cancelar">Cancelar edição</button>
+                </div>
+
+                <div class="osp-calendar" id="calendario" style="overflow-x:auto;"></div>
+              </div>
+
             </div>
 
             <div class="osp-card hidden" id="secao-compromissos" data-secao>
@@ -363,6 +375,7 @@
       carregarAgendamentos();
       carregarCompromissos();
       carregarVisibilidade();
+      carregarAgendaReal();
     }
 
     const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -407,11 +420,14 @@
       document.getElementById('disp-inicio').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
+    let disponibilidadesCache = [];
+
     async function carregarDisponibilidades() {
       montarCalendarioVazio();
       const res = await fetch('/api/psicologos/me/disponibilidades', { headers: { Authorization: 'Bearer ' + token } });
       const data = await res.json();
-      (data.disponibilidades || []).forEach(d => {
+      disponibilidadesCache = data.disponibilidades || [];
+      disponibilidadesCache.forEach(d => {
         const col = document.getElementById('cal-dia-' + d.dia_semana);
         if (!col) return;
         const inicioMin = minutosDoDia(d.hora_inicio) - CAL_HORA_INICIO * 60;
@@ -422,23 +438,50 @@
         bloco.className = 'osp-calendar__block';
         bloco.style.top = top + 'px';
         bloco.style.height = altura + 'px';
+        bloco.style.cursor = 'pointer';
+        bloco.title = 'Clique pra editar';
         bloco.innerHTML = `${d.hora_inicio}–${d.hora_fim}<br>${d.duracao_minutos}min<span class="osp-calendar__remove" title="Remover">×</span>`;
         bloco.querySelector('.osp-calendar__remove').onclick = (e) => { e.stopPropagation(); removerDisponibilidade(d.id); };
+        bloco.addEventListener('click', (e) => { if (!e.target.closest('.osp-calendar__remove')) editarDisponibilidade(d.id); });
         col.appendChild(bloco);
       });
     }
 
-    async function adicionarDisponibilidade() {
-      await fetch('/api/psicologos/me/disponibilidades', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify({
-          dia_semana: Number(document.getElementById('disp-dia').value),
-          hora_inicio: document.getElementById('disp-inicio').value,
-          hora_fim: document.getElementById('disp-fim').value,
-          duracao_minutos: Number(document.getElementById('disp-duracao').value) || 50,
-        }),
+    async function salvarDisponibilidade() {
+      const id = document.getElementById('disp-id').value;
+      const body = JSON.stringify({
+        dia_semana: Number(document.getElementById('disp-dia').value),
+        hora_inicio: document.getElementById('disp-inicio').value,
+        hora_fim: document.getElementById('disp-fim').value,
+        duracao_minutos: Number(document.getElementById('disp-duracao').value) || 50,
       });
+      const url = id ? `/api/psicologos/me/disponibilidades/${id}` : '/api/psicologos/me/disponibilidades';
+      await fetch(url, {
+        method: id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body,
+      });
+      cancelarEdicaoDisponibilidade();
       carregarDisponibilidades();
+    }
+
+    function editarDisponibilidade(id) {
+      const d = disponibilidadesCache.find(x => x.id === id);
+      if (!d) return;
+      document.getElementById('disp-id').value = d.id;
+      document.getElementById('disp-dia').value = d.dia_semana;
+      document.getElementById('disp-inicio').value = d.hora_inicio;
+      document.getElementById('disp-fim').value = d.hora_fim;
+      document.getElementById('disp-duracao').value = d.duracao_minutos;
+      document.getElementById('disp-btn-salvar').textContent = 'Salvar edição →';
+      document.getElementById('disp-btn-cancelar').classList.remove('hidden');
+      document.getElementById('disp-inicio').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function cancelarEdicaoDisponibilidade() {
+      document.getElementById('disp-id').value = '';
+      document.getElementById('disp-btn-salvar').textContent = '+ Adicionar';
+      document.getElementById('disp-btn-cancelar').classList.add('hidden');
     }
 
     async function removerDisponibilidade(id) {
@@ -464,6 +507,7 @@
       if (!confirm('Cancelar esse agendamento? O paciente será avisado por e-mail.')) return;
       await fetch(`/api/psicologos/me/agendamentos/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
       carregarAgendamentos();
+      carregarAgendaReal();
     }
 
     async function carregarVisibilidade() {
@@ -542,6 +586,7 @@
 
       cancelarEdicaoCompromisso();
       carregarCompromissos();
+      carregarAgendaReal();
     }
 
     function editarCompromisso(id) {
@@ -573,6 +618,68 @@
       if (!confirm('Excluir esse compromisso?')) return;
       await fetch(`/api/psicologos/me/compromissos/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
       carregarCompromissos();
+      carregarAgendaReal();
+    }
+
+    const DIAS_SEMANA_ABREV_AGENDA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+
+    async function carregarAgendaReal() {
+      const el = document.getElementById('agenda-dias');
+      const res = await fetch('/api/psicologos/me/agenda?dias=14', { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      if (!data.ok) { el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Erro ao carregar a agenda.</p>'; return; }
+
+      const feriadosPorData = Object.fromEntries((data.feriados || []).map(f => [f.data, f.nome]));
+
+      // Monta os 14 dias em ordem, mesmo os sem nada — pra sempre mostrar
+      // "Sem compromissos" em vez de simplesmente sumir o dia.
+      const dias = [];
+      const inicio = new Date(data.inicio + 'T12:00:00');
+      for (let i = 0; i < data.dias; i++) {
+        const d = new Date(inicio); d.setDate(d.getDate() + i);
+        const ano = d.getFullYear(), mes = String(d.getMonth() + 1).padStart(2, '0'), dia = String(d.getDate()).padStart(2, '0');
+        dias.push({ iso: `${ano}-${mes}-${dia}`, data: d });
+      }
+
+      el.innerHTML = dias.map(({ iso, data: d }) => {
+        const itensAgendamentos = (data.agendamentos || []).filter(a => a.data_hora.slice(0, 10) === iso)
+          .map(a => ({ tipo: 'agendamento', hora: a.data_hora.slice(11, 16), texto: a.paciente_nome, sub: a.paciente_telefone || '' }));
+        const itensCompromissos = (data.compromissos || []).filter(c => c.data_hora.slice(0, 10) === iso)
+          .map(c => ({ tipo: 'compromisso', id: c.id, hora: c.data_hora.slice(11, 16), texto: c.paciente_nome, sub: c.descricao || '' }));
+        const itens = [...itensAgendamentos, ...itensCompromissos].sort((a, b) => a.hora.localeCompare(b.hora));
+
+        const feriado = feriadosPorData[iso];
+        const diaSemana = DIAS_SEMANA_ABREV_AGENDA[d.getDay()];
+        const dataFormatada = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+        const itensHtml = itens.length ? itens.map(it => `
+          <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;padding:8px 12px;background:#fff;border-radius:8px;margin-bottom:6px;border:1px solid #F0EDE4;">
+            <div>
+              <strong style="font-size:0.85rem;">${it.hora}</strong>
+              <span style="font-size:0.85rem;">${it.tipo === 'agendamento' ? '✅' : '📌'} ${it.texto}</span>
+              ${it.sub ? `<div style="font-size:0.76rem;color:#888;margin-top:2px;">${it.sub}</div>` : ''}
+            </div>
+            ${it.tipo === 'compromisso' ? `
+              <div style="display:flex;gap:8px;flex-shrink:0;">
+                <button style="border:none;background:none;color:#B8940A;font-weight:700;cursor:pointer;font-size:0.78rem;" onclick="editarCompromisso(${it.id});mostrarSecaoPainel('compromissos');">Editar</button>
+                <button style="border:none;background:none;color:#991B1B;font-weight:700;cursor:pointer;font-size:0.78rem;" onclick="excluirCompromisso(${it.id})">Excluir</button>
+              </div>` : ''}
+          </div>
+        `).join('') : '<p style="color:#bbb;font-size:0.8rem;margin:4px 0;">Sem compromissos.</p>';
+
+        return `
+          <div style="padding:12px 14px;border-radius:12px;margin-bottom:10px;background:${feriado ? '#FEF2F2' : '#F7F5F0'};">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <strong style="font-size:0.9rem;text-transform:capitalize;">${diaSemana}, ${dataFormatada}</strong>
+              <div style="display:flex;align-items:center;gap:10px;">
+                ${feriado ? `<span style="font-size:0.76rem;font-weight:700;color:#B4230C;">🎉 Feriado: ${feriado}</span>` : ''}
+                <button style="border:none;background:none;color:#B8940A;font-weight:700;cursor:pointer;font-size:0.78rem;" onclick="document.getElementById('comp-data').value='${iso}';mostrarSecaoPainel('compromissos');document.getElementById('comp-nome').focus();">+ Compromisso</button>
+              </div>
+            </div>
+            ${itensHtml}
+          </div>
+        `;
+      }).join('');
     }
 
     document.getElementById('edit-foto').addEventListener('change', async (e) => {

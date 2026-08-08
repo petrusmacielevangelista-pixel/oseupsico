@@ -252,12 +252,68 @@ function gerarToken() {
 // recorrentes e um Set de horários já ocupados. Usado tanto na listagem
 // pública (calcula pra todos de uma vez, evitando N chamadas separadas)
 // quanto no endpoint de horários completos do perfil individual.
-function proximaVagaLivre(disponibilidades, ocupadosSet, diasAFrente = 14) {
+// Formata uma data local (sem componente de hora) como "AAAA-MM-DD" sem
+// passar por toISOString/UTC — evita qualquer risco de a data mudar por
+// causa de fuso horário, tanto no Worker (que roda em UTC) quanto se essa
+// mesma lógica for reaproveitada em algum lugar que rode noutro fuso.
+function formatarDataISO(data) {
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, '0');
+  const dia = String(data.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
+// Domingo de Páscoa pelo algoritmo de Gauss/anônimo gregoriano — base pros
+// feriados móveis (Carnaval, Sexta-feira Santa, Corpus Christi).
+function calcularPascoa(ano) {
+  const a = ano % 19, b = Math.floor(ano / 100), c = ano % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31);
+  const dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(ano, mes - 1, dia);
+}
+
+// Feriados nacionais brasileiros pra um ano — fixos + móveis (baseados na
+// Páscoa). Usado tanto pra marcar visualmente a agenda quanto pra bloquear
+// agendamento público nesses dias.
+function feriadosBrasileiros(ano) {
+  const pascoa = calcularPascoa(ano);
+  const addDias = (data, dias) => { const d = new Date(data); d.setDate(d.getDate() + dias); return d; };
+  return [
+    { data: `${ano}-01-01`, nome: 'Confraternização Universal' },
+    { data: formatarDataISO(addDias(pascoa, -47)), nome: 'Carnaval (segunda)' },
+    { data: formatarDataISO(addDias(pascoa, -46)), nome: 'Carnaval (terça)' },
+    { data: formatarDataISO(addDias(pascoa, -2)), nome: 'Sexta-feira Santa' },
+    { data: `${ano}-04-21`, nome: 'Tiradentes' },
+    { data: `${ano}-05-01`, nome: 'Dia do Trabalho' },
+    { data: formatarDataISO(addDias(pascoa, 60)), nome: 'Corpus Christi' },
+    { data: `${ano}-09-07`, nome: 'Independência do Brasil' },
+    { data: `${ano}-10-12`, nome: 'Nossa Senhora Aparecida' },
+    { data: `${ano}-11-02`, nome: 'Finados' },
+    { data: `${ano}-11-15`, nome: 'Proclamação da República' },
+    { data: `${ano}-11-20`, nome: 'Consciência Negra' },
+    { data: `${ano}-12-25`, nome: 'Natal' },
+  ];
+}
+
+function feriadosNoIntervalo(inicio, fim) {
+  const anos = new Set([inicio.getFullYear(), fim.getFullYear()]);
+  let todos = [];
+  anos.forEach(a => todos.push(...feriadosBrasileiros(a)));
+  const inicioStr = formatarDataISO(inicio), fimStr = formatarDataISO(fim);
+  return todos.filter(f => f.data >= inicioStr && f.data <= fimStr);
+}
+
+function proximaVagaLivre(disponibilidades, ocupadosSet, diasAFrente = 14, feriadosSet = null) {
   const agora = new Date();
   for (let d = 1; d <= diasAFrente; d++) {
     const dia = new Date(agora);
     dia.setDate(dia.getDate() + d);
     const diaSemana = dia.getDay();
+    if (feriadosSet && feriadosSet.has(formatarDataISO(dia))) continue;
 
     const dispsDoDia = disponibilidades.filter(disp => disp.dia_semana === diaSemana);
     let melhorSlot = null;
@@ -848,12 +904,16 @@ export default {
         ).bind(...ids).all();
         const cliquesPorPsicologo = Object.fromEntries(cliquesRecentes.map(c => [Number(c.psicologo_id), c.total]));
 
+        const hojeParaVaga = new Date();
+        const fimParaVaga = new Date(hojeParaVaga); fimParaVaga.setDate(fimParaVaga.getDate() + 14);
+        const feriadosSet = new Set(feriadosNoIntervalo(hojeParaVaga, fimParaVaga).map(f => f.data));
+
         psicologos = results.map(p => {
           const disponibilidades = todasDisponibilidades.filter(d => Number(d.psicologo_id) === Number(p.id));
           const ocupadosSet = new Set(todosOcupados.filter(o => Number(o.psicologo_id) === Number(p.id)).map(o => o.data_hora));
           return {
             ...p,
-            proxima_vaga: proximaVagaLivre(disponibilidades, ocupadosSet),
+            proxima_vaga: proximaVagaLivre(disponibilidades, ocupadosSet, 14, feriadosSet),
             muito_procurado: (cliquesPorPsicologo[Number(p.id)] || 0) >= limite,
           };
         });
@@ -951,6 +1011,22 @@ export default {
       return json({ ok: true });
     }
 
+    const dispPutMatch = pathname.match(/^\/api\/psicologos\/me\/disponibilidades\/(\d+)$/);
+    if (dispPutMatch && request.method === 'PUT') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { dia_semana, hora_inicio, hora_fim, duracao_minutos } = await request.json();
+      if (dia_semana === undefined || !hora_inicio || !hora_fim) {
+        return json({ ok: false, error: 'Dados obrigatórios ausentes.' }, 400);
+      }
+      await env.DB.prepare(
+        `UPDATE disponibilidades SET dia_semana = ?, hora_inicio = ?, hora_fim = ?, duracao_minutos = ?
+         WHERE id = ? AND psicologo_id = ?`
+      ).bind(dia_semana, hora_inicio, hora_fim, duracao_minutos || 50, dispPutMatch[1], psicologoId).run();
+      return json({ ok: true });
+    }
+
     const dispDeleteMatch = pathname.match(/^\/api\/psicologos\/me\/disponibilidades\/(\d+)$/);
     if (dispDeleteMatch && request.method === 'DELETE') {
       const psicologoId = autenticadoPsicologo(request, env);
@@ -991,6 +1067,37 @@ export default {
       await enviarEmailCancelamentoParaPaciente(env, { nome: info.paciente_nome, email: info.paciente_email }, info.psicologo_nome, info.data_hora).catch(() => {});
 
       return json({ ok: true });
+    }
+
+    // Agenda unificada: agendamentos públicos confirmados + compromissos
+    // manuais + feriados, todos com datas reais (não recorrentes), pra
+    // alimentar o calendário do painel.
+    if (pathname === '/api/psicologos/me/agenda' && request.method === 'GET') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+
+      const dias = Math.min(30, Math.max(1, Number(url.searchParams.get('dias')) || 14));
+      const inicio = new Date(); inicio.setHours(0, 0, 0, 0);
+      const fim = new Date(inicio); fim.setDate(fim.getDate() + dias);
+      const inicioStr = formatarDataISO(inicio), fimStr = formatarDataISO(fim);
+
+      const { results: agendamentos } = await env.DB.prepare(
+        `SELECT a.id, a.data_hora, p.nome as paciente_nome, p.telefone as paciente_telefone
+         FROM agendamentos a JOIN pacientes p ON p.id = a.paciente_id
+         WHERE a.psicologo_id = ? AND a.status = 'confirmado' AND date(a.data_hora) >= ? AND date(a.data_hora) < ?
+         ORDER BY a.data_hora`
+      ).bind(psicologoId, inicioStr, fimStr).all();
+
+      const { results: compromissos } = await env.DB.prepare(
+        `SELECT id, paciente_nome, descricao, data_hora FROM compromissos
+         WHERE psicologo_id = ? AND date(data_hora) >= ? AND date(data_hora) < ?
+         ORDER BY data_hora`
+      ).bind(psicologoId, inicioStr, fimStr).all();
+
+      const feriados = feriadosNoIntervalo(inicio, fim);
+
+      return json({ ok: true, inicio: inicioStr, dias, agendamentos, compromissos, feriados });
     }
 
     if (pathname === '/api/psicologos/me/compromissos' && request.method === 'GET') {
@@ -1201,9 +1308,13 @@ export default {
 
       const slots = [];
       const agora = new Date();
+      const fimIntervalo = new Date(agora); fimIntervalo.setDate(fimIntervalo.getDate() + diasAFrente);
+      const feriadosSet = new Set(feriadosNoIntervalo(agora, fimIntervalo).map(f => f.data));
+
       for (let d = 1; d <= diasAFrente; d++) {
         const dia = new Date(agora);
         dia.setDate(dia.getDate() + d);
+        if (feriadosSet.has(formatarDataISO(dia))) continue; // feriado — não oferece horário público nesse dia
         const diaSemana = dia.getDay();
 
         disponibilidades.filter(disp => disp.dia_semana === diaSemana).forEach(disp => {
