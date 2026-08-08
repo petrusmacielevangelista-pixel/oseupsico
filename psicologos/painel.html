@@ -61,7 +61,6 @@
           <nav class="osp-painel-nav">
             <button class="ativo" data-painel="perfil" onclick="mostrarSecaoPainel('perfil')">👤 Meu perfil</button>
             <button data-painel="agenda" onclick="mostrarSecaoPainel('agenda')">🗓️ Agenda</button>
-            <button data-painel="compromissos" onclick="mostrarSecaoPainel('compromissos')">📌 Compromissos</button>
             <button data-painel="agendamentos" onclick="mostrarSecaoPainel('agendamentos')">✅ Agendamentos confirmados</button>
             <button data-painel="visibilidade" onclick="mostrarSecaoPainel('visibilidade')">📊 Visibilidade</button>
           </nav>
@@ -164,14 +163,31 @@
             <div class="hidden" id="secao-agenda" data-secao>
 
               <div class="osp-card">
-                <h2>Agenda — próximos 14 dias</h2>
-                <p style="font-size:0.85rem;margin-bottom:16px;">Agendamentos confirmados por pacientes e compromissos que você criou, com datas reais. Feriados nacionais aparecem marcados e ficam bloqueados pra agendamento público automaticamente.</p>
-                <div id="agenda-dias"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:6px;">
+                  <h2 style="margin-bottom:0;">Agenda</h2>
+                  <div class="osp-view-toggle-group">
+                    <button class="osp-view-toggle ativo" data-view="dia" onclick="mudarVisaoAgenda('dia')">Dia</button>
+                    <button class="osp-view-toggle" data-view="semana" onclick="mudarVisaoAgenda('semana')">Semana</button>
+                    <button class="osp-view-toggle" data-view="mes" onclick="mudarVisaoAgenda('mes')">Mês</button>
+                  </div>
+                </div>
+                <p style="font-size:0.85rem;margin-bottom:16px;">Clique num horário vazio pra criar um compromisso, ou num já existente pra editar. Feriados nacionais aparecem marcados e ficam bloqueados pra agendamento público automaticamente.</p>
+
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <button class="btn btn--outline" onclick="agendaNavegar(-1)" style="padding:8px 14px;">← Anterior</button>
+                    <button class="btn btn--outline" onclick="agendaHoje()" style="padding:8px 14px;">Hoje</button>
+                    <button class="btn btn--outline" onclick="agendaNavegar(1)" style="padding:8px 14px;">Próximo →</button>
+                  </div>
+                  <strong id="agenda-titulo-periodo" style="font-size:0.95rem;text-transform:capitalize;"></strong>
+                </div>
+
+                <div id="agenda-calendario-wrap" style="overflow-x:auto;"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
               </div>
 
               <div class="osp-card">
                 <h2>Horários recorrentes de atendimento</h2>
-                <p style="font-size:0.85rem;margin-bottom:16px;">Clique em um horário livre na grade pra pré-preencher, ajuste e adicione (ou clique num bloco já existente pra editar). Isso define quando pacientes podem marcar pelo seu perfil público — não são compromissos individuais (veja a aba Compromissos).</p>
+                <p style="font-size:0.85rem;margin-bottom:16px;">Clique em um horário livre na grade pra pré-preencher, ajuste e adicione (ou clique num bloco já existente pra editar). Isso define quando pacientes podem marcar pelo seu perfil público — são regras que se repetem toda semana, diferente dos compromissos individuais marcados na agenda acima.</p>
 
                 <div class="osp-agenda-toolbar">
                   <input type="hidden" id="disp-id" value="" />
@@ -192,24 +208,6 @@
                 <div class="osp-calendar" id="calendario" style="overflow-x:auto;"></div>
               </div>
 
-            </div>
-
-            <div class="osp-card hidden" id="secao-compromissos" data-secao>
-              <h2>Compromissos</h2>
-              <p style="font-size:0.85rem;margin-bottom:16px;">Marque aqui pacientes que agendaram por fora da plataforma (telefone, WhatsApp) ou qualquer outro compromisso.</p>
-
-              <div class="osp-agenda-toolbar" id="compromisso-form" style="flex-wrap:wrap;">
-                <input type="hidden" id="comp-id" value="" />
-                <div class="form-group"><label>Nome do paciente *</label><input type="text" id="comp-nome" placeholder="Ex: João Silva" /></div>
-                <div class="form-group"><label>Data</label><input type="date" id="comp-data" /></div>
-                <div class="form-group"><label>Hora</label><input type="time" id="comp-hora" /></div>
-                <div class="form-group" style="flex:1;min-width:180px;"><label>Descrição (opcional)</label><input type="text" id="comp-descricao" placeholder="Ex: Primeira sessão, retorno..." /></div>
-                <button class="btn btn--yellow" onclick="salvarCompromisso()" style="height:44px;" id="comp-btn-salvar">+ Adicionar</button>
-                <button class="btn btn--outline hidden" onclick="cancelarEdicaoCompromisso()" style="height:44px;" id="comp-btn-cancelar">Cancelar edição</button>
-              </div>
-              <p id="comp-erro" style="color:#991B1B;font-size:0.85rem;margin:8px 0;"></p>
-
-              <div id="lista-compromissos" style="margin-top:16px;"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
             </div>
 
             <div class="osp-card hidden" id="secao-agendamentos" data-secao>
@@ -234,6 +232,41 @@
 
     </div>
   </section>
+
+  <div id="agenda-modal-overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;">
+    <div class="osp-card" style="max-width:440px;width:100%;max-height:90vh;overflow-y:auto;">
+      <h2 id="agenda-modal-titulo" style="margin-bottom:16px;">Novo compromisso</h2>
+      <input type="hidden" id="am-id" value="" />
+      <div class="form-group"><label>Nome do paciente *</label><input type="text" id="am-nome" placeholder="Ex: João Silva" /></div>
+      <div class="form-row">
+        <div class="form-group"><label>Data</label><input type="date" id="am-data" /></div>
+        <div class="form-group"><label>Hora</label><input type="time" id="am-hora" /></div>
+      </div>
+      <div class="form-group">
+        <label>Observação (opcional)</label>
+        <textarea id="am-descricao" rows="2" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea>
+      </div>
+      <div class="form-group" id="am-recorrente-wrap">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:600;">
+          <input type="checkbox" id="am-recorrente" onchange="document.getElementById('am-semanas-wrap').classList.toggle('hidden', !this.checked)" />
+          Recorrente — repetir toda semana, no mesmo dia e horário
+        </label>
+        <div id="am-semanas-wrap" class="hidden" style="margin-top:8px;">
+          <label>Repetir por quantas semanas?</label>
+          <input type="number" id="am-semanas" value="8" min="1" max="52" style="max-width:100px;" />
+        </div>
+      </div>
+      <div id="am-info-agendamento" class="hidden osp-alert osp-alert--info" style="margin-top:8px;"></div>
+      <p id="am-erro" style="color:#991B1B;font-size:0.85rem;margin-top:8px;"></p>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+        <button class="btn btn--outline hidden" id="am-btn-excluir" onclick="excluirCompromissoModal()" style="color:#991B1B;border-color:#FCA5A5;">Excluir</button>
+        <div style="display:flex;gap:8px;margin-left:auto;">
+          <button class="btn btn--outline" onclick="fecharModalAgenda()">Cancelar</button>
+          <button class="btn btn--yellow" id="am-btn-salvar" onclick="salvarCompromissoModal()">Salvar →</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
     aplicarMascaraCelular(document.getElementById('edit-telefone'));
@@ -373,9 +406,8 @@
 
       carregarDisponibilidades();
       carregarAgendamentos();
-      carregarCompromissos();
       carregarVisibilidade();
-      carregarAgendaReal();
+      recarregarAgenda();
     }
 
     const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -507,7 +539,7 @@
       if (!confirm('Cancelar esse agendamento? O paciente será avisado por e-mail.')) return;
       await fetch(`/api/psicologos/me/agendamentos/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
       carregarAgendamentos();
-      carregarAgendaReal();
+      recarregarAgenda();
     }
 
     async function carregarVisibilidade() {
@@ -542,144 +574,292 @@
       el.innerHTML = `<svg width="${larguraTotal}" height="${altura + 44}" viewBox="0 0 ${larguraTotal} ${altura + 44}">${barras}</svg>`;
     }
 
-    async function carregarCompromissos() {
-      const res = await fetch('/api/psicologos/me/compromissos', { headers: { Authorization: 'Bearer ' + token } });
-      const data = await res.json();
-      const el = document.getElementById('lista-compromissos');
-      if (!data.compromissos?.length) { el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Nenhum compromisso cadastrado ainda.</p>'; return; }
-      el.innerHTML = data.compromissos.map(c => `
-        <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;padding:12px 14px;background:#F7F5F0;border-radius:10px;margin-bottom:8px;">
-          <div>
-            <strong style="font-size:0.9rem;">${new Date(c.data_hora.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</strong>
-            — <span style="font-size:0.9rem;">${c.paciente_nome}</span>
-            ${c.descricao ? `<div style="font-size:0.78rem;color:#777;margin-top:2px;">${c.descricao}</div>` : ''}
-          </div>
-          <div style="display:flex;gap:10px;flex-shrink:0;">
-            <button style="border:none;background:none;color:#B8940A;font-weight:700;cursor:pointer;font-size:0.82rem;" onclick="editarCompromisso(${c.id})">Editar</button>
-            <button style="border:none;background:none;color:#991B1B;font-weight:700;cursor:pointer;font-size:0.82rem;" onclick="excluirCompromisso(${c.id})">Excluir</button>
-          </div>
-        </div>
-      `).join('');
-      window._compromissosCache = data.compromissos;
+    /* ══════════════ Agenda: calendário Dia/Semana/Mês ══════════════ */
+
+    const DIAS_SEMANA_ABREV_AGENDA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+    const MESES_NOME = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    const AGENDA_HORA_INICIO = 6, AGENDA_HORA_FIM = 23, AGENDA_PX_POR_HORA = 40;
+    const AGENDA_ALTURA = (AGENDA_HORA_FIM - AGENDA_HORA_INICIO) * AGENDA_PX_POR_HORA;
+
+    let agendaView = 'dia';
+    let agendaReferencia = new Date(); agendaReferencia.setHours(0, 0, 0, 0);
+    let agendaCache = { agendamentos: [], compromissos: [], feriados: [] };
+
+    function agendaDataISO(d) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
-    async function salvarCompromisso() {
-      const erroEl = document.getElementById('comp-erro');
+    function inicioDaSemana(d) { const r = new Date(d); r.setDate(r.getDate() - r.getDay()); return r; }
+
+    function janelaAgenda() {
+      if (agendaView === 'dia') return { inicio: new Date(agendaReferencia), dias: 1 };
+      if (agendaView === 'semana') return { inicio: inicioDaSemana(agendaReferencia), dias: 7 };
+      // mês: mostra a grade completa (semanas inteiras) do 1º dia do mês até o último
+      const primeiroDoMes = new Date(agendaReferencia.getFullYear(), agendaReferencia.getMonth(), 1);
+      const inicioGrade = inicioDaSemana(primeiroDoMes);
+      const ultimoDoMes = new Date(agendaReferencia.getFullYear(), agendaReferencia.getMonth() + 1, 0);
+      const fimGrade = new Date(inicioDaSemana(ultimoDoMes)); fimGrade.setDate(fimGrade.getDate() + 7);
+      const dias = Math.round((fimGrade - inicioGrade) / 86400000);
+      return { inicio: inicioGrade, dias };
+    }
+
+    async function recarregarAgenda() {
+      const { inicio, dias } = janelaAgenda();
+      const res = await fetch(`/api/psicologos/me/agenda?inicio=${agendaDataISO(inicio)}&dias=${dias}`, { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      if (data.ok) agendaCache = data;
+      renderizarAgenda();
+    }
+
+    function mudarVisaoAgenda(v) {
+      agendaView = v;
+      document.querySelectorAll('.osp-view-toggle').forEach(b => b.classList.toggle('ativo', b.dataset.view === v));
+      recarregarAgenda();
+    }
+
+    function agendaNavegar(delta) {
+      if (agendaView === 'dia') agendaReferencia.setDate(agendaReferencia.getDate() + delta);
+      else if (agendaView === 'semana') agendaReferencia.setDate(agendaReferencia.getDate() + delta * 7);
+      else agendaReferencia = new Date(agendaReferencia.getFullYear(), agendaReferencia.getMonth() + delta, 1);
+      recarregarAgenda();
+    }
+
+    function agendaHoje() {
+      agendaReferencia = new Date(); agendaReferencia.setHours(0, 0, 0, 0);
+      recarregarAgenda();
+    }
+
+    function itensAgendaDoDia(iso) {
+      const agendamentos = (agendaCache.agendamentos || []).filter(a => a.data_hora.slice(0, 10) === iso)
+        .map(a => ({ tipo: 'agendamento', id: a.id, hora: a.data_hora.slice(11, 16), texto: a.paciente_nome, sub: a.paciente_telefone || '' }));
+      const compromissos = (agendaCache.compromissos || []).filter(c => c.data_hora.slice(0, 10) === iso)
+        .map(c => ({ tipo: 'compromisso', id: c.id, hora: c.data_hora.slice(11, 16), texto: c.paciente_nome, sub: c.descricao || '' }));
+      return [...agendamentos, ...compromissos].sort((a, b) => a.hora.localeCompare(b.hora));
+    }
+
+    function feriadoDoDia(iso) {
+      return (agendaCache.feriados || []).find(f => f.data === iso);
+    }
+
+    function atualizarTituloPeriodo() {
+      const el = document.getElementById('agenda-titulo-periodo');
+      if (agendaView === 'dia') {
+        el.textContent = `${DIAS_SEMANA_ABREV_AGENDA[agendaReferencia.getDay()]}, ${agendaReferencia.getDate()} de ${MESES_NOME[agendaReferencia.getMonth()]} de ${agendaReferencia.getFullYear()}`;
+      } else if (agendaView === 'semana') {
+        const ini = inicioDaSemana(agendaReferencia), fim = new Date(ini); fim.setDate(fim.getDate() + 6);
+        el.textContent = `${ini.getDate()} de ${MESES_NOME[ini.getMonth()]} – ${fim.getDate()} de ${MESES_NOME[fim.getMonth()]} de ${fim.getFullYear()}`;
+      } else {
+        el.textContent = `${MESES_NOME[agendaReferencia.getMonth()]} de ${agendaReferencia.getFullYear()}`;
+      }
+    }
+
+    function renderizarAgenda() {
+      atualizarTituloPeriodo();
+      if (agendaView === 'mes') renderAgendaMes();
+      else renderAgendaGradeHoraria();
+    }
+
+    // Renderiza Dia (1 coluna) ou Semana (7 colunas), ambas em grade horária
+    // 06h–23h, reaproveitando a mesma lógica de posicionamento por pixel.
+    function renderAgendaGradeHoraria() {
+      const wrap = document.getElementById('agenda-calendario-wrap');
+      const { inicio } = janelaAgenda();
+      const numDias = agendaView === 'dia' ? 1 : 7;
+      const diasArr = [];
+      for (let i = 0; i < numDias; i++) { const d = new Date(inicio); d.setDate(d.getDate() + i); diasArr.push(d); }
+
+      let html = `<div class="osp-calendar" style="grid-template-columns:52px repeat(${numDias}, 1fr);">`;
+      html += `<div class="osp-calendar__corner"></div>`;
+      diasArr.forEach((d, i) => {
+        const iso = agendaDataISO(d);
+        const feriado = feriadoDoDia(iso);
+        const hoje = agendaDataISO(new Date()) === iso;
+        html += `<div class="osp-calendar__day-header ${feriado ? 'osp-calendar__day-header--feriado' : ''}" style="grid-column:${i + 2};${hoje ? 'text-decoration:underline;' : ''}">
+          ${DIAS_SEMANA_ABREV_AGENDA[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}${feriado ? `<br><span style="font-size:0.62rem;">🎉 ${feriado.nome}</span>` : ''}
+        </div>`;
+      });
+      html += `<div class="osp-calendar__hours-col" style="grid-column:1;grid-row:2;height:${AGENDA_ALTURA}px;">`;
+      for (let h = AGENDA_HORA_INICIO; h <= AGENDA_HORA_FIM; h++) {
+        html += `<div class="osp-calendar__hour-label" style="top:${(h - AGENDA_HORA_INICIO) * AGENDA_PX_POR_HORA}px;">${String(h).padStart(2, '0')}:00</div>`;
+      }
+      html += `</div>`;
+      diasArr.forEach((d, i) => {
+        const iso = agendaDataISO(d);
+        html += `<div class="osp-calendar__day-body" id="agenda-dia-${i}" style="grid-column:${i + 2};grid-row:2;height:${AGENDA_ALTURA}px;" onclick="cliqueNaAgenda(event, '${iso}')"></div>`;
+      });
+      html += `</div>`;
+      wrap.innerHTML = html;
+
+      diasArr.forEach((d, i) => {
+        const iso = agendaDataISO(d);
+        const col = document.getElementById('agenda-dia-' + i);
+        itensAgendaDoDia(iso).forEach(item => {
+          const [hh, mm] = item.hora.split(':').map(Number);
+          const minutosDoInicio = (hh - AGENDA_HORA_INICIO) * 60 + mm;
+          if (minutosDoInicio < 0 || hh > AGENDA_HORA_FIM) return;
+          const top = minutosDoInicio / 60 * AGENDA_PX_POR_HORA;
+          const bloco = document.createElement('div');
+          bloco.className = 'osp-calendar__block' + (item.tipo === 'agendamento' ? ' osp-calendar__block--agendamento' : '');
+          bloco.style.top = top + 'px';
+          bloco.style.height = '38px';
+          bloco.style.cursor = 'pointer';
+          bloco.innerHTML = `${item.tipo === 'agendamento' ? '✅' : '📌'} ${item.hora} ${item.texto}`;
+          bloco.addEventListener('click', (e) => { e.stopPropagation(); abrirModalAgenda(item); });
+          col.appendChild(bloco);
+        });
+      });
+    }
+
+    function renderAgendaMes() {
+      const wrap = document.getElementById('agenda-calendario-wrap');
+      const { inicio, dias } = janelaAgenda();
+      const mesAtual = agendaReferencia.getMonth();
+      const hojeISO = agendaDataISO(new Date());
+
+      let html = `<div class="osp-mes-grid">`;
+      DIAS_SEMANA_ABREV_AGENDA.forEach(d => html += `<div class="osp-mes-grid__cabecalho">${d}</div>`);
+
+      for (let i = 0; i < dias; i++) {
+        const d = new Date(inicio); d.setDate(d.getDate() + i);
+        const iso = agendaDataISO(d);
+        const feriado = feriadoDoDia(iso);
+        const foraDoMes = d.getMonth() !== mesAtual;
+        const itens = itensAgendaDoDia(iso);
+        const classes = ['osp-mes-grid__dia'];
+        if (foraDoMes) classes.push('osp-mes-grid__dia--fora-do-mes');
+        if (feriado) classes.push('osp-mes-grid__dia--feriado');
+        if (iso === hojeISO) classes.push('osp-mes-grid__dia--hoje');
+
+        const itensVisiveis = itens.slice(0, 3);
+        const itensHtml = itensVisiveis.map(it =>
+          `<div class="osp-mes-grid__item osp-mes-grid__item--${it.tipo}" onclick="event.stopPropagation();abrirModalAgenda(${JSON.stringify(it).replace(/"/g, '&quot;')})">${it.hora} ${it.texto}</div>`
+        ).join('');
+        const maisHtml = itens.length > 3 ? `<div class="osp-mes-grid__mais">+${itens.length - 3} mais</div>` : '';
+
+        html += `<div class="${classes.join(' ')}" onclick="agendaReferencia=new Date('${iso}T00:00:00');mudarVisaoAgenda('dia');document.querySelectorAll('.osp-view-toggle').forEach(b=>b.classList.toggle('ativo',b.dataset.view==='dia'));">
+          <div class="osp-mes-grid__numero">${d.getDate()}</div>
+          ${feriado ? `<div class="osp-mes-grid__feriado-label">🎉 ${feriado.nome}</div>` : ''}
+          ${itensHtml}
+          ${maisHtml}
+        </div>`;
+      }
+      html += `</div>`;
+      wrap.innerHTML = html;
+    }
+
+    function cliqueNaAgenda(ev, iso) {
+      if (ev.target.closest('.osp-calendar__block')) return;
+      const rect = ev.currentTarget.getBoundingClientRect();
+      const offsetY = ev.clientY - rect.top;
+      let horaDecimal = AGENDA_HORA_INICIO + offsetY / AGENDA_PX_POR_HORA;
+      horaDecimal = Math.round(horaDecimal * 2) / 2;
+      const h = Math.floor(horaDecimal);
+      const m = horaDecimal % 1 === 0 ? '00' : '30';
+      abrirModalAgenda(null, iso, `${String(h).padStart(2, '0')}:${m}`);
+    }
+
+    /* ── Modal de criar/editar compromisso (e ver/cancelar agendamento) ── */
+
+    function abrirModalAgenda(item, isoPrefill, horaPrefill) {
+      const infoAgendamento = document.getElementById('am-info-agendamento');
+      document.getElementById('am-erro').textContent = '';
+
+      if (item && item.tipo === 'agendamento') {
+        // Agendamento público: só visualização + cancelar (edição de verdade
+        // exigiria renegociar o horário com o paciente, fora de escopo aqui).
+        document.getElementById('agenda-modal-titulo').textContent = 'Agendamento confirmado';
+        document.getElementById('am-id').value = '';
+        document.getElementById('am-nome').value = item.texto;
+        document.getElementById('am-nome').disabled = true;
+        document.getElementById('am-descricao').value = '';
+        document.getElementById('am-descricao').disabled = true;
+        document.getElementById('am-recorrente-wrap').classList.add('hidden');
+        infoAgendamento.classList.remove('hidden');
+        infoAgendamento.textContent = `Reservado pelo próprio paciente${item.sub ? ' — ' + item.sub : ''}. Pra cancelar, use o botão abaixo (o paciente será avisado por e-mail).`;
+        document.getElementById('am-btn-salvar').classList.add('hidden');
+        const btnExcluir = document.getElementById('am-btn-excluir');
+        btnExcluir.textContent = 'Cancelar agendamento';
+        btnExcluir.classList.remove('hidden');
+        btnExcluir.onclick = () => { fecharModalAgenda(); cancelarAgendamento(item.id); };
+      } else {
+        document.getElementById('am-nome').disabled = false;
+        document.getElementById('am-descricao').disabled = false;
+        infoAgendamento.classList.add('hidden');
+        document.getElementById('am-btn-salvar').classList.remove('hidden');
+
+        if (item) {
+          // editar compromisso existente
+          document.getElementById('agenda-modal-titulo').textContent = 'Editar compromisso';
+          document.getElementById('am-id').value = item.id;
+          document.getElementById('am-nome').value = item.texto;
+          document.getElementById('am-data').value = ''; // preenchido abaixo via cache completo
+          document.getElementById('am-hora').value = item.hora;
+          document.getElementById('am-descricao').value = item.sub || '';
+          const original = (agendaCache.compromissos || []).find(c => c.id === item.id);
+          if (original) document.getElementById('am-data').value = original.data_hora.slice(0, 10);
+          document.getElementById('am-recorrente-wrap').classList.add('hidden'); // edita só essa ocorrência
+          const btnExcluir = document.getElementById('am-btn-excluir');
+          btnExcluir.textContent = 'Excluir';
+          btnExcluir.classList.remove('hidden');
+          btnExcluir.onclick = excluirCompromissoModal;
+        } else {
+          // novo compromisso
+          document.getElementById('agenda-modal-titulo').textContent = 'Novo compromisso';
+          document.getElementById('am-id').value = '';
+          document.getElementById('am-nome').value = '';
+          document.getElementById('am-data').value = isoPrefill || agendaDataISO(agendaReferencia);
+          document.getElementById('am-hora').value = horaPrefill || '09:00';
+          document.getElementById('am-descricao').value = '';
+          document.getElementById('am-recorrente-wrap').classList.remove('hidden');
+          document.getElementById('am-recorrente').checked = false;
+          document.getElementById('am-semanas-wrap').classList.add('hidden');
+          document.getElementById('am-btn-excluir').classList.add('hidden');
+        }
+      }
+      document.getElementById('agenda-modal-overlay').classList.remove('hidden');
+    }
+
+    function fecharModalAgenda() {
+      document.getElementById('agenda-modal-overlay').classList.add('hidden');
+    }
+
+    async function salvarCompromissoModal() {
+      const erroEl = document.getElementById('am-erro');
       erroEl.textContent = '';
-      const id = document.getElementById('comp-id').value;
-      const nome = document.getElementById('comp-nome').value.trim();
-      const data = document.getElementById('comp-data').value;
-      const hora = document.getElementById('comp-hora').value;
-      const descricao = document.getElementById('comp-descricao').value.trim();
+      const id = document.getElementById('am-id').value;
+      const nome = document.getElementById('am-nome').value.trim();
+      const data = document.getElementById('am-data').value;
+      const hora = document.getElementById('am-hora').value;
+      const descricao = document.getElementById('am-descricao').value.trim();
+      const recorrente = document.getElementById('am-recorrente').checked;
+      const semanas = Number(document.getElementById('am-semanas').value) || 1;
 
       if (!nome || !data || !hora) { erroEl.textContent = 'Preencha nome, data e hora.'; return; }
       const data_hora = `${data} ${hora}:00`;
 
       const url = id ? `/api/psicologos/me/compromissos/${id}` : '/api/psicologos/me/compromissos';
+      const body = { paciente_nome: nome, descricao, data_hora };
+      if (!id && recorrente) body.repetir_semanas = semanas;
+
       const res = await fetch(url, {
         method: id ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify({ paciente_nome: nome, descricao, data_hora }),
+        body: JSON.stringify(body),
       });
       const resultado = await res.json();
       if (!resultado.ok) { erroEl.textContent = resultado.error || 'Erro ao salvar.'; return; }
 
-      cancelarEdicaoCompromisso();
-      carregarCompromissos();
-      carregarAgendaReal();
+      fecharModalAgenda();
+      recarregarAgenda();
     }
 
-    function editarCompromisso(id) {
-      const c = (window._compromissosCache || []).find(x => x.id === id);
-      if (!c) return;
-      const [data, horaCompleta] = c.data_hora.split(' ');
-      document.getElementById('comp-id').value = c.id;
-      document.getElementById('comp-nome').value = c.paciente_nome;
-      document.getElementById('comp-data').value = data;
-      document.getElementById('comp-hora').value = (horaCompleta || '00:00:00').slice(0, 5);
-      document.getElementById('comp-descricao').value = c.descricao || '';
-      document.getElementById('comp-btn-salvar').textContent = 'Salvar edição →';
-      document.getElementById('comp-btn-cancelar').classList.remove('hidden');
-      document.getElementById('compromisso-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    function cancelarEdicaoCompromisso() {
-      document.getElementById('comp-id').value = '';
-      document.getElementById('comp-nome').value = '';
-      document.getElementById('comp-data').value = '';
-      document.getElementById('comp-hora').value = '';
-      document.getElementById('comp-descricao').value = '';
-      document.getElementById('comp-erro').textContent = '';
-      document.getElementById('comp-btn-salvar').textContent = '+ Adicionar';
-      document.getElementById('comp-btn-cancelar').classList.add('hidden');
-    }
-
-    async function excluirCompromisso(id) {
+    async function excluirCompromissoModal() {
+      const id = document.getElementById('am-id').value;
+      if (!id) return;
       if (!confirm('Excluir esse compromisso?')) return;
       await fetch(`/api/psicologos/me/compromissos/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
-      carregarCompromissos();
-      carregarAgendaReal();
-    }
-
-    const DIAS_SEMANA_ABREV_AGENDA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
-
-    async function carregarAgendaReal() {
-      const el = document.getElementById('agenda-dias');
-      const res = await fetch('/api/psicologos/me/agenda?dias=14', { headers: { Authorization: 'Bearer ' + token } });
-      const data = await res.json();
-      if (!data.ok) { el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Erro ao carregar a agenda.</p>'; return; }
-
-      const feriadosPorData = Object.fromEntries((data.feriados || []).map(f => [f.data, f.nome]));
-
-      // Monta os 14 dias em ordem, mesmo os sem nada — pra sempre mostrar
-      // "Sem compromissos" em vez de simplesmente sumir o dia.
-      const dias = [];
-      const inicio = new Date(data.inicio + 'T12:00:00');
-      for (let i = 0; i < data.dias; i++) {
-        const d = new Date(inicio); d.setDate(d.getDate() + i);
-        const ano = d.getFullYear(), mes = String(d.getMonth() + 1).padStart(2, '0'), dia = String(d.getDate()).padStart(2, '0');
-        dias.push({ iso: `${ano}-${mes}-${dia}`, data: d });
-      }
-
-      el.innerHTML = dias.map(({ iso, data: d }) => {
-        const itensAgendamentos = (data.agendamentos || []).filter(a => a.data_hora.slice(0, 10) === iso)
-          .map(a => ({ tipo: 'agendamento', hora: a.data_hora.slice(11, 16), texto: a.paciente_nome, sub: a.paciente_telefone || '' }));
-        const itensCompromissos = (data.compromissos || []).filter(c => c.data_hora.slice(0, 10) === iso)
-          .map(c => ({ tipo: 'compromisso', id: c.id, hora: c.data_hora.slice(11, 16), texto: c.paciente_nome, sub: c.descricao || '' }));
-        const itens = [...itensAgendamentos, ...itensCompromissos].sort((a, b) => a.hora.localeCompare(b.hora));
-
-        const feriado = feriadosPorData[iso];
-        const diaSemana = DIAS_SEMANA_ABREV_AGENDA[d.getDay()];
-        const dataFormatada = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
-
-        const itensHtml = itens.length ? itens.map(it => `
-          <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;padding:8px 12px;background:#fff;border-radius:8px;margin-bottom:6px;border:1px solid #F0EDE4;">
-            <div>
-              <strong style="font-size:0.85rem;">${it.hora}</strong>
-              <span style="font-size:0.85rem;">${it.tipo === 'agendamento' ? '✅' : '📌'} ${it.texto}</span>
-              ${it.sub ? `<div style="font-size:0.76rem;color:#888;margin-top:2px;">${it.sub}</div>` : ''}
-            </div>
-            ${it.tipo === 'compromisso' ? `
-              <div style="display:flex;gap:8px;flex-shrink:0;">
-                <button style="border:none;background:none;color:#B8940A;font-weight:700;cursor:pointer;font-size:0.78rem;" onclick="editarCompromisso(${it.id});mostrarSecaoPainel('compromissos');">Editar</button>
-                <button style="border:none;background:none;color:#991B1B;font-weight:700;cursor:pointer;font-size:0.78rem;" onclick="excluirCompromisso(${it.id})">Excluir</button>
-              </div>` : ''}
-          </div>
-        `).join('') : '<p style="color:#bbb;font-size:0.8rem;margin:4px 0;">Sem compromissos.</p>';
-
-        return `
-          <div style="padding:12px 14px;border-radius:12px;margin-bottom:10px;background:${feriado ? '#FEF2F2' : '#F7F5F0'};">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-              <strong style="font-size:0.9rem;text-transform:capitalize;">${diaSemana}, ${dataFormatada}</strong>
-              <div style="display:flex;align-items:center;gap:10px;">
-                ${feriado ? `<span style="font-size:0.76rem;font-weight:700;color:#B4230C;">🎉 Feriado: ${feriado}</span>` : ''}
-                <button style="border:none;background:none;color:#B8940A;font-weight:700;cursor:pointer;font-size:0.78rem;" onclick="document.getElementById('comp-data').value='${iso}';mostrarSecaoPainel('compromissos');document.getElementById('comp-nome').focus();">+ Compromisso</button>
-              </div>
-            </div>
-            ${itensHtml}
-          </div>
-        `;
-      }).join('');
+      fecharModalAgenda();
+      recarregarAgenda();
     }
 
     document.getElementById('edit-foto').addEventListener('change', async (e) => {

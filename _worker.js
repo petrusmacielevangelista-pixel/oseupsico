@@ -1077,8 +1077,10 @@ export default {
       if (!psicologoId) return json({ ok: false }, 401);
       await initDB(env.DB);
 
-      const dias = Math.min(30, Math.max(1, Number(url.searchParams.get('dias')) || 14));
-      const inicio = new Date(); inicio.setHours(0, 0, 0, 0);
+      const dias = Math.min(120, Math.max(1, Number(url.searchParams.get('dias')) || 14));
+      const inicioParam = url.searchParams.get('inicio');
+      const inicio = inicioParam ? new Date(inicioParam + 'T00:00:00') : new Date();
+      inicio.setHours(0, 0, 0, 0);
       const fim = new Date(inicio); fim.setDate(fim.getDate() + dias);
       const inicioStr = formatarDataISO(inicio), fimStr = formatarDataISO(fim);
 
@@ -1114,12 +1116,25 @@ export default {
       const psicologoId = autenticadoPsicologo(request, env);
       if (!psicologoId) return json({ ok: false }, 401);
       await initDB(env.DB);
-      const { paciente_nome, descricao, data_hora } = await request.json();
+      const { paciente_nome, descricao, data_hora, repetir_semanas } = await request.json();
       if (!paciente_nome || !data_hora) return json({ ok: false, error: 'Nome do paciente e data/hora são obrigatórios.' }, 400);
-      const result = await env.DB.prepare(
-        `INSERT INTO compromissos (psicologo_id, paciente_nome, descricao, data_hora) VALUES (?, ?, ?, ?)`
-      ).bind(psicologoId, paciente_nome, descricao || null, data_hora).run();
-      return json({ ok: true, id: result.meta.last_row_id });
+
+      // Recorrência: cria o mesmo compromisso (mesmo dia da semana e hora)
+      // nas N semanas seguintes — cada ocorrência vira uma linha independente
+      // (editável/exclusível uma a uma), sem vínculo de "série" no banco.
+      const totalOcorrencias = Math.min(52, Math.max(1, Number(repetir_semanas) || 1));
+      const [dataBase, horaBase] = data_hora.split(' ');
+      let primeiroId = null;
+      for (let i = 0; i < totalOcorrencias; i++) {
+        const dataOcorrencia = new Date(dataBase + 'T00:00:00');
+        dataOcorrencia.setDate(dataOcorrencia.getDate() + i * 7);
+        const dataHoraOcorrencia = `${formatarDataISO(dataOcorrencia)} ${horaBase}`;
+        const result = await env.DB.prepare(
+          `INSERT INTO compromissos (psicologo_id, paciente_nome, descricao, data_hora) VALUES (?, ?, ?, ?)`
+        ).bind(psicologoId, paciente_nome, descricao || null, dataHoraOcorrencia).run();
+        if (i === 0) primeiroId = result.meta.last_row_id;
+      }
+      return json({ ok: true, id: primeiroId, ocorrencias: totalOcorrencias });
     }
 
     const compromissoMatch = pathname.match(/^\/api\/psicologos\/me\/compromissos\/(\d+)$/);

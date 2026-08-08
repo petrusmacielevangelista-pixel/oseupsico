@@ -1259,6 +1259,41 @@ ul { list-style: none; }
 .osp-calendar__block .osp-calendar__remove {
   position: absolute; top: 1px; right: 3px; font-size: 0.72rem; color: #991B1B; cursor: pointer; font-weight: 800;
 }
+.osp-calendar__block--agendamento { background: #E0F2FE; border-color: #7DD3FC; color: #0369A1; }
+.osp-calendar__block--agendamento:hover { background: #CFEBFC; }
+.osp-calendar__day-header--feriado { background: #FEF2F2 !important; color: #B4230C; }
+
+/* Toggle de visão Dia/Semana/Mês da agenda */
+.osp-view-toggle-group { display: inline-flex; background: #F7F5F0; border-radius: 10px; padding: 3px; gap: 2px; }
+.osp-view-toggle {
+  border: none; background: none; padding: 7px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 700;
+  color: #777; cursor: pointer; font-family: inherit; transition: background .15s, color .15s;
+}
+.osp-view-toggle.ativo { background: #1A1A1A; color: #F5C518; }
+
+/* Visão de mês: grade tradicional de semanas x dias */
+.osp-mes-grid { display: grid; grid-template-columns: repeat(7, 1fr); border: 1px solid #F0EDE4; border-radius: 14px; overflow: hidden; background: #fff; }
+.osp-mes-grid__cabecalho {
+  background: #FAFAF7; text-align: center; font-size: 0.72rem; font-weight: 700; color: #888;
+  padding: 8px 2px; border-bottom: 1px solid #F0EDE4; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.osp-mes-grid__dia {
+  min-height: 92px; border-top: 1px solid #F0EDE4; border-left: 1px solid #F0EDE4; padding: 6px; cursor: pointer;
+  transition: background .15s;
+}
+.osp-mes-grid__dia:hover { background: #FFFDF5; }
+.osp-mes-grid__dia--fora-do-mes { background: #FAFAF9; color: #ccc; }
+.osp-mes-grid__dia--feriado { background: #FEF2F2; }
+.osp-mes-grid__dia--hoje { box-shadow: inset 0 0 0 2px #F5C518; }
+.osp-mes-grid__numero { font-size: 0.8rem; font-weight: 700; color: #444; margin-bottom: 4px; }
+.osp-mes-grid__feriado-label { font-size: 0.62rem; color: #B4230C; font-weight: 700; margin-bottom: 3px; }
+.osp-mes-grid__item {
+  font-size: 0.66rem; padding: 2px 6px; border-radius: 5px; margin-bottom: 2px; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis;
+}
+.osp-mes-grid__item--agendamento { background: #E0F2FE; color: #0369A1; }
+.osp-mes-grid__item--compromisso { background: #FFF3C4; color: #7a6200; }
+.osp-mes-grid__mais { font-size: 0.64rem; color: #999; }
 
 /* ── Dark mode ──
    Hero, depoimentos, CTA final e rodapé já são escuros por padrão.
