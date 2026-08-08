@@ -592,7 +592,27 @@ export default {
     if (especDeleteMatch && request.method === 'DELETE') {
       if (!autenticadoAdmin(request, env)) return json({ ok: false }, 401);
       await initDB(env.DB);
+
+      const especialidade = await env.DB.prepare('SELECT nome FROM especialidades_catalogo WHERE id = ?').bind(especDeleteMatch[1]).first();
       await env.DB.prepare('DELETE FROM especialidades_catalogo WHERE id = ?').bind(especDeleteMatch[1]).run();
+
+      // Desmarca essa especialidade de todo psicólogo que a tinha selecionada
+      // — evita que um perfil público continue mostrando algo que o admin
+      // já removeu do catálogo.
+      if (especialidade) {
+        const { results: afetados } = await env.DB.prepare(
+          `SELECT id, especialidades FROM psicologos WHERE especialidades LIKE '%' || ? || '%'`
+        ).bind(especialidade.nome).all();
+        for (const p of afetados) {
+          let lista = [];
+          try { lista = JSON.parse(p.especialidades || '[]'); } catch { continue; }
+          if (!lista.includes(especialidade.nome)) continue; // match do LIKE pode ser só substring de outro nome
+          const novaLista = lista.filter(e => e !== especialidade.nome);
+          await env.DB.prepare('UPDATE psicologos SET especialidades = ? WHERE id = ?')
+            .bind(JSON.stringify(novaLista), p.id).run();
+        }
+      }
+
       return json({ ok: true });
     }
 
