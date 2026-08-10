@@ -166,7 +166,7 @@
                   <h2 style="margin-bottom:0;">Agenda</h2>
                   <div class="osp-view-toggle-group">
                     <button class="osp-view-toggle" data-view="dia" onclick="mudarVisaoAgenda('dia')">Dia</button>
-                    <button class="osp-view-toggle ativo" data-view="semana" onclick="mudarVisaoAgenda('semana')">Semana</button>
+                    <button class="osp-view-toggle" data-view="semana" onclick="mudarVisaoAgenda('semana')">Semana</button>
                     <button class="osp-view-toggle" data-view="mes" onclick="mudarVisaoAgenda('mes')">Mês</button>
                   </div>
                 </div>
@@ -591,7 +591,11 @@
     const AGENDA_HORA_INICIO = 6, AGENDA_HORA_FIM = 23, AGENDA_PX_POR_HORA = 40;
     const AGENDA_ALTURA = (AGENDA_HORA_FIM - AGENDA_HORA_INICIO) * AGENDA_PX_POR_HORA;
 
-    let agendaView = 'semana';
+    // No celular, "Semana" fica com colunas estreitas demais pra ler os
+    // nomes — começa em "Dia" (cabe inteira na tela) e deixa Semana/Mês
+    // disponíveis pra quem quiser rolar de propósito.
+    let agendaView = window.innerWidth < 640 ? 'dia' : 'semana';
+    document.querySelectorAll('.osp-view-toggle').forEach(b => b.classList.toggle('ativo', b.dataset.view === agendaView));
     let agendaReferencia = new Date(); agendaReferencia.setHours(0, 0, 0, 0);
     let agendaCache = { agendamentos: [], compromissos: [], feriados: [] };
 
