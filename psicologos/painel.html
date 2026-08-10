@@ -204,7 +204,9 @@
                   <button class="btn btn--outline hidden" onclick="cancelarEdicaoDisponibilidade()" style="height:44px;" id="disp-btn-cancelar">Cancelar edição</button>
                 </div>
 
-                <div class="osp-calendar" id="calendario" style="overflow-x:auto;"></div>
+                <div style="overflow-x:auto;max-width:100%;">
+                  <div class="osp-calendar" id="calendario"></div>
+                </div>
               </div>
 
             </div>
@@ -307,6 +309,10 @@
     function mostrarSecaoPainel(nome) {
       document.querySelectorAll('[data-secao]').forEach(el => el.classList.toggle('hidden', el.id !== 'secao-' + nome));
       document.querySelectorAll('.osp-painel-nav button').forEach(b => b.classList.toggle('ativo', b.dataset.painel === nome));
+      // A agenda é carregada em segundo plano assim que loga, com a aba
+      // ainda escondida (display:none) — nesse estado o navegador ignora
+      // scrollTop. Recalcula a rolagem de novo agora que ficou visível.
+      if (nome === 'agenda' && typeof renderizarAgenda === 'function' && agendaCache) renderizarAgenda();
     }
 
     function mostrarEsqueciSenha() {
@@ -669,6 +675,12 @@
 
     function renderizarAgenda() {
       atualizarTituloPeriodo();
+      const wrap = document.getElementById('agenda-calendario-wrap');
+      // No mobile, a grade de horas (Dia/Semana) ganha altura contida com
+      // rolagem vertical própria — em vez de espremer 06h–23h inteiro na
+      // tela, mostra um pedaço "com zoom" e a pessoa rola pra ver o resto.
+      // O mês não precisa disso (já é compacto, sem eixo de hora).
+      wrap.classList.toggle('agenda-grade-scroll-mobile', agendaView !== 'mes');
       if (agendaView === 'mes') renderAgendaMes();
       else renderAgendaGradeHoraria();
     }
@@ -682,7 +694,18 @@
       const diasArr = [];
       for (let i = 0; i < numDias; i++) { const d = new Date(inicio); d.setDate(d.getDate() + i); diasArr.push(d); }
 
-      let html = `<div class="osp-calendar" style="grid-template-columns:52px repeat(${numDias}, 1fr);">`;
+      // No mobile, cada coluna precisa de uma largura mínima legível — com
+      // posicionamento explícito de grid-column (usado abaixo pra cada dia),
+      // "auto-fit" colapsa as faixas extras, então o mínimo tem que vir
+      // como valor fixo por coluna, calculado aqui mesmo.
+      // Além do minmax nas colunas, precisa de min-width explícito no
+      // próprio grid — sem isso, o container de grid (mesmo com colunas
+      // maiores que o espaço disponível) fica com a caixa presa à largura
+      // do pai em vez de estourar e disparar o scroll horizontal do wrap.
+      const mobile = window.innerWidth < 640;
+      const colunaDia = mobile ? 'minmax(112px, 1fr)' : '1fr';
+      const minWidthGrid = mobile ? `min-width:${52 + numDias * 112}px;` : '';
+      let html = `<div class="osp-calendar" style="grid-template-columns:52px repeat(${numDias}, ${colunaDia});${minWidthGrid}">`;
       html += `<div class="osp-calendar__corner"></div>`;
       diasArr.forEach((d, i) => {
         const iso = agendaDataISO(d);
@@ -737,6 +760,20 @@
           col.appendChild(bloco);
         });
       });
+
+      // No mobile, já abre "com zoom" perto do horário relevante — hora
+      // atual se hoje estiver na tela, senão 08h — em vez de começar lá
+      // em cima nas 06h e obrigar a pessoa a rolar toda vez.
+      if (window.innerWidth < 640) {
+        const horaAlvo = diasArr.some(d => agendaDataISO(d) === isoHoje)
+          ? Math.max(AGENDA_HORA_INICIO, agora.getHours() - 1)
+          : 8;
+        const alvoScroll = Math.max(0, (horaAlvo - AGENDA_HORA_INICIO) * AGENDA_PX_POR_HORA);
+        // O navegador só aceita um scrollTop != 0 depois que o layout do
+        // container com overflow-y calculado — setar na mesma tick do
+        // innerHTML às vezes é ignorado, então adia um frame.
+        setTimeout(() => { wrap.scrollTop = alvoScroll; }, 0);
+      }
     }
 
     function renderAgendaMes() {
@@ -759,13 +796,14 @@
         if (feriado) classes.push('osp-mes-grid__dia--feriado');
         if (iso === hojeISO) classes.push('osp-mes-grid__dia--hoje');
 
-        const itensVisiveis = itens.slice(0, 3);
+        const maxVisiveis = window.innerWidth < 640 ? 2 : 3;
+        const itensVisiveis = itens.slice(0, maxVisiveis);
         const agora = new Date();
         const itensHtml = itensVisiveis.map(it => {
           const jaPassou = new Date(`${iso}T${it.hora}:00`) < agora;
           return `<div class="osp-mes-grid__item osp-mes-grid__item--${it.tipo}${jaPassou ? ' osp-mes-grid__item--passado' : ''}" onclick="event.stopPropagation();abrirModalAgenda(${JSON.stringify(it).replace(/"/g, '&quot;')})">${TIPO_ICONE[it.tipo] || '📌'} ${it.hora} ${it.texto}</div>`;
         }).join('');
-        const maisHtml = itens.length > 3 ? `<div class="osp-mes-grid__mais">+${itens.length - 3} mais</div>` : '';
+        const maisHtml = itens.length > maxVisiveis ? `<div class="osp-mes-grid__mais">+${itens.length - maxVisiveis} mais</div>` : '';
 
         html += `<div class="${classes.join(' ')}" onclick="agendaReferencia=new Date('${iso}T00:00:00');mudarVisaoAgenda('dia');document.querySelectorAll('.osp-view-toggle').forEach(b=>b.classList.toggle('ativo',b.dataset.view==='dia'));">
           <div class="osp-mes-grid__numero">${d.getDate()}</div>

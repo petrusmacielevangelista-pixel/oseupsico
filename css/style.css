@@ -1245,8 +1245,10 @@ ul { list-style: none; }
 .osp-calendar__day-header {
   grid-row: 1; background: #FAFAF7; border-bottom: 1px solid #F0EDE4; border-left: 1px solid #F0EDE4;
   text-align: center; padding: 8px 2px; font-size: 0.72rem; font-weight: 700; color: #1A1A1A;
+  position: sticky; top: 0; z-index: 4;
 }
-.osp-calendar__hours-col { grid-column: 1; grid-row: 2; position: relative; }
+.osp-calendar__corner { position: sticky; top: 0; left: 0; z-index: 5; }
+.osp-calendar__hours-col { grid-column: 1; grid-row: 2; position: sticky; left: 0; z-index: 3; background: #fff; }
 .osp-calendar__hour-label {
   position: absolute; right: 6px; font-size: 0.64rem; color: #999; transform: translateY(-50%); white-space: nowrap;
 }
@@ -1320,17 +1322,34 @@ ul { list-style: none; }
 
 /* Responsivo — Agenda no mobile */
 @media (max-width: 640px) {
-  .osp-calendar { grid-template-columns: 42px repeat(auto-fit, minmax(96px, 1fr)) !important; font-size: 0.9em; }
+  .osp-calendar { font-size: 0.9em; } /* colunas da Agenda vêm certas do próprio JS, ver renderAgendaGradeHoraria */
+  /* Grid de "Horários recorrentes" é sempre 7 colunas fixas (não regenera
+     via JS por largura de tela) — repeat(7, minmax()) em vez de auto-fit,
+     que colapsa faixas extras quando os itens usam grid-column explícito. */
+  #calendario.osp-calendar { grid-template-columns: 42px repeat(7, minmax(96px, 1fr)) !important; min-width: 714px; }
   .osp-calendar__hour-label { font-size: 0.6rem; right: 3px; }
   .osp-calendar__day-header { font-size: 0.66rem; padding: 6px 1px; }
-  .osp-calendar__block { font-size: 0.6rem; padding: 2px 4px; }
+  .osp-calendar__block {
+    font-size: 0.62rem; padding: 2px 5px; white-space: nowrap; text-overflow: ellipsis;
+  }
   .osp-view-toggle-group { width: 100%; justify-content: center; }
   .osp-view-toggle { padding: 6px 12px; font-size: 0.8rem; }
   #secao-agenda > .osp-card:first-child > div:first-child { flex-direction: column; align-items: flex-start !important; }
   #agenda-titulo-periodo { font-size: 0.85rem; margin-top: 4px; }
-  .osp-mes-grid__dia { min-height: 64px; padding: 4px; }
-  .osp-mes-grid__numero { font-size: 0.72rem; }
-  .osp-mes-grid__item { font-size: 0.58rem; padding: 1px 4px; }
+  .osp-mes-grid__dia { min-height: 58px; padding: 3px; }
+  .osp-mes-grid__numero { font-size: 0.7rem; }
+  .osp-mes-grid__item {
+    font-size: 0.56rem; padding: 1px 3px; white-space: nowrap; text-overflow: ellipsis;
+  }
+  .osp-mes-grid__feriado-label { font-size: 0.52rem; }
+
+  /* Grade de horas (Dia/Semana) com altura contida e rolagem vertical
+     própria — "zoom" num pedaço do dia, a pessoa rola pra ver o resto,
+     em vez de espremer 06h–23h inteiro (17h) na tela toda de uma vez. */
+  #agenda-calendario-wrap.agenda-grade-scroll-mobile {
+    max-height: 62vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    border: 1px solid #F0EDE4; border-radius: 14px;
+  }
 }
 
 /* ── Dark mode ──
