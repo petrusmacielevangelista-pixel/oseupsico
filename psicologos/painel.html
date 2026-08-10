@@ -236,6 +236,7 @@
     <div class="osp-card" style="max-width:440px;width:100%;max-height:90vh;overflow-y:auto;">
       <h2 id="agenda-modal-titulo" style="margin-bottom:16px;">Novo compromisso</h2>
       <input type="hidden" id="am-id" value="" />
+      <input type="hidden" id="am-serie-id" value="" />
       <div class="form-group"><label>Nome do paciente *</label><input type="text" id="am-nome" placeholder="Ex: João Silva" /></div>
       <div class="form-row">
         <div class="form-group"><label>Data</label><input type="date" id="am-data" /></div>
@@ -809,6 +810,7 @@
           document.getElementById('am-descricao').value = item.sub || '';
           const original = (agendaCache.compromissos || []).find(c => c.id === item.id);
           if (original) document.getElementById('am-data').value = original.data_hora.slice(0, 10);
+          document.getElementById('am-serie-id').value = original?.serie_id || '';
           const radioAtual = document.querySelector(`input[name="am-tipo"][value="${item.tipo}"]`);
           if (radioAtual) radioAtual.checked = true;
           const btnExcluir = document.getElementById('am-btn-excluir');
@@ -819,6 +821,7 @@
           // novo compromisso
           document.getElementById('agenda-modal-titulo').textContent = 'Novo compromisso';
           document.getElementById('am-id').value = '';
+          document.getElementById('am-serie-id').value = '';
           document.getElementById('am-nome').value = '';
           document.getElementById('am-data').value = isoPrefill || agendaDataISO(agendaReferencia);
           document.getElementById('am-hora').value = horaPrefill || '09:00';
@@ -836,7 +839,11 @@
     async function salvarCompromissoModal() {
       const erroEl = document.getElementById('am-erro');
       erroEl.textContent = '';
+      const btnSalvar = document.getElementById('am-btn-salvar');
+      if (btnSalvar.disabled) return; // trava contra clique duplo (evitava criar a série inteira 2x)
+
       const id = document.getElementById('am-id').value;
+      const serieId = document.getElementById('am-serie-id').value;
       const nome = document.getElementById('am-nome').value.trim();
       const data = document.getElementById('am-data').value;
       const hora = document.getElementById('am-hora').value;
@@ -848,26 +855,47 @@
       if (!nome || !data || !hora) { erroEl.textContent = 'Preencha nome, data e hora.'; return; }
       const data_hora = `${data} ${hora}:00`;
 
+      let aplicarSerie = false;
+      if (id && serieId && (tipo === 'semanal' || tipo === 'quinzenal')) {
+        aplicarSerie = confirm('Aplicar essa alteração (nome, descrição e tipo) a todos os outros registros desse paciente nessa série também?\n\nA data/hora muda só nesse registro.');
+      }
+
       const url = id ? `/api/psicologos/me/compromissos/${id}` : '/api/psicologos/me/compromissos';
-      const body = { paciente_nome: nome, descricao, data_hora, tipo };
+      const body = { paciente_nome: nome, descricao, data_hora, tipo, aplicar_serie: aplicarSerie };
 
-      const res = await fetch(url, {
-        method: id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify(body),
-      });
-      const resultado = await res.json();
-      if (!resultado.ok) { erroEl.textContent = resultado.error || 'Erro ao salvar.'; return; }
-
-      fecharModalAgenda();
-      recarregarAgenda();
+      btnSalvar.disabled = true;
+      const textoOriginal = btnSalvar.textContent;
+      btnSalvar.textContent = 'Salvando...';
+      try {
+        const res = await fetch(url, {
+          method: id ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify(body),
+        });
+        const resultado = await res.json();
+        if (!resultado.ok) { erroEl.textContent = resultado.error || 'Erro ao salvar.'; return; }
+        fecharModalAgenda();
+        recarregarAgenda();
+      } finally {
+        btnSalvar.disabled = false;
+        btnSalvar.textContent = textoOriginal;
+      }
     }
 
     async function excluirCompromissoModal() {
       const id = document.getElementById('am-id').value;
+      const serieId = document.getElementById('am-serie-id').value;
       if (!id) return;
-      if (!confirm('Excluir esse compromisso?')) return;
-      await fetch(`/api/psicologos/me/compromissos/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+
+      let aplicarSerie = false;
+      if (serieId) {
+        aplicarSerie = confirm('Excluir todos os outros registros desse paciente nessa série também?\n\n"Cancelar" exclui só esse registro.');
+      } else if (!confirm('Excluir esse compromisso?')) {
+        return;
+      }
+
+      const url = `/api/psicologos/me/compromissos/${id}${aplicarSerie ? '?serie=1' : ''}`;
+      await fetch(url, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
       fecharModalAgenda();
       recarregarAgenda();
     }

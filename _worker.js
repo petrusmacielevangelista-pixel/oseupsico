@@ -203,6 +203,7 @@ async function initDB(db) {
       descricao TEXT,
       data_hora TEXT NOT NULL,
       tipo TEXT DEFAULT 'avulso',
+      serie_id TEXT,
       criado_em TEXT DEFAULT (datetime('now'))
     )`
   ).run();
@@ -1093,7 +1094,7 @@ export default {
       ).bind(psicologoId, inicioStr, fimStr).all();
 
       const { results: compromissos } = await env.DB.prepare(
-        `SELECT id, paciente_nome, descricao, data_hora, tipo FROM compromissos
+        `SELECT id, paciente_nome, descricao, data_hora, tipo, serie_id FROM compromissos
          WHERE psicologo_id = ? AND date(data_hora) >= ? AND date(data_hora) < ?
          ORDER BY data_hora`
       ).bind(psicologoId, inicioStr, fimStr).all();
@@ -1123,11 +1124,13 @@ export default {
       if (!TIPOS_VALIDOS.includes(tipo)) return json({ ok: false, error: 'Selecione um tipo: Semanal, Quinzenal, Entrevista ou Avulso.' }, 400);
 
       // Semanal/quinzenal: repete no mesmo dia da semana e horário até o fim
-      // do ano corrente da data escolhida. Entrevista/avulso: um único
-      // registro. Cada ocorrência é uma linha independente (editável/
-      // exclusível uma a uma), sem vínculo de "série" no banco.
+      // do ano corrente da data escolhida — todas as ocorrências ganham o
+      // mesmo serie_id, o que permite editar/excluir "todos os outros
+      // registros desse paciente" de uma vez depois. Entrevista/avulso: um
+      // único registro, sem serie_id.
       const [dataBase, horaBase] = data_hora.split(' ');
       const passoDias = tipo === 'semanal' ? 7 : tipo === 'quinzenal' ? 14 : null;
+      const serieId = passoDias ? crypto.randomUUID() : null;
 
       const datasOcorrencias = [dataBase];
       if (passoDias) {
@@ -1144,8 +1147,8 @@ export default {
       for (let i = 0; i < datasOcorrencias.length; i++) {
         const dataHoraOcorrencia = `${datasOcorrencias[i]} ${horaBase}`;
         const result = await env.DB.prepare(
-          `INSERT INTO compromissos (psicologo_id, paciente_nome, descricao, data_hora, tipo) VALUES (?, ?, ?, ?, ?)`
-        ).bind(psicologoId, paciente_nome, descricao || null, dataHoraOcorrencia, tipo).run();
+          `INSERT INTO compromissos (psicologo_id, paciente_nome, descricao, data_hora, tipo, serie_id) VALUES (?, ?, ?, ?, ?, ?)`
+        ).bind(psicologoId, paciente_nome, descricao || null, dataHoraOcorrencia, tipo, serieId).run();
         if (i === 0) primeiroId = result.meta.last_row_id;
       }
       return json({ ok: true, id: primeiroId, ocorrencias: datasOcorrencias.length });
@@ -1156,10 +1159,28 @@ export default {
       const psicologoId = autenticadoPsicologo(request, env);
       if (!psicologoId) return json({ ok: false }, 401);
       await initDB(env.DB);
-      const { paciente_nome, descricao, data_hora, tipo } = await request.json();
+      const { paciente_nome, descricao, data_hora, tipo, aplicar_serie } = await request.json();
       if (!paciente_nome || !data_hora) return json({ ok: false, error: 'Nome do paciente e data/hora são obrigatórios.' }, 400);
       const TIPOS_VALIDOS = ['semanal', 'quinzenal', 'entrevista', 'avulso'];
       if (!TIPOS_VALIDOS.includes(tipo)) return json({ ok: false, error: 'Selecione um tipo: Semanal, Quinzenal, Entrevista ou Avulso.' }, 400);
+
+      if (aplicar_serie) {
+        // Propaga nome/descrição/tipo pra todos os outros registros da mesma
+        // série — mas NÃO a data/hora, que é específica de cada ocorrência.
+        const atual = await env.DB.prepare('SELECT serie_id FROM compromissos WHERE id = ? AND psicologo_id = ?')
+          .bind(compromissoMatch[1], psicologoId).first();
+        if (atual?.serie_id) {
+          await env.DB.prepare(
+            `UPDATE compromissos SET paciente_nome = ?, descricao = ?, tipo = ? WHERE serie_id = ? AND psicologo_id = ?`
+          ).bind(paciente_nome, descricao || null, tipo, atual.serie_id, psicologoId).run();
+          // A ocorrência clicada também recebe a nova data/hora individualmente.
+          await env.DB.prepare(
+            `UPDATE compromissos SET data_hora = ? WHERE id = ? AND psicologo_id = ?`
+          ).bind(data_hora, compromissoMatch[1], psicologoId).run();
+          return json({ ok: true });
+        }
+      }
+
       await env.DB.prepare(
         `UPDATE compromissos SET paciente_nome = ?, descricao = ?, data_hora = ?, tipo = ? WHERE id = ? AND psicologo_id = ?`
       ).bind(paciente_nome, descricao || null, data_hora, tipo, compromissoMatch[1], psicologoId).run();
@@ -1170,6 +1191,18 @@ export default {
       const psicologoId = autenticadoPsicologo(request, env);
       if (!psicologoId) return json({ ok: false }, 401);
       await initDB(env.DB);
+      const aplicarSerie = url.searchParams.get('serie') === '1';
+
+      if (aplicarSerie) {
+        const atual = await env.DB.prepare('SELECT serie_id FROM compromissos WHERE id = ? AND psicologo_id = ?')
+          .bind(compromissoMatch[1], psicologoId).first();
+        if (atual?.serie_id) {
+          await env.DB.prepare('DELETE FROM compromissos WHERE serie_id = ? AND psicologo_id = ?')
+            .bind(atual.serie_id, psicologoId).run();
+          return json({ ok: true });
+        }
+      }
+
       await env.DB.prepare('DELETE FROM compromissos WHERE id = ? AND psicologo_id = ?')
         .bind(compromissoMatch[1], psicologoId).run();
       return json({ ok: true });
