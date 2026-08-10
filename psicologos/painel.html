@@ -161,25 +161,28 @@
 
             <div class="hidden" id="secao-agenda" data-secao>
 
-              <div class="osp-card">
-                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:6px;">
-                  <h2 style="margin-bottom:0;">Agenda</h2>
-                  <div class="osp-view-toggle-group">
-                    <button class="osp-view-toggle" data-view="dia" onclick="mudarVisaoAgenda('dia')">Dia</button>
-                    <button class="osp-view-toggle" data-view="semana" onclick="mudarVisaoAgenda('semana')">Semana</button>
-                    <button class="osp-view-toggle" data-view="mes" onclick="mudarVisaoAgenda('mes')">Mês</button>
+              <div class="osp-card" style="padding-top:0;">
+                <div class="osp-agenda-header-freeze">
+                  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding-top:32px;margin-bottom:6px;">
+                    <h2 style="margin-bottom:0;">Agenda</h2>
+                    <div class="osp-view-toggle-group">
+                      <button class="osp-view-toggle" data-view="dia" onclick="mudarVisaoAgenda('dia')">Dia</button>
+                      <button class="osp-view-toggle" data-view="semana" onclick="mudarVisaoAgenda('semana')">Semana</button>
+                      <button class="osp-view-toggle" data-view="mes" onclick="mudarVisaoAgenda('mes')">Mês</button>
+                    </div>
                   </div>
-                </div>
-                <p style="font-size:0.85rem;margin-bottom:16px;">Clique num horário vazio pra criar um compromisso, ou num já existente pra editar. Feriados nacionais aparecem marcados e ficam bloqueados pra agendamento público automaticamente.</p>
 
-                <div class="osp-agenda-nav-row" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                    <button class="btn btn--outline" onclick="agendaNavegar(-1)" style="padding:8px 14px;">← Anterior</button>
-                    <button class="btn btn--outline" onclick="agendaHoje()" style="padding:8px 14px;">Hoje</button>
-                    <button class="btn btn--outline" onclick="agendaNavegar(1)" style="padding:8px 14px;">Próximo →</button>
+                  <div class="osp-agenda-nav-row" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding-bottom:14px;">
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                      <button class="btn btn--outline" onclick="agendaNavegar(-1)" style="padding:8px 14px;">← Anterior</button>
+                      <button class="btn btn--outline" onclick="agendaHoje()" style="padding:8px 14px;">Hoje</button>
+                      <button class="btn btn--outline" onclick="agendaNavegar(1)" style="padding:8px 14px;">Próximo →</button>
+                    </div>
+                    <strong id="agenda-titulo-periodo" style="font-size:0.95rem;text-transform:capitalize;"></strong>
                   </div>
-                  <strong id="agenda-titulo-periodo" style="font-size:0.95rem;text-transform:capitalize;"></strong>
                 </div>
+
+                <p style="font-size:0.85rem;margin-bottom:16px;">Clique num horário vazio pra criar um compromisso, ou num já existente pra editar. Feriados nacionais aparecem marcados e ficam bloqueados pra agendamento público automaticamente.</p>
 
                 <div id="agenda-calendario-wrap" style="overflow-x:auto;"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
               </div>

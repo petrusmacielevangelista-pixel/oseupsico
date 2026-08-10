@@ -1274,6 +1274,19 @@ ul { list-style: none; }
 .osp-calendar__day-header--feriado { background: #FEF2F2 !important; color: #B4230C; }
 
 /* Toggle de visão Dia/Semana/Mês da agenda */
+/* Cabeçalho da Agenda (título, Dia/Semana/Mês, Anterior/Hoje/Próximo) fica
+   fixo no topo ao rolar a página, em qualquer visão — mesma referência de
+   offset usada pelo menu lateral (96px, abaixo da navbar fixa do site). */
+.osp-agenda-header-freeze {
+  position: sticky; top: 96px; z-index: 20; background: #fff;
+  border-radius: 20px 20px 0 0; box-shadow: 0 4px 10px -6px rgba(0,0,0,0.08);
+}
+@media (max-width: 820px) {
+  /* Nas páginas internas (.navbar--interna) a navbar é static, não fixa —
+     sem sobreposição a evitar, então gruda bem no topo do viewport. */
+  .osp-agenda-header-freeze { top: 0; }
+}
+
 .osp-view-toggle-group { display: inline-flex; background: #F7F5F0; border-radius: 10px; padding: 3px; gap: 2px; }
 .osp-view-toggle {
   border: none; background: none; padding: 7px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 700;
