@@ -246,10 +246,22 @@
         <textarea id="am-descricao" rows="2" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea>
       </div>
       <div class="form-group" id="am-recorrente-wrap">
-        <label style="display:flex;align-items:center;gap:8px;font-weight:600;">
-          <input type="checkbox" id="am-recorrente" />
-          Recorrente
-        </label>
+        <label style="display:block;font-weight:600;margin-bottom:8px;">Tipo *</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <label style="display:flex;align-items:center;gap:8px;background:#F7F5F0;padding:10px 12px;border-radius:8px;cursor:pointer;">
+            <input type="radio" name="am-tipo" value="semanal" /> Semanal
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;background:#F7F5F0;padding:10px 12px;border-radius:8px;cursor:pointer;">
+            <input type="radio" name="am-tipo" value="quinzenal" /> Quinzenal
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;background:#F7F5F0;padding:10px 12px;border-radius:8px;cursor:pointer;">
+            <input type="radio" name="am-tipo" value="entrevista" /> Entrevista
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;background:#F7F5F0;padding:10px 12px;border-radius:8px;cursor:pointer;">
+            <input type="radio" name="am-tipo" value="avulso" /> Avulso
+          </label>
+        </div>
+        <p style="font-size:0.78rem;color:#999;margin-top:6px;">Semanal/Quinzenal repetem no mesmo dia e horário até o fim do ano. Entrevista e Avulso criam só esse registro.</p>
       </div>
       <div id="am-info-agendamento" class="hidden osp-alert osp-alert--info" style="margin-top:8px;"></div>
       <p id="am-erro" style="color:#991B1B;font-size:0.85rem;margin-top:8px;"></p>
@@ -573,6 +585,8 @@
 
     const DIAS_SEMANA_ABREV_AGENDA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
     const MESES_NOME = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    const TIPO_ICONE = { agendamento: '✅', semanal: '📌', quinzenal: '🔁', entrevista: '🗣️', avulso: '📍' };
+    const TIPO_LABEL = { semanal: 'Semanal', quinzenal: 'Quinzenal', entrevista: 'Entrevista', avulso: 'Avulso' };
     const AGENDA_HORA_INICIO = 6, AGENDA_HORA_FIM = 23, AGENDA_PX_POR_HORA = 40;
     const AGENDA_ALTURA = (AGENDA_HORA_FIM - AGENDA_HORA_INICIO) * AGENDA_PX_POR_HORA;
 
@@ -628,7 +642,7 @@
       const agendamentos = (agendaCache.agendamentos || []).filter(a => a.data_hora.slice(0, 10) === iso)
         .map(a => ({ tipo: 'agendamento', id: a.id, hora: a.data_hora.slice(11, 16), texto: a.paciente_nome, sub: a.paciente_telefone || '' }));
       const compromissos = (agendaCache.compromissos || []).filter(c => c.data_hora.slice(0, 10) === iso)
-        .map(c => ({ tipo: 'compromisso', id: c.id, hora: c.data_hora.slice(11, 16), texto: c.paciente_nome, sub: c.descricao || '' }));
+        .map(c => ({ tipo: c.tipo || 'avulso', id: c.id, hora: c.data_hora.slice(11, 16), texto: c.paciente_nome, sub: c.descricao || '' }));
       return [...agendamentos, ...compromissos].sort((a, b) => a.hora.localeCompare(b.hora));
     }
 
@@ -694,11 +708,11 @@
           if (minutosDoInicio < 0 || hh > AGENDA_HORA_FIM) return;
           const top = minutosDoInicio / 60 * AGENDA_PX_POR_HORA;
           const bloco = document.createElement('div');
-          bloco.className = 'osp-calendar__block' + (item.tipo === 'agendamento' ? ' osp-calendar__block--agendamento' : '');
+          bloco.className = `osp-calendar__block osp-calendar__block--${item.tipo}`;
           bloco.style.top = top + 'px';
           bloco.style.height = '38px';
           bloco.style.cursor = 'pointer';
-          bloco.innerHTML = `${item.tipo === 'agendamento' ? '✅' : '📌'} ${item.hora} ${item.texto}`;
+          bloco.innerHTML = `${TIPO_ICONE[item.tipo] || '📌'} ${item.hora} ${item.texto}`;
           bloco.addEventListener('click', (e) => { e.stopPropagation(); abrirModalAgenda(item); });
           col.appendChild(bloco);
         });
@@ -727,7 +741,7 @@
 
         const itensVisiveis = itens.slice(0, 3);
         const itensHtml = itensVisiveis.map(it =>
-          `<div class="osp-mes-grid__item osp-mes-grid__item--${it.tipo}" onclick="event.stopPropagation();abrirModalAgenda(${JSON.stringify(it).replace(/"/g, '&quot;')})">${it.hora} ${it.texto}</div>`
+          `<div class="osp-mes-grid__item osp-mes-grid__item--${it.tipo}" onclick="event.stopPropagation();abrirModalAgenda(${JSON.stringify(it).replace(/"/g, '&quot;')})">${TIPO_ICONE[it.tipo] || '📌'} ${it.hora} ${it.texto}</div>`
         ).join('');
         const maisHtml = itens.length > 3 ? `<div class="osp-mes-grid__mais">+${itens.length - 3} mais</div>` : '';
 
@@ -781,18 +795,22 @@
         document.getElementById('am-descricao').disabled = false;
         infoAgendamento.classList.add('hidden');
         document.getElementById('am-btn-salvar').classList.remove('hidden');
+        document.getElementById('am-recorrente-wrap').classList.remove('hidden');
+        document.querySelectorAll('input[name="am-tipo"]').forEach(r => r.checked = false);
 
         if (item) {
-          // editar compromisso existente
+          // editar compromisso existente (edita só essa ocorrência — não
+          // regenera a série mesmo se trocar pra Semanal/Quinzenal aqui)
           document.getElementById('agenda-modal-titulo').textContent = 'Editar compromisso';
           document.getElementById('am-id').value = item.id;
           document.getElementById('am-nome').value = item.texto;
-          document.getElementById('am-data').value = ''; // preenchido abaixo via cache completo
+          document.getElementById('am-data').value = '';
           document.getElementById('am-hora').value = item.hora;
           document.getElementById('am-descricao').value = item.sub || '';
           const original = (agendaCache.compromissos || []).find(c => c.id === item.id);
           if (original) document.getElementById('am-data').value = original.data_hora.slice(0, 10);
-          document.getElementById('am-recorrente-wrap').classList.add('hidden'); // edita só essa ocorrência
+          const radioAtual = document.querySelector(`input[name="am-tipo"][value="${item.tipo}"]`);
+          if (radioAtual) radioAtual.checked = true;
           const btnExcluir = document.getElementById('am-btn-excluir');
           btnExcluir.textContent = 'Excluir';
           btnExcluir.classList.remove('hidden');
@@ -805,8 +823,6 @@
           document.getElementById('am-data').value = isoPrefill || agendaDataISO(agendaReferencia);
           document.getElementById('am-hora').value = horaPrefill || '09:00';
           document.getElementById('am-descricao').value = '';
-          document.getElementById('am-recorrente-wrap').classList.remove('hidden');
-          document.getElementById('am-recorrente').checked = false;
           document.getElementById('am-btn-excluir').classList.add('hidden');
         }
       }
@@ -825,15 +841,15 @@
       const data = document.getElementById('am-data').value;
       const hora = document.getElementById('am-hora').value;
       const descricao = document.getElementById('am-descricao').value.trim();
-      const recorrente = document.getElementById('am-recorrente').checked;
-      const semanas = 52; // recorrente = repete pelo ano todo, sem perguntar quantidade
+      const tipoRadio = document.querySelector('input[name="am-tipo"]:checked');
 
+      if (!tipoRadio) { erroEl.textContent = 'Selecione o tipo: Semanal, Quinzenal, Entrevista ou Avulso.'; return; }
+      const tipo = tipoRadio.value;
       if (!nome || !data || !hora) { erroEl.textContent = 'Preencha nome, data e hora.'; return; }
       const data_hora = `${data} ${hora}:00`;
 
       const url = id ? `/api/psicologos/me/compromissos/${id}` : '/api/psicologos/me/compromissos';
-      const body = { paciente_nome: nome, descricao, data_hora };
-      if (!id && recorrente) body.repetir_semanas = semanas;
+      const body = { paciente_nome: nome, descricao, data_hora, tipo };
 
       const res = await fetch(url, {
         method: id ? 'PUT' : 'POST',

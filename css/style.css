@@ -1261,6 +1261,10 @@ ul { list-style: none; }
 }
 .osp-calendar__block--agendamento { background: #E0F2FE; border-color: #7DD3FC; color: #0369A1; }
 .osp-calendar__block--agendamento:hover { background: #CFEBFC; }
+.osp-calendar__block--semanal { background: #FFF3C4; border-color: #F5C518; color: #7a6200; }
+.osp-calendar__block--quinzenal { background: #EDE9FE; border-color: #C4B5FD; color: #5B21B6; }
+.osp-calendar__block--entrevista { background: #D1FAE5; border-color: #6EE7B7; color: #065F46; }
+.osp-calendar__block--avulso { background: #FFE8D6; border-color: #FDBA74; color: #9A4B0C; }
 .osp-calendar__day-header--feriado { background: #FEF2F2 !important; color: #B4230C; }
 
 /* Toggle de visão Dia/Semana/Mês da agenda */
@@ -1292,7 +1296,10 @@ ul { list-style: none; }
   white-space: nowrap; text-overflow: ellipsis;
 }
 .osp-mes-grid__item--agendamento { background: #E0F2FE; color: #0369A1; }
-.osp-mes-grid__item--compromisso { background: #FFF3C4; color: #7a6200; }
+.osp-mes-grid__item--semanal { background: #FFF3C4; color: #7a6200; }
+.osp-mes-grid__item--quinzenal { background: #EDE9FE; color: #5B21B6; }
+.osp-mes-grid__item--entrevista { background: #D1FAE5; color: #065F46; }
+.osp-mes-grid__item--avulso { background: #FFE8D6; color: #9A4B0C; }
 .osp-mes-grid__mais { font-size: 0.64rem; color: #999; }
 
 /* ── Dark mode ──
