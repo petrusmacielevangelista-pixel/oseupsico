@@ -1143,15 +1143,33 @@ export default {
         }
       }
 
+      // Não deixa criar em cima de um horário já ocupado — nem por outro
+      // compromisso, nem por um agendamento público confirmado. Numa série
+      // (semanal/quinzenal) isso pularia só as ocorrências em conflito, sem
+      // travar a série inteira por causa de uma data.
+      const { results: compromissosOcupados } = await env.DB.prepare(
+        'SELECT data_hora FROM compromissos WHERE psicologo_id = ?'
+      ).bind(psicologoId).all();
+      const { results: agendamentosOcupados } = await env.DB.prepare(
+        `SELECT data_hora FROM agendamentos WHERE psicologo_id = ? AND status IN ('confirmado', 'pendente_verificacao')`
+      ).bind(psicologoId).all();
+      const ocupadosSet = new Set([...compromissosOcupados, ...agendamentosOcupados].map(o => o.data_hora));
+
+      const datasLivres = datasOcorrencias.filter(d => !ocupadosSet.has(`${d} ${horaBase}`));
+      if (!datasLivres.length) {
+        return json({ ok: false, error: 'Esse horário já está ocupado.' }, 409);
+      }
+
       let primeiroId = null;
-      for (let i = 0; i < datasOcorrencias.length; i++) {
-        const dataHoraOcorrencia = `${datasOcorrencias[i]} ${horaBase}`;
+      for (let i = 0; i < datasLivres.length; i++) {
+        const dataHoraOcorrencia = `${datasLivres[i]} ${horaBase}`;
         const result = await env.DB.prepare(
           `INSERT INTO compromissos (psicologo_id, paciente_nome, descricao, data_hora, tipo, serie_id) VALUES (?, ?, ?, ?, ?, ?)`
         ).bind(psicologoId, paciente_nome, descricao || null, dataHoraOcorrencia, tipo, serieId).run();
         if (i === 0) primeiroId = result.meta.last_row_id;
       }
-      return json({ ok: true, id: primeiroId, ocorrencias: datasOcorrencias.length });
+      const puladas = datasOcorrencias.length - datasLivres.length;
+      return json({ ok: true, id: primeiroId, ocorrencias: datasLivres.length, puladas_por_conflito: puladas });
     }
 
     const compromissoMatch = pathname.match(/^\/api\/psicologos\/me\/compromissos\/(\d+)$/);
@@ -1163,6 +1181,16 @@ export default {
       if (!paciente_nome || !data_hora) return json({ ok: false, error: 'Nome do paciente e data/hora são obrigatórios.' }, 400);
       const TIPOS_VALIDOS = ['semanal', 'quinzenal', 'entrevista', 'avulso'];
       if (!TIPOS_VALIDOS.includes(tipo)) return json({ ok: false, error: 'Selecione um tipo: Semanal, Quinzenal, Entrevista ou Avulso.' }, 400);
+
+      const conflitoCompromisso = await env.DB.prepare(
+        'SELECT id FROM compromissos WHERE psicologo_id = ? AND data_hora = ? AND id != ?'
+      ).bind(psicologoId, data_hora, compromissoMatch[1]).first();
+      const conflitoAgendamento = await env.DB.prepare(
+        `SELECT id FROM agendamentos WHERE psicologo_id = ? AND data_hora = ? AND status IN ('confirmado', 'pendente_verificacao')`
+      ).bind(psicologoId, data_hora).first();
+      if (conflitoCompromisso || conflitoAgendamento) {
+        return json({ ok: false, error: 'Esse horário já está ocupado.' }, 409);
+      }
 
       if (aplicar_serie) {
         // Propaga nome/descrição/tipo pra todos os outros registros da mesma

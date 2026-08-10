@@ -1222,14 +1222,18 @@ ul { list-style: none; }
 @media (max-width: 820px) {
   .osp-painel-layout { flex-direction: column; }
   .osp-painel-nav {
-    flex-direction: row; width: 100%; overflow-x: auto; position: static; gap: 8px; padding-bottom: 4px;
+    flex-direction: row; width: 100%; max-width: 100%; overflow-x: auto; position: static; gap: 8px; padding-bottom: 4px;
   }
   .osp-painel-nav button { white-space: nowrap; flex-shrink: 0; }
+  /* Em coluna, o eixo cruzado (largura) também sofre o "min-width:auto"
+     automático do flexbox — sem isso o painel crescia pro tamanho do
+     conteúdo (ex: a grade da agenda) em vez de ficar preso à tela. */
+  .osp-painel-content { width: 100%; max-width: 100%; }
 }
 
 /* Agenda semanal estilo calendário (Outlook-like) pra gerenciar disponibilidades recorrentes */
 .osp-agenda-toolbar {
-  display: flex; gap: 12px; flex-wrap: end; align-items: flex-end; margin-bottom: 20px;
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px;
   background: #FAFAF7; border: 1px solid #F0EDE4; border-radius: 14px; padding: 16px;
 }
 .osp-agenda-toolbar .form-group { margin-bottom: 0; }
@@ -1301,6 +1305,33 @@ ul { list-style: none; }
 .osp-mes-grid__item--entrevista { background: #D1FAE5; color: #065F46; }
 .osp-mes-grid__item--avulso { background: #FFE8D6; color: #9A4B0C; }
 .osp-mes-grid__mais { font-size: 0.64rem; color: #999; }
+
+/* Linha indicando o horário atual, nas visões Dia/Semana */
+.osp-calendar__linha-agora {
+  position: absolute; left: 0; right: 0; height: 2px; background: #EF4444; z-index: 5; pointer-events: none;
+}
+.osp-calendar__linha-agora::before {
+  content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: #EF4444;
+}
+
+/* Itens no passado ficam esmaecidos, tanto na grade horária quanto no mês */
+.osp-calendar__block--passado { opacity: 0.45; filter: grayscale(0.6); }
+.osp-mes-grid__item--passado { opacity: 0.45; filter: grayscale(0.6); }
+
+/* Responsivo — Agenda no mobile */
+@media (max-width: 640px) {
+  .osp-calendar { grid-template-columns: 42px repeat(auto-fit, minmax(96px, 1fr)) !important; font-size: 0.9em; }
+  .osp-calendar__hour-label { font-size: 0.6rem; right: 3px; }
+  .osp-calendar__day-header { font-size: 0.66rem; padding: 6px 1px; }
+  .osp-calendar__block { font-size: 0.6rem; padding: 2px 4px; }
+  .osp-view-toggle-group { width: 100%; justify-content: center; }
+  .osp-view-toggle { padding: 6px 12px; font-size: 0.8rem; }
+  #secao-agenda > .osp-card:first-child > div:first-child { flex-direction: column; align-items: flex-start !important; }
+  #agenda-titulo-periodo { font-size: 0.85rem; margin-top: 4px; }
+  .osp-mes-grid__dia { min-height: 64px; padding: 4px; }
+  .osp-mes-grid__numero { font-size: 0.72rem; }
+  .osp-mes-grid__item { font-size: 0.58rem; padding: 1px 4px; }
+}
 
 /* ── Dark mode ──
    Hero, depoimentos, CTA final e rodapé já são escuros por padrão.

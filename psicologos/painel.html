@@ -165,15 +165,15 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:6px;">
                   <h2 style="margin-bottom:0;">Agenda</h2>
                   <div class="osp-view-toggle-group">
-                    <button class="osp-view-toggle ativo" data-view="dia" onclick="mudarVisaoAgenda('dia')">Dia</button>
-                    <button class="osp-view-toggle" data-view="semana" onclick="mudarVisaoAgenda('semana')">Semana</button>
+                    <button class="osp-view-toggle" data-view="dia" onclick="mudarVisaoAgenda('dia')">Dia</button>
+                    <button class="osp-view-toggle ativo" data-view="semana" onclick="mudarVisaoAgenda('semana')">Semana</button>
                     <button class="osp-view-toggle" data-view="mes" onclick="mudarVisaoAgenda('mes')">Mês</button>
                   </div>
                 </div>
                 <p style="font-size:0.85rem;margin-bottom:16px;">Clique num horário vazio pra criar um compromisso, ou num já existente pra editar. Feriados nacionais aparecem marcados e ficam bloqueados pra agendamento público automaticamente.</p>
 
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-                  <div style="display:flex;gap:8px;align-items:center;">
+                <div class="osp-agenda-nav-row" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                     <button class="btn btn--outline" onclick="agendaNavegar(-1)" style="padding:8px 14px;">← Anterior</button>
                     <button class="btn btn--outline" onclick="agendaHoje()" style="padding:8px 14px;">Hoje</button>
                     <button class="btn btn--outline" onclick="agendaNavegar(1)" style="padding:8px 14px;">Próximo →</button>
@@ -591,7 +591,7 @@
     const AGENDA_HORA_INICIO = 6, AGENDA_HORA_FIM = 23, AGENDA_PX_POR_HORA = 40;
     const AGENDA_ALTURA = (AGENDA_HORA_FIM - AGENDA_HORA_INICIO) * AGENDA_PX_POR_HORA;
 
-    let agendaView = 'dia';
+    let agendaView = 'semana';
     let agendaReferencia = new Date(); agendaReferencia.setHours(0, 0, 0, 0);
     let agendaCache = { agendamentos: [], compromissos: [], feriados: [] };
 
@@ -700,16 +700,31 @@
       html += `</div>`;
       wrap.innerHTML = html;
 
+      const agora = new Date();
+      const isoHoje = agendaDataISO(agora);
+      const minutosAgora = (agora.getHours() - AGENDA_HORA_INICIO) * 60 + agora.getMinutes();
+
       diasArr.forEach((d, i) => {
         const iso = agendaDataISO(d);
         const col = document.getElementById('agenda-dia-' + i);
+
+        // Linha indicando o horário atual — só no dia de hoje, se estiver
+        // dentro da faixa 06h–23h visível.
+        if (iso === isoHoje && minutosAgora >= 0 && minutosAgora <= (AGENDA_HORA_FIM - AGENDA_HORA_INICIO) * 60) {
+          const linha = document.createElement('div');
+          linha.className = 'osp-calendar__linha-agora';
+          linha.style.top = (minutosAgora / 60 * AGENDA_PX_POR_HORA) + 'px';
+          col.appendChild(linha);
+        }
+
         itensAgendaDoDia(iso).forEach(item => {
           const [hh, mm] = item.hora.split(':').map(Number);
           const minutosDoInicio = (hh - AGENDA_HORA_INICIO) * 60 + mm;
           if (minutosDoInicio < 0 || hh > AGENDA_HORA_FIM) return;
           const top = minutosDoInicio / 60 * AGENDA_PX_POR_HORA;
+          const jaPassou = new Date(`${iso}T${item.hora}:00`) < agora;
           const bloco = document.createElement('div');
-          bloco.className = `osp-calendar__block osp-calendar__block--${item.tipo}`;
+          bloco.className = `osp-calendar__block osp-calendar__block--${item.tipo}` + (jaPassou ? ' osp-calendar__block--passado' : '');
           bloco.style.top = top + 'px';
           bloco.style.height = '38px';
           bloco.style.cursor = 'pointer';
@@ -741,9 +756,11 @@
         if (iso === hojeISO) classes.push('osp-mes-grid__dia--hoje');
 
         const itensVisiveis = itens.slice(0, 3);
-        const itensHtml = itensVisiveis.map(it =>
-          `<div class="osp-mes-grid__item osp-mes-grid__item--${it.tipo}" onclick="event.stopPropagation();abrirModalAgenda(${JSON.stringify(it).replace(/"/g, '&quot;')})">${TIPO_ICONE[it.tipo] || '📌'} ${it.hora} ${it.texto}</div>`
-        ).join('');
+        const agora = new Date();
+        const itensHtml = itensVisiveis.map(it => {
+          const jaPassou = new Date(`${iso}T${it.hora}:00`) < agora;
+          return `<div class="osp-mes-grid__item osp-mes-grid__item--${it.tipo}${jaPassou ? ' osp-mes-grid__item--passado' : ''}" onclick="event.stopPropagation();abrirModalAgenda(${JSON.stringify(it).replace(/"/g, '&quot;')})">${TIPO_ICONE[it.tipo] || '📌'} ${it.hora} ${it.texto}</div>`;
+        }).join('');
         const maisHtml = itens.length > 3 ? `<div class="osp-mes-grid__mais">+${itens.length - 3} mais</div>` : '';
 
         html += `<div class="${classes.join(' ')}" onclick="agendaReferencia=new Date('${iso}T00:00:00');mudarVisaoAgenda('dia');document.querySelectorAll('.osp-view-toggle').forEach(b=>b.classList.toggle('ativo',b.dataset.view==='dia'));">
