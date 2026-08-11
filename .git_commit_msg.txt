@@ -1,0 +1,5 @@
+Agenda: grade de horarios respeita o horario de trabalho de cada psicologo
+
+Antes a grade da Agenda usava um intervalo fixo (6h-23h) igual pra todo
+mundo. Agora AGENDA_HORA_INICIO/FIM sao carregados do horario_trabalho_*
+do psicologo logado em mostrarPainel(), com fallback 8h-19h.

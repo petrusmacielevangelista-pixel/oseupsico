@@ -417,6 +417,12 @@
       }
       selectHora.value = p.hora_notificacao_diaria || '18:00';
 
+      // A grade da Agenda respeita o "Horário de trabalho" deste psicólogo —
+      // arredonda o início pra baixo e o fim pra cima pra caber a hora cheia.
+      AGENDA_HORA_INICIO = Math.floor(Number((p.horario_trabalho_inicio || '08:00').split(':')[0]));
+      AGENDA_HORA_FIM = Math.ceil(Number((p.horario_trabalho_fim || '19:00').split(':')[0]));
+      if (!(AGENDA_HORA_FIM > AGENDA_HORA_INICIO)) { AGENDA_HORA_INICIO = 8; AGENDA_HORA_FIM = 19; }
+
       carregarAgendamentos();
       carregarVisibilidade();
       recarregarAgenda();
@@ -484,8 +490,12 @@
     const MESES_NOME = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
     const TIPO_ICONE = { agendamento: '✅', semanal: '📌', quinzenal: '🔁', entrevista: '🗣️', avulso: '📍' };
     const TIPO_LABEL = { semanal: 'Semanal', quinzenal: 'Quinzenal', entrevista: 'Entrevista', avulso: 'Avulso' };
-    const AGENDA_HORA_INICIO = 6, AGENDA_HORA_FIM = 23, AGENDA_PX_POR_HORA = 40;
-    const AGENDA_ALTURA = (AGENDA_HORA_FIM - AGENDA_HORA_INICIO) * AGENDA_PX_POR_HORA;
+    // Início/fim são sobrescritos com o "Horário de trabalho" de cada
+    // psicólogo assim que o perfil carrega (ver mostrarPainel) — os valores
+    // abaixo são só o fallback antes disso acontecer.
+    let AGENDA_HORA_INICIO = 6, AGENDA_HORA_FIM = 23;
+    const AGENDA_PX_POR_HORA = 40;
+    function agendaAltura() { return (AGENDA_HORA_FIM - AGENDA_HORA_INICIO) * AGENDA_PX_POR_HORA; }
 
     // No celular, "Semana" fica com colunas estreitas demais pra ler os
     // nomes — começa em "Dia" (cabe inteira na tela) e deixa Semana/Mês
@@ -605,14 +615,14 @@
           ${DIAS_SEMANA_ABREV_AGENDA[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}${feriado ? `<br><span style="font-size:0.62rem;">🎉 ${feriado.nome}</span>` : ''}
         </div>`;
       });
-      html += `<div class="osp-calendar__hours-col" style="grid-column:1;grid-row:2;height:${AGENDA_ALTURA}px;">`;
+      html += `<div class="osp-calendar__hours-col" style="grid-column:1;grid-row:2;height:${agendaAltura()}px;">`;
       for (let h = AGENDA_HORA_INICIO; h <= AGENDA_HORA_FIM; h++) {
         html += `<div class="osp-calendar__hour-label" style="top:${(h - AGENDA_HORA_INICIO) * AGENDA_PX_POR_HORA}px;">${String(h).padStart(2, '0')}:00</div>`;
       }
       html += `</div>`;
       diasArr.forEach((d, i) => {
         const iso = agendaDataISO(d);
-        html += `<div class="osp-calendar__day-body" id="agenda-dia-${i}" style="grid-column:${i + 2};grid-row:2;height:${AGENDA_ALTURA}px;" onclick="cliqueNaAgenda(event, '${iso}')"></div>`;
+        html += `<div class="osp-calendar__day-body" id="agenda-dia-${i}" style="grid-column:${i + 2};grid-row:2;height:${agendaAltura()}px;" onclick="cliqueNaAgenda(event, '${iso}')"></div>`;
       });
       html += `</div>`;
       wrap.innerHTML = html;
