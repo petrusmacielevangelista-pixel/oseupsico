@@ -84,6 +84,9 @@ async function initDB(db) {
       licenca_valor_mensal REAL,
       licenca_observacoes TEXT,
       hora_notificacao_diaria TEXT DEFAULT '18:00',
+      horario_trabalho_inicio TEXT DEFAULT '08:00',
+      horario_trabalho_fim TEXT DEFAULT '19:00',
+      horario_trabalho_dias TEXT DEFAULT '[1,2,3,4,5,6]',
       criado_em TEXT DEFAULT (datetime('now')),
       aprovado_em TEXT
     )`
@@ -309,29 +312,36 @@ function feriadosNoIntervalo(inicio, fim) {
   return todos.filter(f => f.data >= inicioStr && f.data <= fimStr);
 }
 
-function proximaVagaLivre(disponibilidades, ocupadosSet, diasAFrente = 14, feriadosSet = null) {
+// Gera os horários (de hora em hora) de um dia específico a partir do
+// "Horário de trabalho" cadastrado pelo próprio psicólogo (campo
+// obrigatório em Meu perfil) — substitui a antiga configuração de
+// "horários recorrentes" por dia da semana individual.
+function horariosDoDiaPeloTrabalho(psicologo, diaSemana) {
+  const dias = JSON.parse(psicologo.horario_trabalho_dias || '[]');
+  if (!dias.includes(diaSemana)) return [];
+  const [hIni] = (psicologo.horario_trabalho_inicio || '08:00').split(':').map(Number);
+  const [hFim] = (psicologo.horario_trabalho_fim || '19:00').split(':').map(Number);
+  const horas = [];
+  for (let h = hIni; h <= hFim; h++) horas.push(String(h).padStart(2, '0') + ':00');
+  return horas;
+}
+
+// ocupadosSet deve conter os data_hora já normalizados pra "AAAA-MM-DD HH:MM"
+// (16 caracteres) — agendamentos e compromissos guardam formatos com
+// granularidade diferente (com/sem segundos), então quem monta o Set
+// precisa normalizar antes de passar aqui.
+function proximaVagaLivre(psicologo, ocupadosSet, diasAFrente = 15, feriadosSet = null) {
   const agora = new Date();
   for (let d = 1; d <= diasAFrente; d++) {
     const dia = new Date(agora);
     dia.setDate(dia.getDate() + d);
-    const diaSemana = dia.getDay();
     if (feriadosSet && feriadosSet.has(formatarDataISO(dia))) continue;
 
-    const dispsDoDia = disponibilidades.filter(disp => disp.dia_semana === diaSemana);
-    let melhorSlot = null;
-    for (const disp of dispsDoDia) {
-      const [hIni, mIni] = disp.hora_inicio.split(':').map(Number);
-      const [hFim, mFim] = disp.hora_fim.split(':').map(Number);
-      let cursor = new Date(dia); cursor.setHours(hIni, mIni, 0, 0);
-      const fim = new Date(dia); fim.setHours(hFim, mFim, 0, 0);
-
-      while (cursor < fim) {
-        const iso = cursor.toISOString().slice(0, 16).replace('T', ' ');
-        if (!ocupadosSet.has(iso) && (!melhorSlot || iso < melhorSlot)) melhorSlot = iso;
-        cursor = new Date(cursor.getTime() + disp.duracao_minutos * 60000);
-      }
+    const horasDoDia = horariosDoDiaPeloTrabalho(psicologo, dia.getDay());
+    for (const hora of horasDoDia) {
+      const iso = `${formatarDataISO(dia)} ${hora}`;
+      if (!ocupadosSet.has(iso)) return iso;
     }
-    if (melhorSlot) return melhorSlot;
   }
   return null;
 }
@@ -573,6 +583,10 @@ export default {
     const url = new URL(request.url);
     const pathname = url.pathname;
 
+    if (pathname === '/login' || pathname === '/login/') {
+      return Response.redirect(`${url.origin}/psicologos/painel.html`, 302);
+    }
+
     if (pathname === '/auth') {
       const params = new URLSearchParams({
         client_id: env.GITHUB_CLIENT_ID,
@@ -686,9 +700,17 @@ export default {
         const senha = form.get('senha');
         const crpNumero = form.get('crp_numero');
         const crpEstado = form.get('crp_estado');
+        const horarioInicio = form.get('horario_trabalho_inicio');
+        const horarioFim = form.get('horario_trabalho_fim');
+        const horarioDias = form.get('horario_trabalho_dias') || '[]';
 
         if (!nome || !email || !senha || !crpNumero || !crpEstado) {
           return json({ ok: false, error: 'Dados obrigatórios ausentes.' }, 400);
+        }
+        let horarioDiasArr = [];
+        try { horarioDiasArr = JSON.parse(horarioDias); } catch {}
+        if (!horarioInicio || !horarioFim || !horarioDiasArr.length) {
+          return json({ ok: false, error: 'Informe seu horário de trabalho (início, fim e pelo menos um dia).' }, 400);
         }
 
         let fotoUrl = null;
@@ -721,14 +743,16 @@ export default {
           `INSERT INTO psicologos
            (nome, email, senha_hash, telefone, foto_url, cpf, rg, crp_numero, crp_estado, bio,
             graduacao_curso, graduacao_instituicao, graduacao_mes_ano, pos_graduacoes,
-            especialidades, abordagem, experiencias)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            especialidades, abordagem, experiencias,
+            horario_trabalho_inicio, horario_trabalho_fim, horario_trabalho_dias)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           nome, email, senhaHash, form.get('telefone') || null, fotoUrl,
           form.get('cpf') || null, form.get('rg') || null, crpNumero, crpEstado,
           form.get('bio') || null, form.get('graduacao_curso') || null, form.get('graduacao_instituicao') || null,
           form.get('graduacao_mes_ano') || null, posGraduacoes,
-          especialidades, form.get('abordagem') || null, experiencias
+          especialidades, form.get('abordagem') || null, experiencias,
+          horarioInicio, horarioFim, horarioDias
         ).run();
 
         return json({ ok: true, id: result.meta.last_row_id });
@@ -816,8 +840,25 @@ export default {
       // crp_numero/crp_estado também não são editáveis aqui — foram
       // verificados pelo admin na aprovação; mudar exigiria nova checagem.
       const body = await request.json();
+
+      // Horário de trabalho é obrigatório — é a partir dele que o site
+      // calcula quais horários oferecer no perfil público. Só valida
+      // quando o campo vem no corpo da requisição (a tela de edição
+      // sempre manda os três juntos).
+      if (body.horario_trabalho_inicio !== undefined || body.horario_trabalho_fim !== undefined || body.horario_trabalho_dias !== undefined) {
+        if (!body.horario_trabalho_inicio || !body.horario_trabalho_fim) {
+          return json({ ok: false, error: 'Informe o horário de trabalho (início e fim).' }, 400);
+        }
+        let diasArr = [];
+        try { diasArr = JSON.parse(body.horario_trabalho_dias || '[]'); } catch {}
+        if (!Array.isArray(diasArr) || !diasArr.length) {
+          return json({ ok: false, error: 'Selecione ao menos um dia de trabalho.' }, 400);
+        }
+      }
+
       const campos = ['telefone', 'bio', 'cpf', 'rg', 'graduacao_curso', 'graduacao_instituicao', 'graduacao_mes_ano',
-        'pos_graduacoes', 'especialidades', 'abordagem', 'experiencias', 'hora_notificacao_diaria'];
+        'pos_graduacoes', 'especialidades', 'abordagem', 'experiencias', 'hora_notificacao_diaria',
+        'horario_trabalho_inicio', 'horario_trabalho_fim', 'horario_trabalho_dias'];
       const sets = [], binds = [];
       campos.forEach(c => {
         if (body[c] !== undefined) { sets.push(`${c} = ?`); binds.push(body[c]); }
@@ -869,6 +910,7 @@ export default {
       const { results } = await env.DB.prepare(
         `SELECT p.id, p.nome, p.foto_url, p.bio, p.especialidades, p.abordagem,
                 p.graduacao_curso, p.graduacao_instituicao, p.graduacao_mes_ano,
+                p.horario_trabalho_inicio, p.horario_trabalho_fim, p.horario_trabalho_dias,
                 (SELECT AVG(nota) FROM avaliacoes WHERE psicologo_id = p.id AND status = 'publicado') as avaliacao_media,
                 (SELECT COUNT(*) FROM avaliacoes WHERE psicologo_id = p.id AND status = 'publicado') as total_avaliacoes
          FROM psicologos p
@@ -884,14 +926,17 @@ export default {
         const ids = results.map(p => p.id);
         const placeholders = ids.map(() => '?').join(',');
 
-        const { results: todasDisponibilidades } = await env.DB.prepare(
-          `SELECT * FROM disponibilidades WHERE psicologo_id IN (${placeholders}) AND ativo = 1`
-        ).bind(...ids).all();
-
-        const { results: todosOcupados } = await env.DB.prepare(
+        const { results: todosOcupadosAgendamentos } = await env.DB.prepare(
           `SELECT psicologo_id, data_hora FROM agendamentos
            WHERE psicologo_id IN (${placeholders}) AND status IN ('confirmado', 'pendente_verificacao') AND data_hora >= datetime('now')`
         ).bind(...ids).all();
+        const { results: todosOcupadosCompromissos } = await env.DB.prepare(
+          `SELECT psicologo_id, data_hora FROM compromissos WHERE psicologo_id IN (${placeholders}) AND data_hora >= datetime('now')`
+        ).bind(...ids).all();
+        // agendamentos guarda "AAAA-MM-DD HH:MM" e compromissos guarda com
+        // segundos — normaliza os dois pros mesmos 16 caracteres antes de comparar.
+        const todosOcupados = [...todosOcupadosAgendamentos, ...todosOcupadosCompromissos]
+          .map(o => ({ psicologo_id: o.psicologo_id, data_hora: o.data_hora.slice(0, 16) }));
 
         // Os objetos retornados pelo D1 não são mutáveis com segurança —
         // criamos objetos novos em vez de atribuir campo direto neles.
@@ -911,11 +956,10 @@ export default {
         const feriadosSet = new Set(feriadosNoIntervalo(hojeParaVaga, fimParaVaga).map(f => f.data));
 
         psicologos = results.map(p => {
-          const disponibilidades = todasDisponibilidades.filter(d => Number(d.psicologo_id) === Number(p.id));
           const ocupadosSet = new Set(todosOcupados.filter(o => Number(o.psicologo_id) === Number(p.id)).map(o => o.data_hora));
           return {
             ...p,
-            proxima_vaga: proximaVagaLivre(disponibilidades, ocupadosSet, 14, feriadosSet),
+            proxima_vaga: proximaVagaLivre(p, ocupadosSet, 14, feriadosSet),
             muito_procurado: (cliquesPorPsicologo[Number(p.id)] || 0) >= limite,
           };
         });
@@ -1387,16 +1431,23 @@ export default {
     if (horariosMatch && request.method === 'GET') {
       await initDB(env.DB);
       const psicologoId = horariosMatch[1];
-      const diasAFrente = 14;
+      const diasAFrente = 15;
 
-      const { results: disponibilidades } = await env.DB.prepare(
-        'SELECT * FROM disponibilidades WHERE psicologo_id = ? AND ativo = 1'
-      ).bind(psicologoId).all();
+      const psicologo = await env.DB.prepare(
+        'SELECT horario_trabalho_inicio, horario_trabalho_fim, horario_trabalho_dias FROM psicologos WHERE id = ?'
+      ).bind(psicologoId).first();
+      if (!psicologo) return json({ ok: false, error: 'Não encontrado.' }, 404);
 
-      const { results: ocupados } = await env.DB.prepare(
+      // Bloqueia tanto agendamentos públicos (confirmados ou aguardando
+      // confirmação) quanto compromissos que o próprio psicólogo marcou
+      // manualmente na Agenda — ambos "travam" o horário pro site.
+      const { results: ocupadosAgendamentos } = await env.DB.prepare(
         `SELECT data_hora FROM agendamentos WHERE psicologo_id = ? AND status IN ('confirmado', 'pendente_verificacao') AND data_hora >= datetime('now')`
       ).bind(psicologoId).all();
-      const ocupadosSet = new Set(ocupados.map(o => o.data_hora));
+      const { results: ocupadosCompromissos } = await env.DB.prepare(
+        `SELECT data_hora FROM compromissos WHERE psicologo_id = ? AND data_hora >= datetime('now')`
+      ).bind(psicologoId).all();
+      const ocupadosSet = new Set([...ocupadosAgendamentos, ...ocupadosCompromissos].map(o => o.data_hora.slice(0, 16)));
 
       const slots = [];
       const agora = new Date();
@@ -1407,19 +1458,10 @@ export default {
         const dia = new Date(agora);
         dia.setDate(dia.getDate() + d);
         if (feriadosSet.has(formatarDataISO(dia))) continue; // feriado — não oferece horário público nesse dia
-        const diaSemana = dia.getDay();
 
-        disponibilidades.filter(disp => disp.dia_semana === diaSemana).forEach(disp => {
-          const [hIni, mIni] = disp.hora_inicio.split(':').map(Number);
-          const [hFim, mFim] = disp.hora_fim.split(':').map(Number);
-          let cursor = new Date(dia); cursor.setHours(hIni, mIni, 0, 0);
-          const fim = new Date(dia); fim.setHours(hFim, mFim, 0, 0);
-
-          while (cursor < fim) {
-            const iso = cursor.toISOString().slice(0, 16).replace('T', ' ');
-            if (!ocupadosSet.has(iso)) slots.push(iso);
-            cursor = new Date(cursor.getTime() + disp.duracao_minutos * 60000);
-          }
+        horariosDoDiaPeloTrabalho(psicologo, dia.getDay()).forEach(hora => {
+          const iso = `${formatarDataISO(dia)} ${hora}`;
+          if (!ocupadosSet.has(iso)) slots.push(iso);
         });
       }
 

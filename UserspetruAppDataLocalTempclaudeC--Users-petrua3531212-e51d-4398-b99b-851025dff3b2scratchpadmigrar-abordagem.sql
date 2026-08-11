@@ -1,0 +1,11 @@
+UPDATE psicologos SET abordagem = 'TCC' WHERE id = 7;
+UPDATE psicologos SET abordagem = 'TCC' WHERE id = 8;
+UPDATE psicologos SET abordagem = 'Psicanálise' WHERE id = 9;
+UPDATE psicologos SET abordagem = 'TCC' WHERE id = 10;
+UPDATE psicologos SET abordagem = 'Terapia do Esquema' WHERE id = 11;
+UPDATE psicologos SET abordagem = 'TCC' WHERE id = 12;
+UPDATE psicologos SET abordagem = 'Psicanálise' WHERE id = 13;
+UPDATE psicologos SET abordagem = 'ACT' WHERE id = 14;
+UPDATE psicologos SET abordagem = 'Sistêmica' WHERE id = 15;
+UPDATE psicologos SET abordagem = 'TCC' WHERE id = 16;
+UPDATE psicologos SET abordagem = 'TCC' WHERE id = 17;

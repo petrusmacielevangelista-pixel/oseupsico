@@ -72,6 +72,25 @@
           </div>
         </div>
 
+        <h3>Horário de trabalho *</h3>
+        <p style="font-size:0.78rem;color:#999;margin-top:-4px;margin-bottom:12px;">É a partir daqui que calculamos quais horários oferecer pros pacientes no seu perfil público. Depois de cadastrado, você pode adicionar pacientes que já tinha antes direto na aba "Agenda" do seu painel — isso já bloqueia esses horários automaticamente.</p>
+        <div class="form-row">
+          <div class="form-group"><label>Das *</label><input type="time" id="horario_trabalho_inicio" value="08:00" required /></div>
+          <div class="form-group"><label>Até *</label><input type="time" id="horario_trabalho_fim" value="19:00" required /></div>
+        </div>
+        <div class="form-group">
+          <label>Dias de trabalho *</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+            <label style="display:flex;align-items:center;gap:5px;background:#F7F5F0;padding:7px 12px;border-radius:20px;font-size:0.85rem;"><input type="checkbox" class="chk-dia-trabalho" value="1" checked /> Seg</label>
+            <label style="display:flex;align-items:center;gap:5px;background:#F7F5F0;padding:7px 12px;border-radius:20px;font-size:0.85rem;"><input type="checkbox" class="chk-dia-trabalho" value="2" checked /> Ter</label>
+            <label style="display:flex;align-items:center;gap:5px;background:#F7F5F0;padding:7px 12px;border-radius:20px;font-size:0.85rem;"><input type="checkbox" class="chk-dia-trabalho" value="3" checked /> Qua</label>
+            <label style="display:flex;align-items:center;gap:5px;background:#F7F5F0;padding:7px 12px;border-radius:20px;font-size:0.85rem;"><input type="checkbox" class="chk-dia-trabalho" value="4" checked /> Qui</label>
+            <label style="display:flex;align-items:center;gap:5px;background:#F7F5F0;padding:7px 12px;border-radius:20px;font-size:0.85rem;"><input type="checkbox" class="chk-dia-trabalho" value="5" checked /> Sex</label>
+            <label style="display:flex;align-items:center;gap:5px;background:#F7F5F0;padding:7px 12px;border-radius:20px;font-size:0.85rem;"><input type="checkbox" class="chk-dia-trabalho" value="6" checked /> Sáb</label>
+            <label style="display:flex;align-items:center;gap:5px;background:#F7F5F0;padding:7px 12px;border-radius:20px;font-size:0.85rem;"><input type="checkbox" class="chk-dia-trabalho" value="0" /> Dom</label>
+          </div>
+        </div>
+
         <div class="form-group">
           <label>Bio / apresentação <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
           <textarea id="bio" rows="4" style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-md);font-family:inherit;"></textarea>
@@ -83,7 +102,7 @@
           <div class="form-group"><label>Instituição</label><input type="text" id="graduacao_instituicao" /></div>
         </div>
         <div class="form-group" style="max-width:160px;">
-          <label>Data de formação (Mês e ano do término da data que você se formou)</label>
+          <label>Data de formação (Mês e ano da conclusão da sua formação profissional)</label>
           <input type="text" id="graduacao_mes_ano" placeholder="MM/AAAA" maxlength="7" />
         </div>
 
@@ -152,11 +171,17 @@
         return;
       }
 
+      const diasTrabalho = [...document.querySelectorAll('.chk-dia-trabalho:checked')].map(c => Number(c.value));
+      if (!diasTrabalho.length) { erroEl.textContent = 'Selecione ao menos um dia de trabalho.'; return; }
+
       const especialidades = [...document.querySelectorAll('.chk-especialidade:checked')].map(c => c.value);
       const posGraduacoes = document.getElementById('pos_graduacoes').value.split('\n').map(s => s.trim()).filter(Boolean);
       const abordagem = document.getElementById('abordagem').value.trim();
 
       const form = new FormData();
+      form.set('horario_trabalho_inicio', document.getElementById('horario_trabalho_inicio').value);
+      form.set('horario_trabalho_fim', document.getElementById('horario_trabalho_fim').value);
+      form.set('horario_trabalho_dias', JSON.stringify(diasTrabalho));
       form.set('nome', document.getElementById('nome').value.trim());
       form.set('email', document.getElementById('email').value.trim());
       form.set('senha', document.getElementById('senha').value);

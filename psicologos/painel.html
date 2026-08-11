@@ -102,6 +102,24 @@
                 </div>
               </div>
 
+              <div class="form-group">
+                <label>Horário de trabalho * <span style="font-weight:400;color:#999;">(usado pra calcular quais horários oferecer no seu perfil público)</span></label>
+                <p style="font-size:0.78rem;color:#999;margin:-2px 0 10px;">Adicione pacientes que você já tinha antes direto na aba "Agenda" — isso já bloqueia esses horários automaticamente pra não aparecerem disponíveis aqui.</p>
+                <div class="form-row">
+                  <div class="form-group"><label>Das *</label><input type="time" id="edit-horario-trabalho-inicio" /></div>
+                  <div class="form-group"><label>Até *</label><input type="time" id="edit-horario-trabalho-fim" /></div>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+                  <label style="display:flex;align-items:center;gap:5px;background:#F7F5F0;padding:7px 12px;border-radius:20px;font-size:0.85rem;"><input type="checkbox" class="chk-edit-dia-trabalho" value="1" /> Seg</label>
+                  <label style="display:flex;align-items:center;gap:5px;background:#F7F5F0;padding:7px 12px;border-radius:20px;font-size:0.85rem;"><input type="checkbox" class="chk-edit-dia-trabalho" value="2" /> Ter</label>
+                  <label style="display:flex;align-items:center;gap:5px;background:#F7F5F0;padding:7px 12px;border-radius:20px;font-size:0.85rem;"><input type="checkbox" class="chk-edit-dia-trabalho" value="3" /> Qua</label>
+                  <label style="display:flex;align-items:center;gap:5px;background:#F7F5F0;padding:7px 12px;border-radius:20px;font-size:0.85rem;"><input type="checkbox" class="chk-edit-dia-trabalho" value="4" /> Qui</label>
+                  <label style="display:flex;align-items:center;gap:5px;background:#F7F5F0;padding:7px 12px;border-radius:20px;font-size:0.85rem;"><input type="checkbox" class="chk-edit-dia-trabalho" value="5" /> Sex</label>
+                  <label style="display:flex;align-items:center;gap:5px;background:#F7F5F0;padding:7px 12px;border-radius:20px;font-size:0.85rem;"><input type="checkbox" class="chk-edit-dia-trabalho" value="6" /> Sáb</label>
+                  <label style="display:flex;align-items:center;gap:5px;background:#F7F5F0;padding:7px 12px;border-radius:20px;font-size:0.85rem;"><input type="checkbox" class="chk-edit-dia-trabalho" value="0" /> Dom</label>
+                </div>
+              </div>
+
               <div class="form-row">
                 <div class="form-group">
                   <label>Graduação (curso) <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
@@ -161,55 +179,28 @@
 
             <div class="hidden" id="secao-agenda" data-secao>
 
-              <div class="osp-card" style="padding-top:0;">
-                <div class="osp-agenda-header-freeze">
-                  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding-top:32px;margin-bottom:6px;">
-                    <h2 style="margin-bottom:0;">Agenda</h2>
-                    <div class="osp-view-toggle-group">
-                      <button class="osp-view-toggle" data-view="dia" onclick="mudarVisaoAgenda('dia')">Dia</button>
-                      <button class="osp-view-toggle" data-view="semana" onclick="mudarVisaoAgenda('semana')">Semana</button>
-                      <button class="osp-view-toggle" data-view="mes" onclick="mudarVisaoAgenda('mes')">Mês</button>
-                    </div>
-                  </div>
-
-                  <div class="osp-agenda-nav-row" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding-bottom:14px;">
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                      <button class="btn btn--outline" onclick="agendaNavegar(-1)" style="padding:8px 14px;">← Anterior</button>
-                      <button class="btn btn--outline" onclick="agendaHoje()" style="padding:8px 14px;">Hoje</button>
-                      <button class="btn btn--outline" onclick="agendaNavegar(1)" style="padding:8px 14px;">Próximo →</button>
-                    </div>
-                    <strong id="agenda-titulo-periodo" style="font-size:0.95rem;text-transform:capitalize;"></strong>
+              <div class="osp-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:6px;">
+                  <h2 style="margin-bottom:0;">Agenda</h2>
+                  <div class="osp-view-toggle-group">
+                    <button class="osp-view-toggle" data-view="dia" onclick="mudarVisaoAgenda('dia')">Dia</button>
+                    <button class="osp-view-toggle" data-view="semana" onclick="mudarVisaoAgenda('semana')">Semana</button>
+                    <button class="osp-view-toggle" data-view="mes" onclick="mudarVisaoAgenda('mes')">Mês</button>
                   </div>
                 </div>
 
-                <p style="font-size:0.85rem;margin-bottom:16px;">Clique num horário vazio pra criar um compromisso, ou num já existente pra editar. Feriados nacionais aparecem marcados e ficam bloqueados pra agendamento público automaticamente.</p>
+                <div class="osp-agenda-nav-row" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <button class="btn btn--outline" onclick="agendaNavegar(-1)" style="padding:8px 14px;">← Anterior</button>
+                    <button class="btn btn--outline" onclick="agendaHoje()" style="padding:8px 14px;">Hoje</button>
+                    <button class="btn btn--outline" onclick="agendaNavegar(1)" style="padding:8px 14px;">Próximo →</button>
+                  </div>
+                  <strong id="agenda-titulo-periodo" style="font-size:0.95rem;text-transform:capitalize;"></strong>
+                </div>
+
+                <p style="font-size:0.85rem;margin-bottom:16px;">Clique num horário vazio pra criar um compromisso, ou num já existente pra editar. Feriados nacionais aparecem marcados e ficam bloqueados pra agendamento público automaticamente. Os cabeçalhos com os dias ficam fixos ao rolar o calendário.</p>
 
                 <div id="agenda-calendario-wrap" style="overflow-x:auto;"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
-              </div>
-
-              <div class="osp-card">
-                <h2>Horários recorrentes de atendimento</h2>
-                <p style="font-size:0.85rem;margin-bottom:16px;">Clique em um horário livre na grade pra pré-preencher, ajuste e adicione (ou clique num bloco já existente pra editar). Isso define quando pacientes podem marcar pelo seu perfil público — são regras que se repetem toda semana, diferente dos compromissos individuais marcados na agenda acima.</p>
-
-                <div class="osp-agenda-toolbar">
-                  <input type="hidden" id="disp-id" value="" />
-                  <div class="form-group">
-                    <label>Dia</label>
-                    <select id="disp-dia">
-                      <option value="1">Segunda</option><option value="2">Terça</option><option value="3">Quarta</option>
-                      <option value="4">Quinta</option><option value="5">Sexta</option><option value="6">Sábado</option><option value="0">Domingo</option>
-                    </select>
-                  </div>
-                  <div class="form-group"><label>Das</label><input type="time" id="disp-inicio" value="09:00" /></div>
-                  <div class="form-group"><label>Até</label><input type="time" id="disp-fim" value="12:00" /></div>
-                  <div class="form-group"><label>Sessão (min)</label><input type="number" id="disp-duracao" value="50" style="max-width:90px;" /></div>
-                  <button class="btn btn--yellow" onclick="salvarDisponibilidade()" style="height:44px;" id="disp-btn-salvar">+ Adicionar</button>
-                  <button class="btn btn--outline hidden" onclick="cancelarEdicaoDisponibilidade()" style="height:44px;" id="disp-btn-cancelar">Cancelar edição</button>
-                </div>
-
-                <div style="overflow-x:auto;max-width:100%;">
-                  <div class="osp-calendar" id="calendario"></div>
-                </div>
               </div>
 
             </div>
@@ -395,6 +386,11 @@
       document.getElementById('edit-telefone').value = p.telefone || '';
       document.getElementById('edit-telefone').dispatchEvent(new Event('input')); // aplica a máscara no valor já carregado
       document.getElementById('edit-graduacao-mes-ano').value = p.graduacao_mes_ano || '';
+      document.getElementById('edit-horario-trabalho-inicio').value = p.horario_trabalho_inicio || '08:00';
+      document.getElementById('edit-horario-trabalho-fim').value = p.horario_trabalho_fim || '19:00';
+      let diasTrabalhoSalvos = [];
+      try { diasTrabalhoSalvos = JSON.parse(p.horario_trabalho_dias || '[]'); } catch {}
+      document.querySelectorAll('.chk-edit-dia-trabalho').forEach(chk => { chk.checked = diasTrabalhoSalvos.includes(Number(chk.value)); });
       document.getElementById('edit-graduacao-curso').value = p.graduacao_curso || '';
       document.getElementById('edit-graduacao-instituicao').value = p.graduacao_instituicao || '';
       let posGraduacoesSalvas = [];
@@ -421,7 +417,6 @@
       }
       selectHora.value = p.hora_notificacao_diaria || '18:00';
 
-      carregarDisponibilidades();
       carregarAgendamentos();
       carregarVisibilidade();
       recarregarAgenda();
@@ -429,114 +424,6 @@
 
     const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     const DIAS_ABREV = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-    const CAL_HORA_INICIO = 7;   // grade cobre 07:00–21:00
-    const CAL_HORA_FIM = 21;
-    const CAL_PX_POR_HORA = 40;
-    const CAL_ALTURA = (CAL_HORA_FIM - CAL_HORA_INICIO) * CAL_PX_POR_HORA;
-
-    function minutosDoDia(hhmm) {
-      const [h, m] = hhmm.split(':').map(Number);
-      return h * 60 + m;
-    }
-
-    function montarCalendarioVazio() {
-      const cal = document.getElementById('calendario');
-      let html = `<div class="osp-calendar__corner"></div>`;
-      for (let dia = 0; dia < 7; dia++) {
-        html += `<div class="osp-calendar__day-header" style="grid-column:${dia + 2};">${DIAS_ABREV[dia]}</div>`;
-      }
-      html += `<div class="osp-calendar__hours-col" style="height:${CAL_ALTURA}px;">`;
-      for (let h = CAL_HORA_INICIO; h <= CAL_HORA_FIM; h++) {
-        html += `<div class="osp-calendar__hour-label" style="top:${(h - CAL_HORA_INICIO) * CAL_PX_POR_HORA}px;">${String(h).padStart(2, '0')}:00</div>`;
-      }
-      html += `</div>`;
-      for (let dia = 0; dia < 7; dia++) {
-        html += `<div class="osp-calendar__day-body" id="cal-dia-${dia}" style="grid-column:${dia + 2};height:${CAL_ALTURA}px;" onclick="cliqueNaGrade(event, ${dia})"></div>`;
-      }
-      cal.innerHTML = html;
-    }
-
-    function cliqueNaGrade(ev, dia) {
-      if (ev.target.closest('.osp-calendar__block')) return; // clique num bloco existente não pré-preenche
-      const rect = ev.currentTarget.getBoundingClientRect();
-      const offsetY = ev.clientY - rect.top;
-      let horaDecimal = CAL_HORA_INICIO + offsetY / CAL_PX_POR_HORA;
-      horaDecimal = Math.round(horaDecimal * 2) / 2; // arredonda pra meia hora
-      const h = Math.floor(horaDecimal);
-      const m = horaDecimal % 1 === 0 ? '00' : '30';
-      document.getElementById('disp-dia').value = dia;
-      document.getElementById('disp-inicio').value = `${String(h).padStart(2, '0')}:${m}`;
-      document.getElementById('disp-inicio').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    let disponibilidadesCache = [];
-
-    async function carregarDisponibilidades() {
-      montarCalendarioVazio();
-      const res = await fetch('/api/psicologos/me/disponibilidades', { headers: { Authorization: 'Bearer ' + token } });
-      const data = await res.json();
-      disponibilidadesCache = data.disponibilidades || [];
-      disponibilidadesCache.forEach(d => {
-        const col = document.getElementById('cal-dia-' + d.dia_semana);
-        if (!col) return;
-        const inicioMin = minutosDoDia(d.hora_inicio) - CAL_HORA_INICIO * 60;
-        const fimMin = minutosDoDia(d.hora_fim) - CAL_HORA_INICIO * 60;
-        const top = Math.max(0, inicioMin / 60 * CAL_PX_POR_HORA);
-        const altura = Math.max(18, (fimMin - inicioMin) / 60 * CAL_PX_POR_HORA);
-        const bloco = document.createElement('div');
-        bloco.className = 'osp-calendar__block';
-        bloco.style.top = top + 'px';
-        bloco.style.height = altura + 'px';
-        bloco.style.cursor = 'pointer';
-        bloco.title = 'Clique pra editar';
-        bloco.innerHTML = `${d.hora_inicio}–${d.hora_fim}<br>${d.duracao_minutos}min<span class="osp-calendar__remove" title="Remover">×</span>`;
-        bloco.querySelector('.osp-calendar__remove').onclick = (e) => { e.stopPropagation(); removerDisponibilidade(d.id); };
-        bloco.addEventListener('click', (e) => { if (!e.target.closest('.osp-calendar__remove')) editarDisponibilidade(d.id); });
-        col.appendChild(bloco);
-      });
-    }
-
-    async function salvarDisponibilidade() {
-      const id = document.getElementById('disp-id').value;
-      const body = JSON.stringify({
-        dia_semana: Number(document.getElementById('disp-dia').value),
-        hora_inicio: document.getElementById('disp-inicio').value,
-        hora_fim: document.getElementById('disp-fim').value,
-        duracao_minutos: Number(document.getElementById('disp-duracao').value) || 50,
-      });
-      const url = id ? `/api/psicologos/me/disponibilidades/${id}` : '/api/psicologos/me/disponibilidades';
-      await fetch(url, {
-        method: id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body,
-      });
-      cancelarEdicaoDisponibilidade();
-      carregarDisponibilidades();
-    }
-
-    function editarDisponibilidade(id) {
-      const d = disponibilidadesCache.find(x => x.id === id);
-      if (!d) return;
-      document.getElementById('disp-id').value = d.id;
-      document.getElementById('disp-dia').value = d.dia_semana;
-      document.getElementById('disp-inicio').value = d.hora_inicio;
-      document.getElementById('disp-fim').value = d.hora_fim;
-      document.getElementById('disp-duracao').value = d.duracao_minutos;
-      document.getElementById('disp-btn-salvar').textContent = 'Salvar edição →';
-      document.getElementById('disp-btn-cancelar').classList.remove('hidden');
-      document.getElementById('disp-inicio').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    function cancelarEdicaoDisponibilidade() {
-      document.getElementById('disp-id').value = '';
-      document.getElementById('disp-btn-salvar').textContent = '+ Adicionar';
-      document.getElementById('disp-btn-cancelar').classList.add('hidden');
-    }
-
-    async function removerDisponibilidade(id) {
-      await fetch(`/api/psicologos/me/disponibilidades/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
-      carregarDisponibilidades();
-    }
 
     async function carregarAgendamentos() {
       const res = await fetch('/api/psicologos/me/agendamentos', { headers: { Authorization: 'Bearer ' + token } });
@@ -654,7 +541,7 @@
 
     function itensAgendaDoDia(iso) {
       const agendamentos = (agendaCache.agendamentos || []).filter(a => a.data_hora.slice(0, 10) === iso)
-        .map(a => ({ tipo: 'agendamento', id: a.id, hora: a.data_hora.slice(11, 16), texto: a.paciente_nome, sub: a.paciente_telefone || '' }));
+        .map(a => ({ tipo: 'entrevista', origem: 'publico', id: a.id, hora: a.data_hora.slice(11, 16), texto: a.paciente_nome, sub: a.paciente_telefone || '' }));
       const compromissos = (agendaCache.compromissos || []).filter(c => c.data_hora.slice(0, 10) === iso)
         .map(c => ({ tipo: c.tipo || 'avulso', id: c.id, hora: c.data_hora.slice(11, 16), texto: c.paciente_nome, sub: c.descricao || '' }));
       return [...agendamentos, ...compromissos].sort((a, b) => a.hora.localeCompare(b.hora));
@@ -836,7 +723,7 @@
       const infoAgendamento = document.getElementById('am-info-agendamento');
       document.getElementById('am-erro').textContent = '';
 
-      if (item && item.tipo === 'agendamento') {
+      if (item && item.origem === 'publico') {
         // Agendamento público: só visualização + cancelar (edição de verdade
         // exigiria renegociar o horário com o paciente, fora de escopo aqui).
         document.getElementById('agenda-modal-titulo').textContent = 'Agendamento confirmado';
@@ -998,6 +885,15 @@
         return;
       }
 
+      const diasTrabalho = [...document.querySelectorAll('.chk-edit-dia-trabalho:checked')].map(c => Number(c.value));
+      const horarioInicio = document.getElementById('edit-horario-trabalho-inicio').value;
+      const horarioFim = document.getElementById('edit-horario-trabalho-fim').value;
+      if (!horarioInicio || !horarioFim || !diasTrabalho.length) {
+        msg.style.color = '#991B1B';
+        msg.textContent = 'Horário de trabalho é obrigatório — preencha início, fim e pelo menos um dia.';
+        return;
+      }
+
       const especialidades = [...document.querySelectorAll('.chk-edit-especialidade:checked')].map(c => c.value);
       const posGraduacoes = document.getElementById('edit-pos-graduacoes').value.split('\n').map(s => s.trim()).filter(Boolean);
 
@@ -1010,6 +906,9 @@
             cpf: document.getElementById('edit-cpf').value.trim(),
             rg: document.getElementById('edit-rg').value.trim(),
             graduacao_mes_ano: mesAno,
+            horario_trabalho_inicio: horarioInicio,
+            horario_trabalho_fim: horarioFim,
+            horario_trabalho_dias: JSON.stringify(diasTrabalho),
             graduacao_curso: document.getElementById('edit-graduacao-curso').value.trim(),
             graduacao_instituicao: document.getElementById('edit-graduacao-instituicao').value.trim(),
             pos_graduacoes: JSON.stringify(posGraduacoes),
