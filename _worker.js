@@ -84,8 +84,9 @@ async function initDB(db) {
       licenca_valor_mensal REAL,
       licenca_observacoes TEXT,
       hora_notificacao_diaria TEXT DEFAULT '18:00',
+      receber_agenda_email INTEGER DEFAULT 0,
       horario_trabalho_inicio TEXT DEFAULT '08:00',
-      horario_trabalho_fim TEXT DEFAULT '19:00',
+      horario_trabalho_fim TEXT DEFAULT '22:00',
       horario_trabalho_dias TEXT DEFAULT '[1,2,3,4,5,6]',
       criado_em TEXT DEFAULT (datetime('now')),
       aprovado_em TEXT
@@ -320,7 +321,7 @@ function horariosDoDiaPeloTrabalho(psicologo, diaSemana) {
   const dias = JSON.parse(psicologo.horario_trabalho_dias || '[]');
   if (!dias.includes(diaSemana)) return [];
   const [hIni] = (psicologo.horario_trabalho_inicio || '08:00').split(':').map(Number);
-  const [hFim] = (psicologo.horario_trabalho_fim || '19:00').split(':').map(Number);
+  const [hFim] = (psicologo.horario_trabalho_fim || '22:00').split(':').map(Number);
   const horas = [];
   for (let h = hIni; h <= hFim; h++) horas.push(String(h).padStart(2, '0') + ':00');
   return horas;
@@ -857,11 +858,11 @@ export default {
       }
 
       const campos = ['telefone', 'bio', 'cpf', 'rg', 'graduacao_curso', 'graduacao_instituicao', 'graduacao_mes_ano',
-        'pos_graduacoes', 'especialidades', 'abordagem', 'experiencias', 'hora_notificacao_diaria',
+        'pos_graduacoes', 'especialidades', 'abordagem', 'experiencias', 'hora_notificacao_diaria', 'receber_agenda_email',
         'horario_trabalho_inicio', 'horario_trabalho_fim', 'horario_trabalho_dias'];
       const sets = [], binds = [];
       campos.forEach(c => {
-        if (body[c] !== undefined) { sets.push(`${c} = ?`); binds.push(body[c]); }
+        if (body[c] !== undefined) { sets.push(`${c} = ?`); binds.push(c === 'receber_agenda_email' ? (body[c] ? 1 : 0) : body[c]); }
       });
       if (!sets.length) return json({ ok: false, error: 'Nada pra atualizar.' }, 400);
       binds.push(psicologoId);
@@ -1736,7 +1737,7 @@ export default {
 
     const { results: psicologos } = await env.DB.prepare(
       `SELECT id, nome, email FROM psicologos
-       WHERE status_aprovacao = 'aprovado' AND licenca_validade_ate >= date('now') AND hora_notificacao_diaria = ?`
+       WHERE status_aprovacao = 'aprovado' AND licenca_validade_ate >= date('now') AND receber_agenda_email = 1 AND hora_notificacao_diaria = ?`
     ).bind(horaLocalStr).all();
 
     for (const psicologo of psicologos) {

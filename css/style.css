@@ -1272,6 +1272,8 @@ ul { list-style: none; }
 .osp-calendar__block--entrevista { background: #D1FAE5; border-color: #6EE7B7; color: #065F46; }
 .osp-calendar__block--avulso { background: #FFE8D6; border-color: #FDBA74; color: #9A4B0C; }
 .osp-calendar__day-header--feriado { background: #FEF2F2 !important; color: #B4230C; }
+.osp-calendar__day-header--hoje { background: #FFF3C4 !important; color: #7a6200; box-shadow: inset 0 -2px 0 #F5C518; }
+.osp-calendar__day-body--hoje { background-color: #FFFDF0; box-shadow: inset 1px 0 0 #F5C518, inset -1px 0 0 #F5C518; }
 
 /* Toggle de visão Dia/Semana/Mês da agenda */
 /* Cabeçalho da Agenda (título, Dia/Semana/Mês, Anterior/Hoje/Próximo) fica

@@ -169,9 +169,15 @@
                 <div id="edit-experiencias-lista"></div>
               </div>
               <div class="form-group">
-                <label>Horário preferido pra receber sua agenda do dia seguinte por e-mail <span style="font-weight:400;color:#999;">(não é público — só uso interno)</span></label>
-                <select id="edit-hora-notificacao" style="max-width:160px;"></select>
-                <p style="font-size:0.78rem;color:#999;margin-top:4px;">Só enviamos se houver algo marcado — dias vazios não geram e-mail. (Em breve também por WhatsApp.)</p>
+                <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;">
+                  <input type="checkbox" id="edit-receber-agenda" onchange="toggleReceberAgenda()" style="width:18px;height:18px;" />
+                  Quero receber minha agenda do dia seguinte por e-mail
+                </label>
+                <div id="wrap-hora-notificacao" style="margin-top:10px;">
+                  <label>Horário de envio <span style="font-weight:400;color:#999;">(uso interno — não aparece no seu perfil público)</span></label>
+                  <select id="edit-hora-notificacao" style="max-width:160px;"></select>
+                  <p style="font-size:0.78rem;color:#999;margin-top:4px;">Só enviamos e-mail nos dias em que houver algo marcado na sua agenda.</p>
+                </div>
               </div>
               <button class="btn btn--yellow" onclick="salvarPerfil()">Salvar alterações →</button>
               <p id="salvar-msg" style="font-size:0.85rem;margin-top:12px;"></p>
@@ -387,7 +393,7 @@
       document.getElementById('edit-telefone').dispatchEvent(new Event('input')); // aplica a máscara no valor já carregado
       document.getElementById('edit-graduacao-mes-ano').value = p.graduacao_mes_ano || '';
       document.getElementById('edit-horario-trabalho-inicio').value = p.horario_trabalho_inicio || '08:00';
-      document.getElementById('edit-horario-trabalho-fim').value = p.horario_trabalho_fim || '19:00';
+      document.getElementById('edit-horario-trabalho-fim').value = p.horario_trabalho_fim || '22:00';
       let diasTrabalhoSalvos = [];
       try { diasTrabalhoSalvos = JSON.parse(p.horario_trabalho_dias || '[]'); } catch {}
       document.querySelectorAll('.chk-edit-dia-trabalho').forEach(chk => { chk.checked = diasTrabalhoSalvos.includes(Number(chk.value)); });
@@ -416,12 +422,14 @@
         }
       }
       selectHora.value = p.hora_notificacao_diaria || '18:00';
+      document.getElementById('edit-receber-agenda').checked = !!p.receber_agenda_email;
+      toggleReceberAgenda();
 
       // A grade da Agenda respeita o "Horário de trabalho" deste psicólogo —
       // arredonda o início pra baixo e o fim pra cima pra caber a hora cheia.
       AGENDA_HORA_INICIO = Math.floor(Number((p.horario_trabalho_inicio || '08:00').split(':')[0]));
-      AGENDA_HORA_FIM = Math.ceil(Number((p.horario_trabalho_fim || '19:00').split(':')[0]));
-      if (!(AGENDA_HORA_FIM > AGENDA_HORA_INICIO)) { AGENDA_HORA_INICIO = 8; AGENDA_HORA_FIM = 19; }
+      AGENDA_HORA_FIM = Math.ceil(Number((p.horario_trabalho_fim || '22:00').split(':')[0]));
+      if (!(AGENDA_HORA_FIM > AGENDA_HORA_INICIO)) { AGENDA_HORA_INICIO = 8; AGENDA_HORA_FIM = 22; }
 
       carregarAgendamentos();
       carregarVisibilidade();
@@ -611,7 +619,7 @@
         const iso = agendaDataISO(d);
         const feriado = feriadoDoDia(iso);
         const hoje = agendaDataISO(new Date()) === iso;
-        html += `<div class="osp-calendar__day-header ${feriado ? 'osp-calendar__day-header--feriado' : ''}" style="grid-column:${i + 2};${hoje ? 'text-decoration:underline;' : ''}">
+        html += `<div class="osp-calendar__day-header ${feriado ? 'osp-calendar__day-header--feriado' : ''} ${hoje ? 'osp-calendar__day-header--hoje' : ''}" style="grid-column:${i + 2};">
           ${DIAS_SEMANA_ABREV_AGENDA[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}${feriado ? `<br><span style="font-size:0.62rem;">🎉 ${feriado.nome}</span>` : ''}
         </div>`;
       });
@@ -622,7 +630,8 @@
       html += `</div>`;
       diasArr.forEach((d, i) => {
         const iso = agendaDataISO(d);
-        html += `<div class="osp-calendar__day-body" id="agenda-dia-${i}" style="grid-column:${i + 2};grid-row:2;height:${agendaAltura()}px;" onclick="cliqueNaAgenda(event, '${iso}')"></div>`;
+        const hoje = agendaDataISO(new Date()) === iso;
+        html += `<div class="osp-calendar__day-body ${hoje ? 'osp-calendar__day-body--hoje' : ''}" id="agenda-dia-${i}" style="grid-column:${i + 2};grid-row:2;height:${agendaAltura()}px;" onclick="cliqueNaAgenda(event, '${iso}')"></div>`;
       });
       html += `</div>`;
       wrap.innerHTML = html;
@@ -883,6 +892,11 @@
       } catch { msg.style.color = '#991B1B'; msg.textContent = 'Erro de conexão.'; }
     });
 
+    function toggleReceberAgenda() {
+      const ligado = document.getElementById('edit-receber-agenda').checked;
+      document.getElementById('wrap-hora-notificacao').classList.toggle('hidden', !ligado);
+    }
+
     async function salvarPerfil() {
       const msg = document.getElementById('salvar-msg');
       msg.textContent = 'Salvando...';
@@ -926,6 +940,7 @@
             abordagem: document.getElementById('edit-abordagem').value.trim(),
             experiencias: JSON.stringify(widgetExperienciasPainel.getItens()),
             hora_notificacao_diaria: document.getElementById('edit-hora-notificacao').value,
+            receber_agenda_email: document.getElementById('edit-receber-agenda').checked,
           }),
         });
         const data = await res.json();
