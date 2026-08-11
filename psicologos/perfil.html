@@ -33,8 +33,19 @@
     .perfil-badge--experiencia { background: #FFF3C4; color: #7a6200; }
 
     .perfil-corpo { padding: 36px 0 64px; }
-    .perfil-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; align-items: start; }
-    @media (max-width: 860px) { .perfil-grid { grid-template-columns: 1fr; } }
+    /* Avaliações sempre por último: no desktop fica embaixo de "Sobre" na
+       coluna esquerda; no mobile (empilhado) vem depois de "Agendar". */
+    .perfil-grid {
+      display: grid; gap: 24px; align-items: start;
+      grid-template-columns: 1.6fr 1fr;
+      grid-template-areas: "sobre agendar" "avaliacoes agendar";
+    }
+    .perfil-area-sobre { grid-area: sobre; }
+    .perfil-area-agendar { grid-area: agendar; }
+    .perfil-area-avaliacoes { grid-area: avaliacoes; }
+    @media (max-width: 860px) {
+      .perfil-grid { grid-template-columns: 1fr; grid-template-areas: "sobre" "agendar" "avaliacoes"; }
+    }
 
     .perfil-painel {
       background: #fff; border: 1px solid #F0EDE4; border-radius: 20px; padding: 28px;
@@ -72,6 +83,8 @@
       padding: 14px 20px; border-radius: 999px; text-decoration: none; font-weight: 700; font-size: 0.92rem;
       box-shadow: 0 6px 20px rgba(37,211,102,0.4); transition: transform .15s, box-shadow .15s;
     }
+    .perfil-whatsapp-flutuante svg { width: 22px; height: 22px; fill: #fff; flex-shrink: 0;
+    }
     .perfil-whatsapp-flutuante:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(37,211,102,0.5); }
     @media (max-width: 640px) {
       .perfil-whatsapp-flutuante span { display: none; }
@@ -104,9 +117,33 @@
       <div class="container">
         <div class="perfil-grid">
 
-          <div>
+          <div class="perfil-area-sobre">
             <div class="perfil-painel" id="painel-sobre"></div>
+          </div>
 
+          <div class="perfil-area-agendar">
+            <div class="perfil-painel hidden" id="secao-agendar" style="position:sticky;top:88px;">
+              <h2>📅 Agendar entrevista inicial</h2>
+              <p style="font-size:0.85rem;color:#666;margin:-6px 0 14px;">Escolha um horário pra uma primeira conversa — sem compromisso, pra vocês se conhecerem.</p>
+              <div id="horarios-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">Carregando horários...</div>
+
+              <form id="form-agendar" class="hidden">
+                <p style="font-size:0.88rem;color:#555;margin-bottom:14px;">Horário selecionado: <strong id="horario-selecionado-texto" style="color:#1A1A1A;"></strong></p>
+                <div class="form-group"><label>Seu nome *</label><input type="text" id="ag-nome" required /></div>
+                <div class="form-group"><label>Seu e-mail *</label><input type="email" id="ag-email" required /></div>
+                <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="ag-telefone" /></div>
+                <button type="submit" class="btn btn--yellow" style="width:100%;justify-content:center;">Confirmar horário →</button>
+                <p style="font-size:0.76rem;color:#999;margin-top:10px;">Enviaremos um e-mail de confirmação — o horário só é reservado depois que você confirmar.</p>
+                <p id="ag-erro" style="color:#991B1B;font-size:0.85rem;margin-top:10px;"></p>
+              </form>
+              <div id="ag-sucesso" class="hidden" style="text-align:center;padding:20px 0;">
+                <div style="font-size:1.8rem;margin-bottom:8px;">📬</div>
+                <p style="color:#555;">Enviamos um e-mail de confirmação — confira sua caixa de entrada pra garantir seu horário.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="perfil-area-avaliacoes">
             <div class="perfil-painel">
               <h2>Avaliações</h2>
               <div id="lista-avaliacoes"></div>
@@ -141,35 +178,14 @@
             </div>
           </div>
 
-          <div>
-            <div class="perfil-painel hidden" id="secao-agendar" style="position:sticky;top:88px;">
-              <h2>📅 Agendar entrevista inicial</h2>
-              <p style="font-size:0.85rem;color:#666;margin:-6px 0 14px;">Escolha um horário pra uma primeira conversa — sem compromisso, pra vocês se conhecerem.</p>
-              <div id="horarios-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">Carregando horários...</div>
-
-              <form id="form-agendar" class="hidden">
-                <p style="font-size:0.88rem;color:#555;margin-bottom:14px;">Horário selecionado: <strong id="horario-selecionado-texto" style="color:#1A1A1A;"></strong></p>
-                <div class="form-group"><label>Seu nome *</label><input type="text" id="ag-nome" required /></div>
-                <div class="form-group"><label>Seu e-mail *</label><input type="email" id="ag-email" required /></div>
-                <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="ag-telefone" /></div>
-                <button type="submit" class="btn btn--yellow" style="width:100%;justify-content:center;">Confirmar horário →</button>
-                <p style="font-size:0.76rem;color:#999;margin-top:10px;">Enviaremos um e-mail de confirmação — o horário só é reservado depois que você confirmar.</p>
-                <p id="ag-erro" style="color:#991B1B;font-size:0.85rem;margin-top:10px;"></p>
-              </form>
-              <div id="ag-sucesso" class="hidden" style="text-align:center;padding:20px 0;">
-                <div style="font-size:1.8rem;margin-bottom:8px;">📬</div>
-                <p style="color:#555;">Enviamos um e-mail de confirmação — confira sua caixa de entrada pra garantir seu horário.</p>
-              </div>
-            </div>
-          </div>
-
         </div>
       </div>
     </section>
   </div>
 
   <a id="whatsapp-flutuante" href="#" target="_blank" rel="noopener" class="perfil-whatsapp-flutuante hidden">
-    <span style="font-size:1.2rem;">💬</span> <span>Falar no WhatsApp</span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+    <span>Falar no WhatsApp</span>
   </a>
 
   <script>

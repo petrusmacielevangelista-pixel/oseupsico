@@ -1,0 +1,10 @@
+Card e perfil do psicologo: avaliacao por ultimo, icone real do WhatsApp
+
+- No card de /psicologos, a avaliacao (estrelas/contagem) passa a aparecer
+  depois das tags de especialidade, logo antes do CTA "Ver perfil e agenda"
+  em vez de ficar no topo junto ao nome
+- No perfil individual, reorganiza a grade com grid-template-areas: no
+  desktop Avaliacoes fica embaixo de Sobre (coluna esquerda); no mobile
+  empilhado, Avaliacoes sempre vem por ultimo (depois de Agendar)
+- Botao flutuante de WhatsApp do perfil troca o emoji generico por um SVG
+  do icone oficial, mesmo usado no botao flutuante do site principal
