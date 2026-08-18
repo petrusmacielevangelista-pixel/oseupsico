@@ -1,0 +1,6 @@
+Agenda: tipo do compromisso fica legivel no mobile
+
+O seletor de Tipo (Semanal/Quinzenal/Entrevista/Avulso) no modal de
+novo/editar compromisso ganhou icone + cor de fundo iguais aos blocos do
+calendario (facil reconhecer de relance) e empilha em 1 coluna abaixo de
+480px, em vez de espremer o texto em 2 colunas de ~140px.

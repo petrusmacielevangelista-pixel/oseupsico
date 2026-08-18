@@ -1272,6 +1272,25 @@ ul { list-style: none; }
 .osp-calendar__block--entrevista { background: #D1FAE5; border-color: #6EE7B7; color: #065F46; }
 .osp-calendar__block--avulso { background: #FFE8D6; border-color: #FDBA74; color: #9A4B0C; }
 .osp-calendar__day-header--feriado { background: #FEF2F2 !important; color: #B4230C; }
+
+/* Seletor de "Tipo" no modal de novo/editar compromisso — mesmas cores dos
+   blocos do calendário, pra reconhecer de relance qual é qual (inclusive
+   no mobile, onde o texto sozinho ficava difícil de ler). */
+.am-tipo-opcao {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px;
+  cursor: pointer; border: 1.5px solid transparent; font-size: 0.88rem; font-weight: 600;
+}
+.am-tipo-opcao input { flex-shrink: 0; }
+.am-tipo-opcao span { white-space: nowrap; }
+.am-tipo-opcao--semanal { background: #FFF3C4; color: #7a6200; }
+.am-tipo-opcao--quinzenal { background: #EDE9FE; color: #5B21B6; }
+.am-tipo-opcao--entrevista { background: #D1FAE5; color: #065F46; }
+.am-tipo-opcao--avulso { background: #FFE8D6; color: #9A4B0C; }
+.am-tipo-opcao:has(input:checked) { border-color: currentColor; box-shadow: 0 0 0 1px currentColor inset; }
+@media (max-width: 480px) {
+  .am-tipo-grid { grid-template-columns: 1fr !important; }
+  .am-tipo-opcao { font-size: 0.92rem; }
+}
 .osp-calendar__day-header--hoje { background: #FFF3C4 !important; color: #7a6200; box-shadow: inset 0 -2px 0 #F5C518; }
 .osp-calendar__day-body--hoje { background-color: #FFFDF0; box-shadow: inset 1px 0 0 #F5C518, inset -1px 0 0 #F5C518; }
 

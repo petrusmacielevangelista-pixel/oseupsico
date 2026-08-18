@@ -250,18 +250,18 @@
       </div>
       <div class="form-group" id="am-recorrente-wrap">
         <label style="display:block;font-weight:600;margin-bottom:8px;">Tipo *</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <label style="display:flex;align-items:center;gap:8px;background:#F7F5F0;padding:10px 12px;border-radius:8px;cursor:pointer;">
-            <input type="radio" name="am-tipo" value="semanal" /> Semanal
+        <div class="am-tipo-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <label class="am-tipo-opcao am-tipo-opcao--semanal">
+            <input type="radio" name="am-tipo" value="semanal" /> <span>📌 Semanal</span>
           </label>
-          <label style="display:flex;align-items:center;gap:8px;background:#F7F5F0;padding:10px 12px;border-radius:8px;cursor:pointer;">
-            <input type="radio" name="am-tipo" value="quinzenal" /> Quinzenal
+          <label class="am-tipo-opcao am-tipo-opcao--quinzenal">
+            <input type="radio" name="am-tipo" value="quinzenal" /> <span>🔁 Quinzenal</span>
           </label>
-          <label style="display:flex;align-items:center;gap:8px;background:#F7F5F0;padding:10px 12px;border-radius:8px;cursor:pointer;">
-            <input type="radio" name="am-tipo" value="entrevista" /> Entrevista
+          <label class="am-tipo-opcao am-tipo-opcao--entrevista">
+            <input type="radio" name="am-tipo" value="entrevista" /> <span>🗣️ Entrevista</span>
           </label>
-          <label style="display:flex;align-items:center;gap:8px;background:#F7F5F0;padding:10px 12px;border-radius:8px;cursor:pointer;">
-            <input type="radio" name="am-tipo" value="avulso" /> Avulso
+          <label class="am-tipo-opcao am-tipo-opcao--avulso">
+            <input type="radio" name="am-tipo" value="avulso" /> <span>📍 Avulso</span>
           </label>
         </div>
         <p style="font-size:0.78rem;color:#999;margin-top:6px;">Semanal/Quinzenal repetem no mesmo dia e horário até o fim do ano. Entrevista e Avulso criam só esse registro.</p>
