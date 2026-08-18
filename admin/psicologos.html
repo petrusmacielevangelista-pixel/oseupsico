@@ -57,6 +57,7 @@
       <div class="tab" data-tab="avaliacoes" onclick="mudarTab('avaliacoes')">Avaliações</div>
       <div class="tab" data-tab="especialidades" onclick="mudarTab('especialidades')">Especialidades</div>
       <div class="tab" data-tab="configuracoes" onclick="mudarTab('configuracoes')">Configurações</div>
+      <div class="tab" data-tab="emails" onclick="mudarTab('emails')">E-mails</div>
     </div>
 
     <div id="tab-cadastros">
@@ -104,6 +105,69 @@
         <p id="config-msg" style="font-size:0.85rem;margin-top:12px;"></p>
       </div>
     </div>
+
+    <div id="tab-emails" class="hidden">
+      <div style="display:grid;grid-template-columns:1.1fr 0.9fr;gap:20px;align-items:start;">
+        <div style="background:#fff;border-radius:12px;padding:24px;">
+          <h3 style="margin-bottom:16px;font-size:1rem;">Nova campanha</h3>
+
+          <label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:4px;">Público-alvo</label>
+          <select id="em-publico" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #ddd;margin-bottom:6px;">
+            <option value="todos">Todos os psicólogos aprovados</option>
+            <option value="licenca_vencendo">Licença vencendo nos próximos 7 dias</option>
+            <option value="poucas_visualizacoes">Menos de 5 visualizações de perfil na última semana</option>
+            <option value="poucos_depoimentos">Menos de 3 depoimentos publicados</option>
+          </select>
+          <p id="em-publico-contagem" style="font-size:0.78rem;color:#888;margin-bottom:16px;">Carregando contagem...</p>
+
+          <label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:4px;">Assunto</label>
+          <input type="text" id="em-assunto" placeholder="Ex: Seu perfil teve poucas visualizações essa semana" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #ddd;margin-bottom:14px;" />
+
+          <label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:4px;">Texto do e-mail</label>
+          <p style="font-size:0.76rem;color:#888;margin-bottom:6px;">Separe parágrafos deixando uma linha em branco entre eles.</p>
+          <textarea id="em-texto" rows="8" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #ddd;font-family:inherit;font-size:0.88rem;margin-bottom:14px;" placeholder="Olá! Vimos que seu perfil teve poucas visualizações essa semana...&#10;&#10;Uma dica: perfis com mais depoimentos aparecem mais nas buscas."></textarea>
+
+          <label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:4px;">Imagem (opcional)</label>
+          <input type="file" id="em-imagem-input" accept="image/*" onchange="uploadImagemCampanha()" style="margin-bottom:6px;" />
+          <div id="em-imagem-preview-wrap" class="hidden" style="margin-bottom:14px;">
+            <img id="em-imagem-preview" style="max-width:100%;max-height:140px;border-radius:8px;display:block;margin-bottom:6px;" />
+            <button class="btn--outline" style="font-size:0.78rem;padding:6px 10px;border-radius:8px;" onclick="removerImagemCampanha()">Remover imagem</button>
+          </div>
+          <p id="em-imagem-msg" style="font-size:0.78rem;color:#991B1B;margin-bottom:10px;"></p>
+
+          <div style="display:flex;gap:10px;margin-bottom:14px;">
+            <div style="flex:1;">
+              <label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:4px;">Texto do botão (opcional)</label>
+              <input type="text" id="em-botao-texto" placeholder="Ex: Ver meu painel" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #ddd;" />
+            </div>
+            <div style="flex:1;">
+              <label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:4px;">Link do botão</label>
+              <input type="text" id="em-botao-link" placeholder="https://oseupsico.com.br/psicologos/painel.html" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #ddd;" />
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;">
+            <button class="btn--outline" onclick="atualizarPreviewCampanha()">👁 Atualizar preview</button>
+            <button class="btn" onclick="enviarCampanha()">Enviar campanha →</button>
+          </div>
+          <p id="em-envio-msg" style="font-size:0.85rem;margin-top:12px;"></p>
+        </div>
+
+        <div>
+          <div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;">
+            <h3 style="margin-bottom:10px;font-size:0.9rem;">Preview</h3>
+            <iframe id="em-preview-frame" style="width:100%;height:420px;border:1px solid #eee;border-radius:8px;"></iframe>
+          </div>
+          <div style="background:#fff;border-radius:12px;padding:16px;">
+            <h3 style="margin-bottom:10px;font-size:0.9rem;">Histórico de disparos</h3>
+            <table>
+              <thead><tr><th>Assunto</th><th>Público</th><th>Enviados</th><th>Data</th></tr></thead>
+              <tbody id="tbody-campanhas"><tr><td colspan="4">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -141,9 +205,10 @@
 
     function mudarTab(nome) {
       document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === nome));
-      ['cadastros', 'licencas', 'avaliacoes', 'especialidades', 'configuracoes'].forEach(t => document.getElementById('tab-' + t).classList.toggle('hidden', t !== nome));
+      ['cadastros', 'licencas', 'avaliacoes', 'especialidades', 'configuracoes', 'emails'].forEach(t => document.getElementById('tab-' + t).classList.toggle('hidden', t !== nome));
       if (nome === 'especialidades') carregarEspecialidades();
       if (nome === 'configuracoes') carregarConfiguracoes();
+      if (nome === 'emails') mostrarAbaEmails();
     }
 
     async function carregarConfiguracoes() {
@@ -305,6 +370,112 @@
       });
       if (!res.ok) { alert('Erro ao excluir.'); return; }
       carregarAvaliacoesAdmin();
+    }
+
+    /* ── Régua de e-mail ── */
+    let imagemCampanhaUrl = null;
+
+    function mostrarAbaEmails() {
+      atualizarContagemPublico();
+      atualizarPreviewCampanha();
+      carregarHistoricoCampanhas();
+    }
+
+    function paragrafosDoTexto() {
+      return document.getElementById('em-texto').value
+        .split(/\n\s*\n/).map(p => p.trim().replace(/\n/g, '<br>')).filter(Boolean);
+    }
+
+    async function atualizarContagemPublico() {
+      const publico = document.getElementById('em-publico').value;
+      const el = document.getElementById('em-publico-contagem');
+      el.textContent = 'Carregando contagem...';
+      const res = await fetch(`/api/admin/campanhas-email/destinatarios?publico=${publico}`, { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      if (!data.ok) { el.textContent = 'Erro ao calcular público.'; return; }
+      el.textContent = data.total
+        ? `Vai pra ${data.total} psicólogo${data.total === 1 ? '' : 's'}${data.nomes.length ? ' — ' + data.nomes.join(', ') + (data.total > data.nomes.length ? '...' : '') : ''}`
+        : 'Nenhum psicólogo se encaixa nesse recorte agora.';
+    }
+    document.getElementById('em-publico').addEventListener('change', atualizarContagemPublico);
+
+    async function uploadImagemCampanha() {
+      const input = document.getElementById('em-imagem-input');
+      const msgEl = document.getElementById('em-imagem-msg');
+      msgEl.textContent = '';
+      if (!input.files.length) return;
+      const form = new FormData();
+      form.append('imagem', input.files[0]);
+      try {
+        const res = await fetch('/api/admin/campanhas-email/imagem', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
+        const data = await res.json();
+        if (!data.ok) { msgEl.textContent = data.error || 'Erro ao enviar imagem.'; return; }
+        imagemCampanhaUrl = data.imagem_url;
+        document.getElementById('em-imagem-preview').src = imagemCampanhaUrl;
+        document.getElementById('em-imagem-preview-wrap').classList.remove('hidden');
+        atualizarPreviewCampanha();
+      } catch { msgEl.textContent = 'Erro de conexão ao enviar imagem.'; }
+    }
+
+    function removerImagemCampanha() {
+      imagemCampanhaUrl = null;
+      document.getElementById('em-imagem-input').value = '';
+      document.getElementById('em-imagem-preview-wrap').classList.add('hidden');
+      atualizarPreviewCampanha();
+    }
+
+    async function atualizarPreviewCampanha() {
+      const res = await fetch('/api/admin/campanhas-email/preview', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({
+          paragrafos: paragrafosDoTexto(),
+          imagem_url: imagemCampanhaUrl,
+          botao_texto: document.getElementById('em-botao-texto').value.trim() || null,
+          botao_link: document.getElementById('em-botao-link').value.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) return;
+      document.getElementById('em-preview-frame').srcdoc = data.html;
+    }
+
+    async function enviarCampanha() {
+      const msgEl = document.getElementById('em-envio-msg');
+      const assunto = document.getElementById('em-assunto').value.trim();
+      const paragrafos = paragrafosDoTexto();
+      const publico = document.getElementById('em-publico').value;
+      if (!assunto || !paragrafos.length) { msgEl.style.color = '#991B1B'; msgEl.textContent = 'Preencha assunto e texto do e-mail.'; return; }
+      if (!confirm(`Confirma o envio dessa campanha? Confira o preview ao lado antes de mandar — não dá pra desfazer.`)) return;
+
+      msgEl.style.color = '#666';
+      msgEl.textContent = 'Enviando...';
+      try {
+        const res = await fetch('/api/admin/campanhas-email/enviar', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({
+            assunto, paragrafos, publico,
+            imagem_url: imagemCampanhaUrl,
+            botao_texto: document.getElementById('em-botao-texto').value.trim() || null,
+            botao_link: document.getElementById('em-botao-link').value.trim() || null,
+          }),
+        });
+        const data = await res.json();
+        if (!data.ok) { msgEl.style.color = '#991B1B'; msgEl.textContent = data.error || 'Erro ao enviar.'; return; }
+        msgEl.style.color = '#065F46';
+        msgEl.textContent = `Enviado pra ${data.enviados} de ${data.total} psicólogos.`;
+        carregarHistoricoCampanhas();
+      } catch { msgEl.style.color = '#991B1B'; msgEl.textContent = 'Erro de conexão.'; }
+    }
+
+    async function carregarHistoricoCampanhas() {
+      const tbody = document.getElementById('tbody-campanhas');
+      const res = await fetch('/api/admin/campanhas-email', { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      const campanhas = data.campanhas || [];
+      const publicoLabel = { todos: 'Todos', licenca_vencendo: 'Licença vencendo', poucas_visualizacoes: 'Poucas visualizações', poucos_depoimentos: 'Poucos depoimentos' };
+      tbody.innerHTML = campanhas.length
+        ? campanhas.map(c => `<tr><td>${c.assunto}</td><td>${publicoLabel[c.publico] || c.publico}</td><td>${c.total_destinatarios}</td><td>${(c.enviado_em || '').slice(0, 16).replace('T', ' ')}</td></tr>`).join('')
+        : '<tr><td colspan="4">Nenhuma campanha enviada ainda.</td></tr>';
     }
   </script>
 </body>

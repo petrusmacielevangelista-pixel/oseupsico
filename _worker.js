@@ -16,6 +16,11 @@
      POST /api/admin/psicologos/:id/aprovar   → aprova/rejeita cadastro (protegido)
      POST /api/admin/psicologos/:id/licenca   → gerencia licença (protegido)
      DELETE /api/admin/avaliacoes/:id         → remove avaliação (protegido)
+     GET  /api/admin/campanhas-email          → histórico de disparos (protegido)
+     GET  /api/admin/campanhas-email/destinatarios → conta público-alvo (protegido)
+     POST /api/admin/campanhas-email/preview  → renderiza HTML sem enviar (protegido)
+     POST /api/admin/campanhas-email/imagem   → upload de imagem pro corpo do e-mail (protegido)
+     POST /api/admin/campanhas-email/enviar   → dispara campanha (protegido)
    ============================================================ */
 
 const CORS = {
@@ -230,6 +235,22 @@ async function initDB(db) {
   // qualquer outro parâmetro futuro sem precisar migração de schema.
   await db.prepare(`CREATE TABLE IF NOT EXISTS configuracoes (chave TEXT PRIMARY KEY, valor TEXT)`).run();
   await db.prepare(`INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES ('limite_muito_procurado', '5')`).run();
+
+  // Histórico da "régua de e-mail" — cada disparo feito pelo admin pra um
+  // recorte de psicólogos (ver /admin/psicologos.html, aba "E-mails").
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS campanhas_email (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      assunto TEXT NOT NULL,
+      paragrafos TEXT NOT NULL,
+      imagem_url TEXT,
+      botao_texto TEXT,
+      botao_link TEXT,
+      publico TEXT NOT NULL,
+      total_destinatarios INTEGER NOT NULL DEFAULT 0,
+      enviado_em TEXT DEFAULT (datetime('now'))
+    )`
+  ).run();
 
   const { results: existentes } = await db.prepare('SELECT COUNT(*) as n FROM especialidades_catalogo').all();
   if (existentes[0].n === 0) {
@@ -485,13 +506,14 @@ async function enviarEmailRedefinirSenha(env, psicologo, linkRedefinir) {
   });
 }
 
-async function enviarEmailBasico(env, { destinatario, assunto, tituloBotao, linkBotao, paragrafos }) {
+function montarHtmlEmailBasico({ tituloBotao, linkBotao, paragrafos, imagemUrl }) {
   const corpo = paragrafos.map(p => `<p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 16px;">${p}</p>`).join('');
+  const imagem = imagemUrl ? `<img src="${imagemUrl}" alt="" style="width:100%;max-width:456px;border-radius:10px;display:block;margin:0 0 20px;" />` : '';
   const botao = linkBotao ? `
     <table cellpadding="0" cellspacing="0"><tr><td style="background:#F5C518;border-radius:40px;padding:14px 28px;">
       <a href="${linkBotao}" style="font-size:15px;font-weight:700;color:#1A1A1A;text-decoration:none;">${tituloBotao} →</a>
     </td></tr></table>` : '';
-  const html = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"/></head>
 <body style="margin:0;padding:0;background:#f5f5f5;font-family:'Helvetica Neue',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 0;">
@@ -501,6 +523,7 @@ async function enviarEmailBasico(env, { destinatario, assunto, tituloBotao, link
           <div style="font-size:20px;font-weight:800;color:#fff;">O Seu <span style="color:#F5C518;">Psico</span></div>
         </td></tr>
         <tr><td style="padding:32px;">
+          ${imagem}
           ${corpo}
           ${botao}
         </td></tr>
@@ -508,7 +531,10 @@ async function enviarEmailBasico(env, { destinatario, assunto, tituloBotao, link
     </td></tr>
   </table>
 </body></html>`;
+}
 
+async function enviarEmailBasico(env, { destinatario, assunto, tituloBotao, linkBotao, paragrafos, imagemUrl }) {
+  const html = montarHtmlEmailBasico({ tituloBotao, linkBotao, paragrafos, imagemUrl });
   await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
@@ -577,6 +603,31 @@ async function enviarEmailResumoDiario(env, psicologo, itens) {
     tituloBotao: 'Ver minha agenda completa',
     linkBotao: `${env.APP_ORIGIN || 'https://oseupsico.com.br'}/psicologos/painel.html`,
   });
+}
+
+// Recortes de público usados pela "régua de e-mail" do admin. Sempre parte
+// de psicólogos aprovados (rejeitados/pendentes não recebem campanha).
+// Os limiares (7 dias, 5 visualizações, 3 depoimentos) são fixos por ora —
+// dá pra virar configuração editável (como limite_muito_procurado) se um
+// dia precisar ajustar sem deploy.
+async function resolverPublicoCampanha(env, publico) {
+  const base = `FROM psicologos p WHERE p.status_aprovacao = 'aprovado'`;
+  let sql;
+  if (publico === 'licenca_vencendo') {
+    sql = `SELECT p.id, p.nome, p.email ${base}
+           AND p.licenca_validade_ate IS NOT NULL
+           AND p.licenca_validade_ate BETWEEN date('now') AND date('now', '+7 days')`;
+  } else if (publico === 'poucas_visualizacoes') {
+    sql = `SELECT p.id, p.nome, p.email ${base}
+           AND (SELECT COUNT(*) FROM eventos_perfil e WHERE e.psicologo_id = p.id AND e.tipo = 'visualizacao' AND e.criado_em >= datetime('now', '-7 days')) < 5`;
+  } else if (publico === 'poucos_depoimentos') {
+    sql = `SELECT p.id, p.nome, p.email ${base}
+           AND (SELECT COUNT(*) FROM avaliacoes a WHERE a.psicologo_id = p.id AND a.status = 'publicado') < 3`;
+  } else {
+    sql = `SELECT p.id, p.nome, p.email ${base}`;
+  }
+  const { results } = await env.DB.prepare(sql).all();
+  return results;
 }
 
 export default {
@@ -1719,6 +1770,77 @@ export default {
       await env.DB.prepare(`UPDATE avaliacoes SET status = 'removido_pelo_admin' WHERE id = ?`).bind(avalDeleteMatch[1]).run();
       await env.DB.prepare(`INSERT INTO avaliacoes_log (avaliacao_id, motivo) VALUES (?, ?)`).bind(avalDeleteMatch[1], motivo || null).run();
       return json({ ok: true });
+    }
+
+    /* ── Régua de e-mail (admin) ── */
+
+    if (pathname === '/api/admin/campanhas-email/imagem' && request.method === 'POST') {
+      if (!autenticadoAdmin(request, env)) return json({ ok: false }, 401);
+      if (!env.FOTOS_BUCKET) return json({ ok: false, error: 'Upload de imagem temporariamente indisponível.' }, 503);
+      try {
+        const form = await request.formData();
+        const imagem = form.get('imagem');
+        if (!imagem || !imagem.size) return json({ ok: false, error: 'Nenhuma imagem enviada.' }, 400);
+        const ext = (imagem.name || '').split('.').pop() || 'jpg';
+        const key = `campanhas/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        await env.FOTOS_BUCKET.put(key, await imagem.arrayBuffer(), { httpMetadata: { contentType: imagem.type } });
+        return json({ ok: true, imagem_url: `${url.origin}/fotos/${key}` });
+      } catch (e) {
+        return json({ ok: false, error: e.message }, 500);
+      }
+    }
+
+    if (pathname === '/api/admin/campanhas-email/destinatarios' && request.method === 'GET') {
+      if (!autenticadoAdmin(request, env)) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const destinatarios = await resolverPublicoCampanha(env, url.searchParams.get('publico') || 'todos');
+      return json({ ok: true, total: destinatarios.length, nomes: destinatarios.slice(0, 8).map(d => d.nome) });
+    }
+
+    if (pathname === '/api/admin/campanhas-email/preview' && request.method === 'POST') {
+      if (!autenticadoAdmin(request, env)) return json({ ok: false }, 401);
+      const { paragrafos, imagem_url, botao_texto, botao_link } = await request.json();
+      const html = montarHtmlEmailBasico({ paragrafos: paragrafos || [], imagemUrl: imagem_url || null, tituloBotao: botao_texto || null, linkBotao: botao_link || null });
+      return json({ ok: true, html });
+    }
+
+    if (pathname === '/api/admin/campanhas-email' && request.method === 'GET') {
+      if (!autenticadoAdmin(request, env)) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { results } = await env.DB.prepare('SELECT * FROM campanhas_email ORDER BY enviado_em DESC LIMIT 50').all();
+      return json({ ok: true, campanhas: results });
+    }
+
+    if (pathname === '/api/admin/campanhas-email/enviar' && request.method === 'POST') {
+      if (!autenticadoAdmin(request, env)) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { assunto, paragrafos, imagem_url, botao_texto, botao_link, publico } = await request.json();
+      if (!assunto || !Array.isArray(paragrafos) || !paragrafos.length) {
+        return json({ ok: false, error: 'Assunto e ao menos um parágrafo são obrigatórios.' }, 400);
+      }
+      const destinatarios = await resolverPublicoCampanha(env, publico || 'todos');
+      if (!destinatarios.length) return json({ ok: false, error: 'Nenhum psicólogo se encaixa nesse recorte.' }, 400);
+
+      // Dispara em série (não em paralelo) pra não estourar o rate limit da
+      // Resend — o volume aqui é baixo (algumas dezenas de psicólogos), não
+      // milhares, então o tempo total é aceitável dentro do CPU time do Worker.
+      let enviados = 0;
+      for (const d of destinatarios) {
+        try {
+          await enviarEmailBasico(env, {
+            destinatario: d.email, assunto, paragrafos,
+            imagemUrl: imagem_url || null, tituloBotao: botao_texto || null, linkBotao: botao_link || null,
+          });
+          enviados++;
+        } catch {}
+      }
+
+      await env.DB.prepare(
+        `INSERT INTO campanhas_email (assunto, paragrafos, imagem_url, botao_texto, botao_link, publico, total_destinatarios)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).bind(assunto, JSON.stringify(paragrafos), imagem_url || null, botao_texto || null, botao_link || null, publico || 'todos', enviados).run();
+
+      return json({ ok: true, enviados, total: destinatarios.length });
     }
 
     return env.ASSETS.fetch(request);
