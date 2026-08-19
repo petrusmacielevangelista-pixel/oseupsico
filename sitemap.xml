@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://oseupsico.com.br/</loc>
@@ -97,6 +97,106 @@
   </url>
   <url>
     <loc>https://oseupsico.com.br/blog/post.html?slug=ciume-entre-irmaos-desenvolvimento</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=primeira-sessao-de-terapia-o-que-esperar</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=quanto-tempo-dura-terapia</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=como-saber-se-terapia-esta-funcionando</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=psicologo-psiquiatra-terapeuta-diferencas</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=sigilo-profissional-psicologia</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=resistencia-a-terapia-como-lidar</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=terapia-preventiva-nao-precisa-estar-em-crise</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=depressao-sintomas-mitos-quando-buscar-ajuda</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=toc-transtorno-obsessivo-compulsivo</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=procrastinacao-por-que-adiamos</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=perfeccionismo-quando-vira-sofrimento</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=solidao-estar-so-x-sentir-sozinho</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=autossabotagem-por-que-agimos-contra-nos-mesmos</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=mindfulness-atencao-plena-o-que-diz-a-ciencia</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=resiliencia-como-se-desenvolve</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=limites-saudaveis-como-dizer-nao-sem-culpa</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=luto-fases-e-processo-de-elaboracao</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=birra-infantil-o-que-esta-por-tras</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=ansiedade-de-separacao-infantil</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=paternidade-ativa-papel-do-pai</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>

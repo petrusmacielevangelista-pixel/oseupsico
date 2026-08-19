@@ -204,7 +204,7 @@
         `).join('');
       }
 
-      fetch('/data/blog.json?' + Date.now())
+      fetch('/data/blog.json')
         .then(r => r.json())
         .then(data => {
           posts = (data.posts || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
