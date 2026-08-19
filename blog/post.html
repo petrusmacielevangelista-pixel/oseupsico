@@ -27,6 +27,7 @@
     .post-wrap { max-width: 720px; margin: 0 auto; padding: 120px 20px 100px; }
     .post-back { display: inline-block; margin-bottom: 24px; color: #999; text-decoration: none; font-size: 0.9rem; }
     .post-back:hover { color: #1A1A1A; }
+    .post-category { display: inline-block; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #B8940A; background: #FFF3C4; padding: 4px 12px; border-radius: 20px; text-decoration: none; margin-bottom: 16px; }
     .post-date { font-size: 0.82rem; color: #999; text-transform: uppercase; letter-spacing: 0.04em; }
     .post-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 800; margin: 10px 0 24px; line-height: 1.25; }
     .post-cover { width: 100%; border-radius: 16px; margin-bottom: 32px; aspect-ratio: 16/9; object-fit: cover; }
@@ -41,6 +42,7 @@
     @media (prefers-color-scheme: dark) {
       .post-back { color: rgba(255,255,255,0.5); }
       .post-back:hover { color: #fff; }
+      .post-category { background: #1A1A1A; color: #F5C518; }
       .post-date { color: rgba(255,255,255,0.45); }
       .post-title { color: #F2F2F2; }
       .post-body { color: rgba(255,255,255,0.82); }
@@ -152,6 +154,8 @@
 
           const dataFormatada = new Date(post.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
           const url = `https://oseupsico.com.br/blog/post.html?slug=${encodeURIComponent(post.slug)}`;
+          const categorias = data.categories || {};
+          const categoriaLabel = categorias[post.category] || post.category;
 
           document.getElementById('page-title').textContent = `${post.title} · O Seu Psico`;
           document.getElementById('meta-description').setAttribute('content', post.excerpt || '');
@@ -162,6 +166,7 @@
 
           wrap.innerHTML = `
             <a class="post-back" href="/blog/">← Voltar pro blog</a>
+            ${post.category ? `<a class="post-category" href="/blog/?categoria=${encodeURIComponent(post.category)}">${categoriaLabel}</a>` : ''}
             <div class="post-date">${dataFormatada}</div>
             <h1 class="post-title">${post.title}</h1>
             ${post.cover ? `<img class="post-cover" src="${post.cover}" alt="" />` : ''}

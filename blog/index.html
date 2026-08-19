@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>Blog · O Seu Psico</title>
-  <meta name="description" content="Artigos sobre terapia, saúde mental e bem-estar emocional, escritos pela equipe do O Seu Psico." />
+  <meta name="description" content="Artigos sobre terapia, saúde mental, maternidade e bem-estar emocional, escritos pela equipe do O Seu Psico." />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://oseupsico.com.br/blog/" />
 
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://oseupsico.com.br/blog/" />
   <meta property="og:title" content="Blog · O Seu Psico" />
-  <meta property="og:description" content="Artigos sobre terapia, saúde mental e bem-estar emocional." />
+  <meta property="og:description" content="Artigos sobre terapia, saúde mental, maternidade e bem-estar emocional." />
   <meta property="og:image" content="https://oseupsico.com.br/assets/logo.png" />
   <meta property="og:locale" content="pt_BR" />
   <meta property="og:site_name" content="O Seu Psico" />
@@ -24,28 +24,51 @@
   <link rel="icon" type="image/png" href="/assets/logo.png" />
 
   <style>
-    .blog-hero { padding: 120px 0 40px; text-align: center; }
+    .blog-hero { padding: 120px 0 32px; text-align: center; }
     .blog-hero h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(2rem, 4vw, 2.75rem); font-weight: 800; margin: 0 0 12px; }
     .blog-hero p { color: #666; font-size: 1.05rem; max-width: 560px; margin: 0 auto; }
-    .blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 28px; padding: 40px 0 100px; }
+
+    .blog-layout { display: grid; grid-template-columns: 220px 1fr; gap: 40px; align-items: start; padding-bottom: 100px; }
+
+    .blog-sidebar { position: sticky; top: 100px; display: flex; flex-direction: column; gap: 4px; }
+    .blog-sidebar__title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #999; margin: 0 0 8px; }
+    .blog-filter { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 12px; border-radius: 10px; background: none; border: none; text-align: left; font-size: 0.92rem; font-family: 'Inter', sans-serif; color: #444; cursor: pointer; transition: background .15s ease, color .15s ease; }
+    .blog-filter:hover { background: #F7F5F0; }
+    .blog-filter.active { background: #1A1A1A; color: #F5C518; font-weight: 600; }
+    .blog-filter__count { font-size: 0.78rem; opacity: 0.6; }
+
+    .blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 28px; }
     .blog-card { display: block; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 16px rgba(0,0,0,0.06); text-decoration: none; color: inherit; transition: transform .2s ease, box-shadow .2s ease; }
     .blog-card:hover { transform: translateY(-4px); box-shadow: 0 8px 28px rgba(0,0,0,0.1); }
     .blog-card__cover { width: 100%; aspect-ratio: 16/9; object-fit: cover; background: #F5C518; }
     .blog-card__body { padding: 20px 22px 24px; }
+    .blog-card__category { display: inline-block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #B8940A; background: #FFF3C4; padding: 3px 10px; border-radius: 20px; margin-bottom: 10px; }
     .blog-card__date { font-size: 0.78rem; color: #999; text-transform: uppercase; letter-spacing: 0.04em; }
     .blog-card__title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.15rem; font-weight: 700; margin: 8px 0 8px; color: #1A1A1A; }
     .blog-card__excerpt { font-size: 0.92rem; color: #555; line-height: 1.5; }
-    .blog-empty { text-align: center; padding: 60px 20px; color: #888; }
+    .blog-empty { text-align: center; padding: 60px 20px; color: #888; grid-column: 1 / -1; }
+
+    @media (max-width: 760px) {
+      .blog-layout { grid-template-columns: 1fr; }
+      .blog-sidebar { position: static; flex-direction: row; overflow-x: auto; gap: 8px; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
+      .blog-sidebar__title { display: none; }
+      .blog-filter { flex-shrink: 0; white-space: nowrap; background: #F7F5F0; }
+    }
 
     @media (prefers-color-scheme: dark) {
       .blog-hero h1 { color: #F2F2F2; }
       .blog-hero p { color: rgba(255,255,255,0.6); }
+      .blog-sidebar__title { color: rgba(255,255,255,0.4); }
+      .blog-filter { color: rgba(255,255,255,0.75); }
+      .blog-filter:hover { background: #1A1A1A; }
+      .blog-filter.active { background: #F5C518; color: #1A1A1A; }
       .blog-card { background: #1A1A1A; box-shadow: 0 2px 16px rgba(0,0,0,0.3); }
       .blog-card:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.45); }
       .blog-card__date { color: rgba(255,255,255,0.45); }
       .blog-card__title { color: #F2F2F2; }
       .blog-card__excerpt { color: rgba(255,255,255,0.72); }
       .blog-empty { color: rgba(255,255,255,0.55); }
+      @media (max-width: 760px) { .blog-filter { background: #1A1A1A; } }
     }
   </style>
 </head>
@@ -74,13 +97,18 @@
     <section class="blog-hero">
       <div class="container">
         <h1>Blog do O Seu Psico</h1>
-        <p>Reflexões sobre terapia, saúde mental e bem-estar emocional — escritas para ajudar você a entender melhor o que sente.</p>
+        <p>Reflexões sobre terapia, saúde mental, maternidade e bem-estar emocional — escritas para ajudar você a entender melhor o que sente.</p>
       </div>
     </section>
 
     <section class="container">
-      <div class="blog-grid" id="blog-grid">
-        <p class="blog-empty">Carregando posts…</p>
+      <div class="blog-layout">
+        <aside class="blog-sidebar" id="blog-sidebar">
+          <div class="blog-sidebar__title">Categorias</div>
+        </aside>
+        <div class="blog-grid" id="blog-grid">
+          <p class="blog-empty">Carregando posts…</p>
+        </div>
       </div>
     </section>
   </main>
@@ -122,28 +150,75 @@
   <script src="/js/script.js" defer></script>
   <script>
     (function () {
+      const sidebar = document.getElementById('blog-sidebar');
+      const grid = document.getElementById('blog-grid');
+      let posts = [];
+      let categorias = {};
+      let ativa = new URLSearchParams(location.search).get('categoria') || 'todas';
+
+      function renderSidebar() {
+        const contagem = { todas: posts.length };
+        posts.forEach(p => { contagem[p.category] = (contagem[p.category] || 0) + 1; });
+
+        const itens = [{ id: 'todas', label: 'Todas as categorias' }]
+          .concat(Object.keys(categorias).map(id => ({ id, label: categorias[id] })));
+
+        const botoes = itens.map(item => `
+          <button class="blog-filter${ativa === item.id ? ' active' : ''}" data-categoria="${item.id}">
+            <span>${item.label}</span>
+            <span class="blog-filter__count">${contagem[item.id] || 0}</span>
+          </button>
+        `).join('');
+
+        sidebar.innerHTML = '<div class="blog-sidebar__title">Categorias</div>' + botoes;
+
+        sidebar.querySelectorAll('.blog-filter').forEach(btn => {
+          btn.addEventListener('click', () => {
+            ativa = btn.dataset.categoria;
+            const url = new URL(location.href);
+            if (ativa === 'todas') url.searchParams.delete('categoria');
+            else url.searchParams.set('categoria', ativa);
+            history.replaceState(null, '', url);
+            renderSidebar();
+            renderGrid();
+          });
+        });
+      }
+
+      function renderGrid() {
+        const filtrados = ativa === 'todas' ? posts : posts.filter(p => p.category === ativa);
+        if (!filtrados.length) {
+          grid.innerHTML = '<p class="blog-empty">Nenhum post nessa categoria ainda.</p>';
+          return;
+        }
+        grid.innerHTML = filtrados.map(p => `
+          <a class="blog-card" href="/blog/post.html?slug=${encodeURIComponent(p.slug)}">
+            ${p.cover ? `<img class="blog-card__cover" src="${p.cover}" alt="" loading="lazy" />` : '<div class="blog-card__cover"></div>'}
+            <div class="blog-card__body">
+              <span class="blog-card__category">${categorias[p.category] || p.category}</span>
+              <div class="blog-card__date">${new Date(p.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+              <div class="blog-card__title">${p.title}</div>
+              <div class="blog-card__excerpt">${p.excerpt || ''}</div>
+            </div>
+          </a>
+        `).join('');
+      }
+
       fetch('/data/blog.json?' + Date.now())
         .then(r => r.json())
         .then(data => {
-          const posts = (data.posts || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-          const grid = document.getElementById('blog-grid');
+          posts = (data.posts || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+          categorias = data.categories || {};
           if (!posts.length) {
             grid.innerHTML = '<p class="blog-empty">Nenhum post publicado ainda.</p>';
+            sidebar.innerHTML = '<div class="blog-sidebar__title">Categorias</div>';
             return;
           }
-          grid.innerHTML = posts.map(p => `
-            <a class="blog-card" href="/blog/post.html?slug=${encodeURIComponent(p.slug)}">
-              ${p.cover ? `<img class="blog-card__cover" src="${p.cover}" alt="" loading="lazy" />` : '<div class="blog-card__cover"></div>'}
-              <div class="blog-card__body">
-                <div class="blog-card__date">${new Date(p.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
-                <div class="blog-card__title">${p.title}</div>
-                <div class="blog-card__excerpt">${p.excerpt || ''}</div>
-              </div>
-            </a>
-          `).join('');
+          renderSidebar();
+          renderGrid();
         })
         .catch(() => {
-          document.getElementById('blog-grid').innerHTML = '<p class="blog-empty">Não foi possível carregar os posts.</p>';
+          grid.innerHTML = '<p class="blog-empty">Não foi possível carregar os posts.</p>';
         });
     })();
   </script>

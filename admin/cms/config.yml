@@ -25,6 +25,14 @@ collections:
             fields:
               - { label: Título, name: title, widget: string }
               - { label: Slug (URL, sem espaços/acentos), name: slug, widget: string, hint: "Ex: terapia-online-funciona" }
+              - label: Categoria
+                name: category
+                widget: select
+                options:
+                  - { label: Terapia e Abordagens, value: terapia }
+                  - { label: Saúde Mental, value: saude-mental }
+                  - { label: Autoconhecimento e Bem-estar, value: bem-estar }
+                  - { label: Maternidade e Desenvolvimento Infantil, value: maternidade }
               - { label: Data, name: date, widget: datetime }
               - { label: Resumo (aparece na listagem e no Google), name: excerpt, widget: text }
               - label: "Imagem de capa — proporção 16:9, mínimo 1200×675px"

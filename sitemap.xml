@@ -75,4 +75,29 @@
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=apego-seguro-desenvolvimento-infantil</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=disciplina-positiva-limites-sem-punicao</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=tempo-de-tela-desenvolvimento-infantil</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=inteligencia-emocional-infantil</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oseupsico.com.br/blog/post.html?slug=ciume-entre-irmaos-desenvolvimento</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
 </urlset>
