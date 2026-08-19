@@ -38,6 +38,7 @@
     .blog-filter__count { font-size: 0.78rem; opacity: 0.6; }
 
     .blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 28px; }
+    .blog-load-more { grid-column: 1 / -1; text-align: center; margin-top: 12px; }
     .blog-card { display: block; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 16px rgba(0,0,0,0.06); text-decoration: none; color: inherit; transition: transform .2s ease, box-shadow .2s ease; }
     .blog-card:hover { transform: translateY(-4px); box-shadow: 0 8px 28px rgba(0,0,0,0.1); }
     .blog-card__cover { width: 100%; aspect-ratio: 16/9; object-fit: cover; background: #F5C518; }
@@ -155,6 +156,8 @@
       let posts = [];
       let categorias = {};
       let ativa = new URLSearchParams(location.search).get('categoria') || 'todas';
+      const PAGINA = 6;
+      let visiveis = PAGINA;
 
       function renderSidebar() {
         const contagem = { todas: posts.length };
@@ -175,6 +178,7 @@
         sidebar.querySelectorAll('.blog-filter').forEach(btn => {
           btn.addEventListener('click', () => {
             ativa = btn.dataset.categoria;
+            visiveis = PAGINA;
             const url = new URL(location.href);
             if (ativa === 'todas') url.searchParams.delete('categoria');
             else url.searchParams.set('categoria', ativa);
@@ -191,7 +195,9 @@
           grid.innerHTML = '<p class="blog-empty">Nenhum post nessa categoria ainda.</p>';
           return;
         }
-        grid.innerHTML = filtrados.map(p => `
+
+        const mostrados = filtrados.slice(0, visiveis);
+        const cards = mostrados.map(p => `
           <a class="blog-card" href="/blog/post.html?slug=${encodeURIComponent(p.slug)}">
             ${p.cover ? `<img class="blog-card__cover" src="${p.cover}" alt="" loading="lazy" />` : '<div class="blog-card__cover"></div>'}
             <div class="blog-card__body">
@@ -202,6 +208,21 @@
             </div>
           </a>
         `).join('');
+
+        const restantes = filtrados.length - visiveis;
+        const botaoVerMais = restantes > 0
+          ? `<div class="blog-load-more"><button class="btn btn--outline-black" id="blog-ver-mais">Ver mais posts (${restantes})</button></div>`
+          : '';
+
+        grid.innerHTML = cards + botaoVerMais;
+
+        const btn = document.getElementById('blog-ver-mais');
+        if (btn) {
+          btn.addEventListener('click', () => {
+            visiveis += PAGINA;
+            renderGrid();
+          });
+        }
       }
 
       fetch('/data/blog.json')
