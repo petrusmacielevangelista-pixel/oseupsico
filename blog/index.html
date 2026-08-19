@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Blog · O Seu Psico</title>
+  <meta name="description" content="Artigos sobre terapia, saúde mental e bem-estar emocional, escritos pela equipe do O Seu Psico." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://oseupsico.com.br/blog/" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://oseupsico.com.br/blog/" />
+  <meta property="og:title" content="Blog · O Seu Psico" />
+  <meta property="og:description" content="Artigos sobre terapia, saúde mental e bem-estar emocional." />
+  <meta property="og:image" content="https://oseupsico.com.br/assets/logo.png" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:site_name" content="O Seu Psico" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/logo.png" />
+
+  <style>
+    .blog-hero { padding: 120px 0 40px; text-align: center; }
+    .blog-hero h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(2rem, 4vw, 2.75rem); font-weight: 800; margin: 0 0 12px; }
+    .blog-hero p { color: #666; font-size: 1.05rem; max-width: 560px; margin: 0 auto; }
+    .blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 28px; padding: 40px 0 100px; }
+    .blog-card { display: block; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 16px rgba(0,0,0,0.06); text-decoration: none; color: inherit; transition: transform .2s ease, box-shadow .2s ease; }
+    .blog-card:hover { transform: translateY(-4px); box-shadow: 0 8px 28px rgba(0,0,0,0.1); }
+    .blog-card__cover { width: 100%; aspect-ratio: 16/9; object-fit: cover; background: #F5C518; }
+    .blog-card__body { padding: 20px 22px 24px; }
+    .blog-card__date { font-size: 0.78rem; color: #999; text-transform: uppercase; letter-spacing: 0.04em; }
+    .blog-card__title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.15rem; font-weight: 700; margin: 8px 0 8px; color: #1A1A1A; }
+    .blog-card__excerpt { font-size: 0.92rem; color: #555; line-height: 1.5; }
+    .blog-empty { text-align: center; padding: 60px 20px; color: #888; }
+  </style>
+</head>
+<body>
+
+  <nav id="navbar" class="navbar" role="navigation" aria-label="Navegação principal">
+    <div class="container">
+      <div class="navbar__inner">
+        <a href="/" class="navbar__logo" aria-label="O Seu Psico — início">
+          <img src="/assets/logo.png" alt="Logo O Seu Psico" class="navbar__logo-img" width="40" height="40" />
+        </a>
+        <ul class="navbar__links" role="list">
+          <li><a href="/#como-funciona">Como funciona</a></li>
+          <li><a href="/#especialidades">Especialidades</a></li>
+          <li><a href="/testes/">Testes</a></li>
+          <li><a href="/blog/">Blog</a></li>
+        </ul>
+        <div class="navbar__cta">
+          <a href="#" class="btn btn--yellow btn--nav js-wa" aria-label="Falar no WhatsApp">Encontrar psicólogo</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <section class="blog-hero">
+      <div class="container">
+        <h1>Blog do O Seu Psico</h1>
+        <p>Reflexões sobre terapia, saúde mental e bem-estar emocional — escritas para ajudar você a entender melhor o que sente.</p>
+      </div>
+    </section>
+
+    <section class="container">
+      <div class="blog-grid" id="blog-grid">
+        <p class="blog-empty">Carregando posts…</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__inner">
+        <div>
+          <div class="footer__logo">
+            <img src="/assets/logo.png" alt="O Seu Psico" width="36" height="36" loading="lazy" />
+            <span class="footer__logo-name">O Seu Psico</span>
+          </div>
+          <p class="footer__tagline">A plataforma que conecta você ao psicólogo certo para a sua jornada. Atendimento online em todo o Brasil.</p>
+        </div>
+        <div>
+          <div class="footer__col-title">Navegação</div>
+          <nav class="footer__links" aria-label="Links do rodapé">
+            <a href="/#como-funciona">Como funciona</a>
+            <a href="/testes/">Testes</a>
+            <a href="/blog/">Blog</a>
+          </nav>
+        </div>
+        <div>
+          <div class="footer__col-title">Contato</div>
+          <div class="footer__links">
+            <a href="#" class="js-wa">📱 WhatsApp</a>
+            <a href="https://instagram.com/oseupsico" class="js-ig" target="_blank" rel="noopener">📸 @oseupsico</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <p class="footer__copy">© <span id="footer-year">2026</span> O Seu Psico • Todos os direitos reservados</p>
+        <p class="footer__disclaimer">Este site tem caráter informativo e não substitui acompanhamento psicológico profissional.</p>
+        <p class="footer__disclaimer">Psicólogo Responsável Técnico: Petrus Maciel Evangelista • CRPSP 16/2109</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/script.js" defer></script>
+  <script>
+    (function () {
+      fetch('/data/blog.json?' + Date.now())
+        .then(r => r.json())
+        .then(data => {
+          const posts = (data.posts || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+          const grid = document.getElementById('blog-grid');
+          if (!posts.length) {
+            grid.innerHTML = '<p class="blog-empty">Nenhum post publicado ainda.</p>';
+            return;
+          }
+          grid.innerHTML = posts.map(p => `
+            <a class="blog-card" href="/blog/post.html?slug=${encodeURIComponent(p.slug)}">
+              ${p.cover ? `<img class="blog-card__cover" src="${p.cover}" alt="" loading="lazy" />` : '<div class="blog-card__cover"></div>'}
+              <div class="blog-card__body">
+                <div class="blog-card__date">${new Date(p.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+                <div class="blog-card__title">${p.title}</div>
+                <div class="blog-card__excerpt">${p.excerpt || ''}</div>
+              </div>
+            </a>
+          `).join('');
+        })
+        .catch(() => {
+          document.getElementById('blog-grid').innerHTML = '<p class="blog-empty">Não foi possível carregar os posts.</p>';
+        });
+    })();
+  </script>
+</body>
+</html>

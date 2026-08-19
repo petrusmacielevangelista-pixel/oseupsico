@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title id="page-title">Blog · O Seu Psico</title>
+  <meta name="description" id="meta-description" content="Blog do O Seu Psico." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" id="canonical-link" href="https://oseupsico.com.br/blog/" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:url" id="og-url" content="https://oseupsico.com.br/blog/" />
+  <meta property="og:title" id="og-title" content="Blog · O Seu Psico" />
+  <meta property="og:description" id="og-description" content="Blog do O Seu Psico." />
+  <meta property="og:image" content="https://oseupsico.com.br/assets/logo.png" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:site_name" content="O Seu Psico" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/logo.png" />
+
+  <style>
+    .post-wrap { max-width: 720px; margin: 0 auto; padding: 120px 20px 100px; }
+    .post-back { display: inline-block; margin-bottom: 24px; color: #999; text-decoration: none; font-size: 0.9rem; }
+    .post-back:hover { color: #1A1A1A; }
+    .post-date { font-size: 0.82rem; color: #999; text-transform: uppercase; letter-spacing: 0.04em; }
+    .post-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 800; margin: 10px 0 24px; line-height: 1.25; }
+    .post-cover { width: 100%; border-radius: 16px; margin-bottom: 32px; aspect-ratio: 16/9; object-fit: cover; }
+    .post-body { font-size: 1.05rem; line-height: 1.8; color: #333; }
+    .post-body h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.4rem; font-weight: 700; margin: 36px 0 14px; color: #1A1A1A; }
+    .post-body p { margin: 0 0 18px; }
+    .post-body ul { margin: 0 0 18px; padding-left: 22px; }
+    .post-body li { margin-bottom: 8px; }
+    .post-cta { margin-top: 48px; padding: 28px; background: #F7F5F0; border-radius: 16px; text-align: center; }
+    .post-cta p { margin: 0 0 16px; color: #444; }
+  </style>
+</head>
+<body>
+
+  <nav id="navbar" class="navbar" role="navigation" aria-label="Navegação principal">
+    <div class="container">
+      <div class="navbar__inner">
+        <a href="/" class="navbar__logo" aria-label="O Seu Psico — início">
+          <img src="/assets/logo.png" alt="Logo O Seu Psico" class="navbar__logo-img" width="40" height="40" />
+        </a>
+        <ul class="navbar__links" role="list">
+          <li><a href="/#como-funciona">Como funciona</a></li>
+          <li><a href="/#especialidades">Especialidades</a></li>
+          <li><a href="/testes/">Testes</a></li>
+          <li><a href="/blog/">Blog</a></li>
+        </ul>
+        <div class="navbar__cta">
+          <a href="#" class="btn btn--yellow btn--nav js-wa" aria-label="Falar no WhatsApp">Encontrar psicólogo</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="post-wrap" id="post-wrap">
+    <a class="post-back" href="/blog/">← Voltar pro blog</a>
+    <p>Carregando…</p>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__inner">
+        <div>
+          <div class="footer__logo">
+            <img src="/assets/logo.png" alt="O Seu Psico" width="36" height="36" loading="lazy" />
+            <span class="footer__logo-name">O Seu Psico</span>
+          </div>
+          <p class="footer__tagline">A plataforma que conecta você ao psicólogo certo para a sua jornada. Atendimento online em todo o Brasil.</p>
+        </div>
+        <div>
+          <div class="footer__col-title">Navegação</div>
+          <nav class="footer__links" aria-label="Links do rodapé">
+            <a href="/#como-funciona">Como funciona</a>
+            <a href="/testes/">Testes</a>
+            <a href="/blog/">Blog</a>
+          </nav>
+        </div>
+        <div>
+          <div class="footer__col-title">Contato</div>
+          <div class="footer__links">
+            <a href="#" class="js-wa">📱 WhatsApp</a>
+            <a href="https://instagram.com/oseupsico" class="js-ig" target="_blank" rel="noopener">📸 @oseupsico</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <p class="footer__copy">© <span id="footer-year">2026</span> O Seu Psico • Todos os direitos reservados</p>
+        <p class="footer__disclaimer">Este site tem caráter informativo e não substitui acompanhamento psicológico profissional.</p>
+        <p class="footer__disclaimer">Psicólogo Responsável Técnico: Petrus Maciel Evangelista • CRPSP 16/2109</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/script.js" defer></script>
+  <script>
+    (function () {
+      // Mini conversor markdown → HTML. Suporta ## títulos, listas com "- ",
+      // parágrafos e **negrito** — suficiente pro estilo de texto usado nos
+      // posts. Não é um parser completo (sem tabelas, links markdown, etc).
+      function markdownParaHtml(md) {
+        const linhas = md.split('\n');
+        let html = '';
+        let dentroLista = false;
+        for (let linha of linhas) {
+          linha = linha.trim();
+          if (!linha) { if (dentroLista) { html += '</ul>'; dentroLista = false; } continue; }
+          if (linha.startsWith('## ')) {
+            if (dentroLista) { html += '</ul>'; dentroLista = false; }
+            html += `<h2>${linha.slice(3)}</h2>`;
+          } else if (linha.startsWith('- ')) {
+            if (!dentroLista) { html += '<ul>'; dentroLista = true; }
+            html += `<li>${linha.slice(2)}</li>`;
+          } else {
+            if (dentroLista) { html += '</ul>'; dentroLista = false; }
+            html += `<p>${linha}</p>`;
+          }
+        }
+        if (dentroLista) html += '</ul>';
+        return html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      }
+
+      const slug = new URLSearchParams(location.search).get('slug');
+      const wrap = document.getElementById('post-wrap');
+
+      fetch('/data/blog.json?' + Date.now())
+        .then(r => r.json())
+        .then(data => {
+          const post = (data.posts || []).find(p => p.slug === slug);
+          if (!post) {
+            wrap.innerHTML = '<a class="post-back" href="/blog/">← Voltar pro blog</a><p>Post não encontrado.</p>';
+            return;
+          }
+
+          const dataFormatada = new Date(post.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+          const url = `https://oseupsico.com.br/blog/post.html?slug=${encodeURIComponent(post.slug)}`;
+
+          document.getElementById('page-title').textContent = `${post.title} · O Seu Psico`;
+          document.getElementById('meta-description').setAttribute('content', post.excerpt || '');
+          document.getElementById('canonical-link').setAttribute('href', url);
+          document.getElementById('og-url').setAttribute('content', url);
+          document.getElementById('og-title').setAttribute('content', post.title);
+          document.getElementById('og-description').setAttribute('content', post.excerpt || '');
+
+          wrap.innerHTML = `
+            <a class="post-back" href="/blog/">← Voltar pro blog</a>
+            <div class="post-date">${dataFormatada}</div>
+            <h1 class="post-title">${post.title}</h1>
+            ${post.cover ? `<img class="post-cover" src="${post.cover}" alt="" />` : ''}
+            <div class="post-body">${markdownParaHtml(post.body || '')}</div>
+            <div class="post-cta">
+              <p>Gostou do conteúdo? Encontre o psicólogo certo para você agora mesmo.</p>
+              <a href="#" class="btn btn--yellow js-wa">Falar com nossa equipe no WhatsApp</a>
+            </div>
+          `;
+        })
+        .catch(() => {
+          wrap.innerHTML = '<a class="post-back" href="/blog/">← Voltar pro blog</a><p>Não foi possível carregar o post.</p>';
+        });
+    })();
+  </script>
+</body>
+</html>

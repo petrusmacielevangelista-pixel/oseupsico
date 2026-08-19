@@ -10,6 +10,29 @@ public_folder: assets
 locale: pt
 
 collections:
+  - name: blog
+    label: Blog
+    files:
+      - name: posts
+        label: Posts do Blog
+        file: data/blog.json
+        format: json
+        fields:
+          - label: Posts
+            name: posts
+            widget: list
+            summary: "{{title}} — {{date}}"
+            fields:
+              - { label: Título, name: title, widget: string }
+              - { label: Slug (URL, sem espaços/acentos), name: slug, widget: string, hint: "Ex: terapia-online-funciona" }
+              - { label: Data, name: date, widget: datetime }
+              - { label: Resumo (aparece na listagem e no Google), name: excerpt, widget: text }
+              - label: "Imagem de capa — proporção 16:9, mínimo 1200×675px"
+                name: cover
+                widget: image
+                required: false
+              - { label: Conteúdo, name: body, widget: markdown }
+
   - name: configuracoes
     label: Configurações do Site
     files:
