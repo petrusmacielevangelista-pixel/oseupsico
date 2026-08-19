@@ -31,6 +31,8 @@ collections:
                 name: cover
                 widget: image
                 required: false
+                media_folder: "/assets"
+                public_folder: "/assets"
               - { label: Conteúdo, name: body, widget: markdown }
 
   - name: configuracoes
