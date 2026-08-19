@@ -36,6 +36,17 @@
     .blog-card__title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.15rem; font-weight: 700; margin: 8px 0 8px; color: #1A1A1A; }
     .blog-card__excerpt { font-size: 0.92rem; color: #555; line-height: 1.5; }
     .blog-empty { text-align: center; padding: 60px 20px; color: #888; }
+
+    @media (prefers-color-scheme: dark) {
+      .blog-hero h1 { color: #F2F2F2; }
+      .blog-hero p { color: rgba(255,255,255,0.6); }
+      .blog-card { background: #1A1A1A; box-shadow: 0 2px 16px rgba(0,0,0,0.3); }
+      .blog-card:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.45); }
+      .blog-card__date { color: rgba(255,255,255,0.45); }
+      .blog-card__title { color: #F2F2F2; }
+      .blog-card__excerpt { color: rgba(255,255,255,0.72); }
+      .blog-empty { color: rgba(255,255,255,0.55); }
+    }
   </style>
 </head>
 <body>
