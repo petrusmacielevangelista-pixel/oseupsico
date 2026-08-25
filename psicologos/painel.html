@@ -169,6 +169,32 @@
               </div>
 
               <div class="form-group">
+                <label>Pacientes que atende <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
+                <div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:6px;">
+                  <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;">
+                    <input type="checkbox" id="edit-atende-adultos" style="width:16px;height:16px;" /> Adultos
+                  </label>
+                  <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;">
+                    <input type="checkbox" id="edit-atende-criancas" onchange="toggleIdadeMinima()" style="width:16px;height:16px;" /> Crianças/adolescentes
+                  </label>
+                </div>
+                <div id="wrap-idade-minima" class="hidden" style="margin-top:8px;max-width:220px;">
+                  <label>A partir de quantos anos?</label>
+                  <input type="number" id="edit-idade-minima" min="0" max="17" placeholder="Ex: 12" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Formatos de consulta <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
+                <div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:6px;">
+                  <div style="font-size:0.85rem;color:#666;">💻 Consulta por vídeo <span style="color:#999;">(sempre ativo na plataforma)</span></div>
+                </div>
+                <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;margin-top:8px;">
+                  <input type="checkbox" id="edit-atende-presencial" style="width:16px;height:16px;" /> Também atendo presencialmente
+                </label>
+              </div>
+
+              <div class="form-group">
                 <label>Certificados e diplomas <span style="font-weight:400;color:#999;">(fotos, aparecem no seu perfil público)</span></label>
                 <div id="lista-certificados" style="display:flex;flex-wrap:wrap;gap:10px;margin:8px 0;"></div>
                 <input type="file" id="cert-imagem-input" accept="image/*" onchange="uploadCertificado()" />
@@ -196,17 +222,6 @@
                 <label>Experiências de trabalho e vivências relevantes <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
                 <p style="font-size:0.78rem;color:#999;margin:-2px 0 10px;">Resuma o máximo possível. Escreva por tópicos e coloque data de início-fim.</p>
                 <div id="edit-experiencias-lista"></div>
-              </div>
-              <div class="form-group">
-                <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;">
-                  <input type="checkbox" id="edit-receber-agenda" onchange="toggleReceberAgenda()" style="width:18px;height:18px;" />
-                  Quero receber minha agenda do dia seguinte por e-mail
-                </label>
-                <div id="wrap-hora-notificacao" style="margin-top:10px;">
-                  <label>Horário de envio <span style="font-weight:400;color:#999;">(uso interno — não aparece no seu perfil público)</span></label>
-                  <select id="edit-hora-notificacao" style="max-width:160px;"></select>
-                  <p style="font-size:0.78rem;color:#999;margin-top:4px;">Só enviamos e-mail nos dias em que houver algo marcado na sua agenda.</p>
-                </div>
               </div>
               <button class="btn btn--yellow" onclick="salvarPerfil()">Salvar alterações →</button>
               <p id="salvar-msg" style="font-size:0.85rem;margin-top:12px;"></p>
@@ -236,6 +251,23 @@
                 <p style="font-size:0.85rem;margin-bottom:16px;">Clique num horário vazio pra criar um compromisso, ou num já existente pra editar. Feriados nacionais aparecem marcados e ficam bloqueados pra agendamento público automaticamente. Os cabeçalhos com os dias ficam fixos ao rolar o calendário.</p>
 
                 <div id="agenda-calendario-wrap" style="overflow-x:auto;"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
+              </div>
+
+              <div class="osp-card">
+                <h2 style="font-size:1rem;">Notificação por e-mail</h2>
+                <div class="form-group">
+                  <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;">
+                    <input type="checkbox" id="edit-receber-agenda" onchange="toggleReceberAgenda()" style="width:18px;height:18px;" />
+                    Quero receber minha agenda do dia seguinte por e-mail
+                  </label>
+                  <div id="wrap-hora-notificacao" style="margin-top:10px;">
+                    <label>Horário de envio</label>
+                    <select id="edit-hora-notificacao" style="max-width:160px;"></select>
+                    <p style="font-size:0.78rem;color:#999;margin-top:4px;">Só enviamos e-mail nos dias em que houver algo marcado na sua agenda.</p>
+                  </div>
+                </div>
+                <button class="btn btn--yellow" onclick="salvarNotificacaoAgenda()">Salvar →</button>
+                <p id="notificacao-agenda-msg" style="font-size:0.85rem;margin-top:12px;"></p>
               </div>
 
             </div>
@@ -452,6 +484,11 @@
       document.getElementById('edit-idiomas').value = p.idiomas || '';
       document.getElementById('edit-instagram').value = p.instagram || '';
       document.getElementById('edit-site-pessoal').value = p.site_pessoal || '';
+      document.getElementById('edit-atende-adultos').checked = p.atende_adultos == null ? true : !!p.atende_adultos;
+      document.getElementById('edit-atende-criancas').checked = !!p.atende_criancas;
+      document.getElementById('edit-idade-minima').value = p.idade_minima_criancas || '';
+      document.getElementById('edit-atende-presencial').checked = !!p.atende_presencial;
+      toggleIdadeMinima();
       document.getElementById('edit-graduacao-curso').value = p.graduacao_curso || '';
       document.getElementById('edit-graduacao-instituicao').value = p.graduacao_instituicao || '';
       let posGraduacoesSalvas = [];
@@ -953,6 +990,28 @@
       document.getElementById('wrap-hora-notificacao').classList.toggle('hidden', !ligado);
     }
 
+    async function salvarNotificacaoAgenda() {
+      const msg = document.getElementById('notificacao-agenda-msg');
+      msg.textContent = 'Salvando...';
+      msg.style.color = '#666';
+      try {
+        const res = await fetch('/api/psicologos/me', {
+          method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({
+            receber_agenda_email: document.getElementById('edit-receber-agenda').checked,
+            hora_notificacao_diaria: document.getElementById('edit-hora-notificacao').value,
+          }),
+        });
+        const data = await res.json();
+        msg.textContent = data.ok ? 'Salvo com sucesso!' : (data.error || 'Erro ao salvar.');
+        msg.style.color = data.ok ? '#065F46' : '#991B1B';
+      } catch { msg.textContent = 'Erro de conexão.'; msg.style.color = '#991B1B'; }
+    }
+
+    function toggleIdadeMinima() {
+      document.getElementById('wrap-idade-minima').classList.toggle('hidden', !document.getElementById('edit-atende-criancas').checked);
+    }
+
     /* ── Certificados/diplomas ── */
 
     async function carregarCertificados() {
@@ -1114,9 +1173,11 @@
             idiomas: document.getElementById('edit-idiomas').value.trim(),
             instagram: document.getElementById('edit-instagram').value.trim(),
             site_pessoal: document.getElementById('edit-site-pessoal').value.trim(),
+            atende_adultos: document.getElementById('edit-atende-adultos').checked,
+            atende_criancas: document.getElementById('edit-atende-criancas').checked,
+            idade_minima_criancas: document.getElementById('edit-idade-minima').value ? Number(document.getElementById('edit-idade-minima').value) : null,
+            atende_presencial: document.getElementById('edit-atende-presencial').checked,
             experiencias: JSON.stringify(widgetExperienciasPainel.getItens()),
-            hora_notificacao_diaria: document.getElementById('edit-hora-notificacao').value,
-            receber_agenda_email: document.getElementById('edit-receber-agenda').checked,
           }),
         });
         const data = await res.json();

@@ -538,6 +538,18 @@
         const tagsVisiveis = especialidades.slice(0, LIMITE_TAGS);
         const tagsRestantes = especialidades.length - tagsVisiveis.length;
 
+        // "Pacientes que trato" e "Formatos de consulta" — mesmos blocos do
+        // Doctoralia. Vídeo é sempre exibido (é assim que a plataforma
+        // funciona); presencial só aparece se o psicólogo marcou que atende.
+        const pacientesPartes = [];
+        if (p.atende_adultos == null || p.atende_adultos) pacientesPartes.push('<div class="perfil-fato">🧑 <strong>Adultos</strong></div>');
+        if (p.atende_criancas) pacientesPartes.push(`<div class="perfil-fato">🧒 <strong>Crianças e adolescentes${p.idade_minima_criancas ? ` a partir dos ${p.idade_minima_criancas} anos` : ''}</strong></div>`);
+        const pacientesHtml = pacientesPartes.join('');
+
+        const formatosPartes = ['<div class="perfil-fato">💻 <strong>Consulta por vídeo</strong></div>'];
+        if (p.atende_presencial) formatosPartes.push('<div class="perfil-fato">🏢 <strong>Presencial</strong></div>');
+        const formatosHtml = formatosPartes.join('');
+
         document.getElementById('painel-sobre-conteudo').innerHTML = `
           ${p.bio ? `<p>${p.bio}</p>` : '<p style="color:#999;">Esse psicólogo ainda não escreveu uma apresentação.</p>'}
           ${fatos.length ? `<div class="perfil-fatos">${fatos.join('')}</div>` : ''}
@@ -557,6 +569,10 @@
               ${tagsRestantes > 0 ? `<button type="button" class="perfil-tags--ver-mais" onclick="abrirModalFormacao()">+${tagsRestantes} mais</button>` : ''}
             </div>
           ` : ''}
+
+          ${pacientesHtml ? `<div class="perfil-secao-titulo">Pacientes que trato</div><div class="perfil-fatos">${pacientesHtml}</div>` : ''}
+
+          ${formatosHtml ? `<div class="perfil-secao-titulo">Formatos de consulta</div><div class="perfil-fatos">${formatosHtml}</div>` : ''}
         `;
 
         // ── Aba "Serviços" — só aparece se houver algo cadastrado. Cada
