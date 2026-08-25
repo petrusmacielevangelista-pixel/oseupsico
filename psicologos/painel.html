@@ -62,6 +62,7 @@
             <button class="ativo" data-painel="perfil" onclick="mostrarSecaoPainel('perfil')">👤 Meu perfil</button>
             <button data-painel="agenda" onclick="mostrarSecaoPainel('agenda')">🗓️ Agenda</button>
             <button data-painel="agendamentos" onclick="mostrarSecaoPainel('agendamentos')">✅ Entrevistas iniciais agendadas</button>
+            <button data-painel="valores" onclick="mostrarSecaoPainel('valores')">💰 Valores</button>
             <button data-painel="visibilidade" onclick="mostrarSecaoPainel('visibilidade')">📊 Visibilidade</button>
           </nav>
 
@@ -146,6 +147,27 @@
                 <input type="text" id="edit-abordagem" placeholder="Escolha a abordagem principal" />
               </div>
 
+              <div class="form-group">
+                <label>Vídeo de apresentação <span style="font-weight:400;color:#999;">(link do YouTube ou Vimeo — aparece no seu perfil público)</span></label>
+                <input type="text" id="edit-video-apresentacao" placeholder="https://youtube.com/watch?v=..." />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Idiomas de atendimento <span style="font-weight:400;color:#999;">(aparece no seu perfil público)</span></label>
+                  <input type="text" id="edit-idiomas" placeholder="Ex: Português, Inglês" />
+                </div>
+                <div class="form-group">
+                  <label>Instagram <span style="font-weight:400;color:#999;">(opcional, aparece no seu perfil público)</span></label>
+                  <input type="text" id="edit-instagram" placeholder="@seuusuario" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Site pessoal <span style="font-weight:400;color:#999;">(opcional, aparece no seu perfil público)</span></label>
+                <input type="text" id="edit-site-pessoal" placeholder="https://seusite.com.br" />
+              </div>
+
               <div class="form-row">
                 <div class="form-group">
                   <label>CPF <span style="font-weight:400;color:#999;">(não é público — só uso interno de verificação)</span></label>
@@ -215,6 +237,27 @@
               <h2>Entrevistas iniciais agendadas</h2>
               <p style="font-size:0.85rem;margin-bottom:16px;">Reservas feitas pelo próprio paciente pelo seu perfil público, já confirmadas por e-mail.</p>
               <div id="lista-agendamentos"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
+            </div>
+
+            <div class="osp-card hidden" id="secao-valores" data-secao>
+              <h2>Valores</h2>
+              <p style="font-size:0.85rem;margin-bottom:16px;">Cadastre os serviços que você oferece e o valor de cada um. Eles aparecem no seu perfil público de forma simples e informativa — sem destaque ou promoção, conforme as diretrizes do CFP sobre divulgação de honorários (Art. 20 do Código de Ética). Deixe o campo de valor em branco se preferir combinar por mensagem.</p>
+              <div id="lista-servicos" style="margin-bottom:20px;"><p style="color:#999;font-size:0.85rem;">Carregando...</p></div>
+
+              <div style="background:#F7F5F0;border-radius:12px;padding:18px;">
+                <h3 style="font-size:0.92rem;margin-bottom:12px;" id="sv-form-titulo">Adicionar serviço</h3>
+                <input type="hidden" id="sv-id" value="" />
+                <div class="form-row">
+                  <div class="form-group"><label>Nome do serviço *</label><input type="text" id="sv-nome" placeholder="Ex: Sessão individual" /></div>
+                  <div class="form-group"><label>Valor (R$)</label><input type="number" id="sv-valor" min="0" step="0.01" placeholder="Ex: 200.00" /></div>
+                </div>
+                <div class="form-group"><label>Descrição (opcional)</label><input type="text" id="sv-descricao" placeholder="Ex: Sessões de 50 minutos" /></div>
+                <div style="display:flex;gap:10px;">
+                  <button class="btn" id="sv-btn-salvar" onclick="salvarServico()">+ Adicionar</button>
+                  <button class="btn btn--outline hidden" id="sv-btn-cancelar" onclick="cancelarEdicaoServico()">Cancelar edição</button>
+                </div>
+                <p id="sv-msg" style="font-size:0.85rem;margin-top:10px;"></p>
+              </div>
             </div>
 
             <div class="osp-card hidden" id="secao-visibilidade" data-secao>
@@ -313,6 +356,7 @@
       // ainda escondida (display:none) — nesse estado o navegador ignora
       // scrollTop. Recalcula a rolagem de novo agora que ficou visível.
       if (nome === 'agenda' && typeof renderizarAgenda === 'function' && agendaCache) renderizarAgenda();
+      if (nome === 'valores') carregarServicos();
     }
 
     function mostrarEsqueciSenha() {
@@ -397,6 +441,10 @@
       let diasTrabalhoSalvos = [];
       try { diasTrabalhoSalvos = JSON.parse(p.horario_trabalho_dias || '[]'); } catch {}
       document.querySelectorAll('.chk-edit-dia-trabalho').forEach(chk => { chk.checked = diasTrabalhoSalvos.includes(Number(chk.value)); });
+      document.getElementById('edit-video-apresentacao').value = p.video_apresentacao_url || '';
+      document.getElementById('edit-idiomas').value = p.idiomas || '';
+      document.getElementById('edit-instagram').value = p.instagram || '';
+      document.getElementById('edit-site-pessoal').value = p.site_pessoal || '';
       document.getElementById('edit-graduacao-curso').value = p.graduacao_curso || '';
       document.getElementById('edit-graduacao-instituicao').value = p.graduacao_instituicao || '';
       let posGraduacoesSalvas = [];
@@ -897,6 +945,81 @@
       document.getElementById('wrap-hora-notificacao').classList.toggle('hidden', !ligado);
     }
 
+    /* ── Valores / serviços ── */
+    let servicosCache = [];
+
+    async function carregarServicos() {
+      const lista = document.getElementById('lista-servicos');
+      lista.innerHTML = '<p style="color:#999;font-size:0.85rem;">Carregando...</p>';
+      const res = await fetch('/api/psicologos/me/servicos', { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      servicosCache = data.servicos || [];
+      if (!servicosCache.length) { lista.innerHTML = '<p style="color:#999;font-size:0.85rem;">Nenhum serviço cadastrado ainda.</p>'; return; }
+      lista.innerHTML = servicosCache.map(s => `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;background:#fff;border:1.5px solid #F0EDE4;border-radius:10px;margin-bottom:8px;">
+          <div>
+            <strong>${s.nome}</strong>${s.valor != null ? ` — R$ ${Number(s.valor).toFixed(2).replace('.', ',')}` : ' — a combinar'}
+            ${s.descricao ? `<div style="font-size:0.8rem;color:#888;margin-top:2px;">${s.descricao}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button class="btn btn--outline" style="padding:6px 10px;font-size:0.78rem;" onclick="editarServico(${s.id})">Editar</button>
+            <button class="btn btn--outline" style="padding:6px 10px;font-size:0.78rem;color:#991B1B;border-color:#FCA5A5;" onclick="removerServico(${s.id})">Remover</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function salvarServico() {
+      const msgEl = document.getElementById('sv-msg');
+      const id = document.getElementById('sv-id').value;
+      const nome = document.getElementById('sv-nome').value.trim();
+      const valorStr = document.getElementById('sv-valor').value;
+      const descricao = document.getElementById('sv-descricao').value.trim();
+      if (!nome) { msgEl.style.color = '#991B1B'; msgEl.textContent = 'Informe o nome do serviço.'; return; }
+      const body = JSON.stringify({ nome, valor: valorStr ? Number(valorStr) : null, descricao: descricao || null });
+      const url = id ? `/api/psicologos/me/servicos/${id}` : '/api/psicologos/me/servicos';
+      const res = await fetch(url, {
+        method: id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body,
+      });
+      const data = await res.json();
+      if (!data.ok) { msgEl.style.color = '#991B1B'; msgEl.textContent = data.error || 'Erro ao salvar.'; return; }
+      msgEl.style.color = '#065F46';
+      msgEl.textContent = 'Salvo!';
+      cancelarEdicaoServico();
+      carregarServicos();
+    }
+
+    function editarServico(id) {
+      const s = servicosCache.find(x => x.id === id);
+      if (!s) return;
+      document.getElementById('sv-id').value = s.id;
+      document.getElementById('sv-nome').value = s.nome;
+      document.getElementById('sv-valor').value = s.valor != null ? s.valor : '';
+      document.getElementById('sv-descricao').value = s.descricao || '';
+      document.getElementById('sv-form-titulo').textContent = 'Editar serviço';
+      document.getElementById('sv-btn-salvar').textContent = 'Salvar edição →';
+      document.getElementById('sv-btn-cancelar').classList.remove('hidden');
+      document.getElementById('sv-nome').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function cancelarEdicaoServico() {
+      document.getElementById('sv-id').value = '';
+      document.getElementById('sv-nome').value = '';
+      document.getElementById('sv-valor').value = '';
+      document.getElementById('sv-descricao').value = '';
+      document.getElementById('sv-form-titulo').textContent = 'Adicionar serviço';
+      document.getElementById('sv-btn-salvar').textContent = '+ Adicionar';
+      document.getElementById('sv-btn-cancelar').classList.add('hidden');
+    }
+
+    async function removerServico(id) {
+      if (!confirm('Remover esse serviço do seu perfil público?')) return;
+      await fetch(`/api/psicologos/me/servicos/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+      carregarServicos();
+    }
+
     async function salvarPerfil() {
       const msg = document.getElementById('salvar-msg');
       msg.textContent = 'Salvando...';
@@ -938,6 +1061,10 @@
             pos_graduacoes: JSON.stringify(posGraduacoes),
             especialidades: JSON.stringify(especialidades),
             abordagem: document.getElementById('edit-abordagem').value.trim(),
+            video_apresentacao_url: document.getElementById('edit-video-apresentacao').value.trim(),
+            idiomas: document.getElementById('edit-idiomas').value.trim(),
+            instagram: document.getElementById('edit-instagram').value.trim(),
+            site_pessoal: document.getElementById('edit-site-pessoal').value.trim(),
             experiencias: JSON.stringify(widgetExperienciasPainel.getItens()),
             hora_notificacao_diaria: document.getElementById('edit-hora-notificacao').value,
             receber_agenda_email: document.getElementById('edit-receber-agenda').checked,

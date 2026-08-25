@@ -17,6 +17,7 @@
      POST /api/admin/psicologos/:id/licenca   → gerencia licença (protegido)
      DELETE /api/admin/avaliacoes/:id         → remove avaliação (protegido)
      GET  /api/admin/campanhas-email          → histórico de disparos (protegido)
+     GET/POST/PUT/DELETE /api/psicologos/me/servicos → valores/serviços (autenticado)
      GET  /api/admin/campanhas-email/destinatarios → conta público-alvo (protegido)
      POST /api/admin/campanhas-email/preview  → renderiza HTML sem enviar (protegido)
      POST /api/admin/campanhas-email/imagem   → upload de imagem pro corpo do e-mail (protegido)
@@ -93,6 +94,10 @@ async function initDB(db) {
       horario_trabalho_inicio TEXT DEFAULT '08:00',
       horario_trabalho_fim TEXT DEFAULT '22:00',
       horario_trabalho_dias TEXT DEFAULT '[1,2,3,4,5,6]',
+      video_apresentacao_url TEXT,
+      idiomas TEXT,
+      instagram TEXT,
+      site_pessoal TEXT,
       criado_em TEXT DEFAULT (datetime('now')),
       aprovado_em TEXT
     )`
@@ -249,6 +254,22 @@ async function initDB(db) {
       publico TEXT NOT NULL,
       total_destinatarios INTEGER NOT NULL DEFAULT 0,
       enviado_em TEXT DEFAULT (datetime('now'))
+    )`
+  ).run();
+
+  // Serviços/valores que o próprio psicólogo cadastra (aba "Valores" do
+  // painel) — exibidos no perfil público de forma neutra (sem destaque
+  // promocional), conforme Art. 20-d do Código de Ética (preço não pode
+  // ser usado como propaganda).
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS servicos_precos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      psicologo_id INTEGER NOT NULL,
+      nome TEXT NOT NULL,
+      valor REAL,
+      descricao TEXT,
+      ordem INTEGER NOT NULL DEFAULT 0,
+      criado_em TEXT DEFAULT (datetime('now'))
     )`
   ).run();
 
@@ -910,7 +931,8 @@ export default {
 
       const campos = ['telefone', 'bio', 'cpf', 'rg', 'graduacao_curso', 'graduacao_instituicao', 'graduacao_mes_ano',
         'pos_graduacoes', 'especialidades', 'abordagem', 'experiencias', 'hora_notificacao_diaria', 'receber_agenda_email',
-        'horario_trabalho_inicio', 'horario_trabalho_fim', 'horario_trabalho_dias'];
+        'horario_trabalho_inicio', 'horario_trabalho_fim', 'horario_trabalho_dias',
+        'video_apresentacao_url', 'idiomas', 'instagram', 'site_pessoal'];
       const sets = [], binds = [];
       campos.forEach(c => {
         if (body[c] !== undefined) { sets.push(`${c} = ?`); binds.push(c === 'receber_agenda_email' ? (body[c] ? 1 : 0) : body[c]); }
@@ -918,6 +940,52 @@ export default {
       if (!sets.length) return json({ ok: false, error: 'Nada pra atualizar.' }, 400);
       binds.push(psicologoId);
       await env.DB.prepare(`UPDATE psicologos SET ${sets.join(', ')} WHERE id = ?`).bind(...binds).run();
+      return json({ ok: true });
+    }
+
+    /* ── Serviços/valores (aba "Valores" do painel) ── */
+
+    if (pathname === '/api/psicologos/me/servicos' && request.method === 'GET') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { results } = await env.DB.prepare(
+        'SELECT id, nome, valor, descricao, ordem FROM servicos_precos WHERE psicologo_id = ? ORDER BY ordem, id'
+      ).bind(psicologoId).all();
+      return json({ ok: true, servicos: results });
+    }
+
+    if (pathname === '/api/psicologos/me/servicos' && request.method === 'POST') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { nome, valor, descricao } = await request.json();
+      if (!nome) return json({ ok: false, error: 'Informe o nome do serviço.' }, 400);
+      const { results } = await env.DB.prepare('SELECT COALESCE(MAX(ordem), -1) + 1 as prox FROM servicos_precos WHERE psicologo_id = ?').bind(psicologoId).all();
+      const r = await env.DB.prepare(
+        'INSERT INTO servicos_precos (psicologo_id, nome, valor, descricao, ordem) VALUES (?, ?, ?, ?, ?)'
+      ).bind(psicologoId, nome, valor || null, descricao || null, results[0].prox).run();
+      return json({ ok: true, id: r.meta.last_row_id });
+    }
+
+    const servicoMatch = pathname.match(/^\/api\/psicologos\/me\/servicos\/(\d+)$/);
+    if (servicoMatch && request.method === 'PUT') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { nome, valor, descricao } = await request.json();
+      if (!nome) return json({ ok: false, error: 'Informe o nome do serviço.' }, 400);
+      await env.DB.prepare(
+        'UPDATE servicos_precos SET nome = ?, valor = ?, descricao = ? WHERE id = ? AND psicologo_id = ?'
+      ).bind(nome, valor || null, descricao || null, servicoMatch[1], psicologoId).run();
+      return json({ ok: true });
+    }
+
+    if (servicoMatch && request.method === 'DELETE') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      await env.DB.prepare('DELETE FROM servicos_precos WHERE id = ? AND psicologo_id = ?').bind(servicoMatch[1], psicologoId).run();
       return json({ ok: true });
     }
 
@@ -1026,7 +1094,8 @@ export default {
       const p = await env.DB.prepare(
         `SELECT id, nome, foto_url, bio, especialidades, abordagem, telefone, crp_numero, crp_estado,
                 graduacao_curso, graduacao_instituicao, graduacao_mes_ano, pos_graduacoes,
-                experiencias, projetos_relevantes
+                experiencias, projetos_relevantes,
+                video_apresentacao_url, idiomas, instagram, site_pessoal
          FROM psicologos
          WHERE id = ? AND status_aprovacao = 'aprovado' AND licenca_validade_ate >= date('now')`
       ).bind(perfilMatch[1]).first();
@@ -1037,7 +1106,11 @@ export default {
       ).bind(perfilMatch[1]).all();
       const media = avals.length ? avals.reduce((s, a) => s + a.nota, 0) / avals.length : null;
 
-      return json({ ok: true, psicologo: p, avaliacao_media: media, total_avaliacoes: avals.length });
+      const { results: servicos } = await env.DB.prepare(
+        `SELECT id, nome, valor, descricao FROM servicos_precos WHERE psicologo_id = ? ORDER BY ordem, id`
+      ).bind(perfilMatch[1]).all();
+
+      return json({ ok: true, psicologo: p, avaliacao_media: media, total_avaliacoes: avals.length, servicos });
     }
 
     // Tracking leve de visualização de perfil / clique no WhatsApp — público,

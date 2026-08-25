@@ -47,6 +47,11 @@
       .perfil-grid { grid-template-columns: 1fr; grid-template-areas: "sobre" "agendar" "avaliacoes"; }
     }
 
+    /* Lista de valores/serviços — deliberadamente neutra, sem destaque
+       visual (ver Art. 20-d do Código de Ética: preço não pode virar
+       propaganda). Mesma tipografia do resto do texto do perfil. */
+    .perfil-valores p { margin-bottom: 6px; }
+
     .perfil-painel {
       background: #fff; border: 1px solid #F0EDE4; border-radius: 20px; padding: 28px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.04); color: #1A1A1A; margin-bottom: 20px;
@@ -140,6 +145,7 @@
                 <div style="font-size:1.8rem;margin-bottom:8px;">📬</div>
                 <p style="color:#555;">Enviamos um e-mail de confirmação — confira sua caixa de entrada pra garantir seu horário.</p>
               </div>
+              <p style="font-size:0.76rem;color:#999;margin-top:14px;border-top:1px solid #F0EDE4;padding-top:12px;">Cancelamento gratuito — se não puder comparecer, avise o psicólogo com antecedência pelo WhatsApp.</p>
             </div>
           </div>
 
@@ -189,6 +195,23 @@
   </a>
 
   <script>
+    // Converte um link comum de YouTube/Vimeo pro formato de embed. Retorna
+    // null se não reconhecer o link (nesse caso mostramos só um link normal).
+    function embedVideoSrc(url) {
+      if (!url) return null;
+      try {
+        const u = new URL(url);
+        if (u.hostname.includes('youtube.com')) {
+          const v = u.searchParams.get('v');
+          if (v) return `https://www.youtube.com/embed/${v}`;
+          if (u.pathname.startsWith('/shorts/')) return `https://www.youtube.com/embed/${u.pathname.split('/')[2]}`;
+        }
+        if (u.hostname === 'youtu.be') return `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
+        if (u.hostname.includes('vimeo.com')) return `https://player.vimeo.com/video/${u.pathname.split('/').pop()}`;
+      } catch {}
+      return null;
+    }
+
     function calcularAnosExperiencia(graduacaoMesAno) {
       if (!graduacaoMesAno) return null;
       const [mes, ano] = graduacaoMesAno.split('/').map(Number);
@@ -243,6 +266,10 @@
                 ${badgeExperiencia}
                 ${p.crp_numero ? `<span class="perfil-badge" style="background:#F0EDE4;color:#555;">CRP ${p.crp_numero}/${p.crp_estado}</span>` : ''}
               </div>
+              ${p.instagram || p.site_pessoal ? `<div style="display:flex;gap:12px;margin-top:8px;font-size:0.85rem;">
+                ${p.instagram ? `<a href="https://instagram.com/${p.instagram.replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '')}" target="_blank" rel="noopener" style="color:#555;">📷 Instagram</a>` : ''}
+                ${p.site_pessoal ? `<a href="${p.site_pessoal}" target="_blank" rel="noopener" style="color:#555;">🔗 Site</a>` : ''}
+              </div>` : ''}
             </div>
           </div>
         `;
@@ -262,10 +289,31 @@
              </div>`
           : (p.projetos_relevantes ? `<h3>Experiências de trabalho e vivências relevantes</h3><p>${p.projetos_relevantes}</p>` : '');
 
+        const videoSrc = embedVideoSrc(p.video_apresentacao_url);
+        const videoHtml = p.video_apresentacao_url
+          ? `<h3>Vídeo de apresentação</h3>${videoSrc
+              ? `<div style="position:relative;padding-top:56.25%;border-radius:12px;overflow:hidden;margin-bottom:16px;"><iframe src="${videoSrc}" style="position:absolute;inset:0;width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+              : `<p><a href="${p.video_apresentacao_url}" target="_blank" rel="noopener">Assistir vídeo de apresentação →</a></p>`}`
+          : '';
+
+        const servicos = perfilData.servicos || [];
+        // Lista neutra, sem destaque visual — Art. 20-d do Código de Ética
+        // do Psicólogo veda usar o preço como forma de propaganda (ver
+        // memória do projeto). Nada de badge, cor chamativa ou "a partir de".
+        const valoresHtml = servicos.length
+          ? `<h3>Valores</h3><div class="perfil-valores">
+              ${servicos.map(s => `<p>${s.nome}${s.valor != null ? ` — R$ ${Number(s.valor).toFixed(2).replace('.', ',')}` : ' — a combinar'}${s.descricao ? ` <span style="color:#999;">(${s.descricao})</span>` : ''}</p>`).join('')}
+            </div>`
+          : '';
+
         sobreEl.innerHTML = `
+          ${videoHtml}
+
           ${p.bio ? `<h2>Sobre</h2><p>${p.bio}</p>` : ''}
 
           ${especialidades.length ? `<h3>Especialidades</h3><div class="perfil-tags">${especialidades.map(e => `<span class="perfil-tag">${e}</span>`).join('')}</div>` : ''}
+
+          ${p.idiomas ? `<h3>Idiomas de atendimento</h3><p>${p.idiomas}</p>` : ''}
 
           <h3>Formação</h3>
           <p>${p.graduacao_curso || ''}${p.graduacao_instituicao ? ' — ' + p.graduacao_instituicao : ''}${anoFormacao ? ' (' + anoFormacao + ')' : ''}</p>
@@ -274,12 +322,14 @@
           ${p.abordagem ? `<h3>Abordagem</h3><p>${p.abordagem}</p>` : ''}
 
           ${experienciasHtml}
+
+          ${valoresHtml}
         `;
 
         document.getElementById('lista-avaliacoes').innerHTML = avaliacoes.length
           ? avaliacoes.map(a => `
               <div class="avaliacao-item">
-                <div><span class="estrelas">${'⭐'.repeat(a.nota)}</span>${a.verificado ? '<span class="avaliacao-verificado">✓ Paciente verificado</span>' : ''}</div>
+                <div><span class="estrelas">${'⭐'.repeat(a.nota)}</span>${a.verificado ? '<span class="avaliacao-verificado">✓ Consulta verificada</span>' : ''}</div>
                 ${a.comentario ? `<p class="avaliacao-comentario">${a.comentario}</p>` : ''}
                 <p class="avaliacao-autor">${a.avaliador_nome}</p>
               </div>
