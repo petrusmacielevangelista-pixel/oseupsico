@@ -1,0 +1,23 @@
+Perfil do psicologo: reestrutura em abas, modal Formacao, CTAs no estilo Doctoralia
+
+Comparacao lado a lado com prints reais do Doctoralia enviados pelo
+usuario. Mudancas estruturais:
+
+- Card unico com abas Sobre / Servicos / Avaliacoes (sublinhado, no lugar
+  de 5 cards empilhados) — Servicos so aparece se houver algo cadastrado
+- Aba Sobre: bio, fatos rapidos (idiomas/abordagem), estatistica clicavel
+  "N Formacao" que abre modal, chips de especialidades limitados a 8 com
+  "+N mais"
+- Modal Formacao consolida formacao completa + galeria de certificados +
+  lista completa de doencas tratadas, replicando o popup do Doctoralia
+- Aba Servicos: cada linha de valor ganha botao Agendar proprio
+- Aba Avaliacoes: lista + formulario de nova avaliacao juntos
+- Hero: botoes Agendar consulta (amarelo) e Enviar mensagem (pill cinza
+  neutro, nao mais verde WhatsApp) lado a lado, icones de Instagram/site
+  como botoes circulares na mesma linha em vez de links soltos
+- Grid da pagina simplifica pra 2 areas (sobre/agendar) ja que avaliacoes
+  virou aba em vez de card separado
+
+Testado ao vivo no perfil id=18: abas trocando corretamente, modal abrindo
+com formacao+certificados+especialidades, servicos reais do usuario
+renderizando com botao Agendar, sem overflow no mobile.
