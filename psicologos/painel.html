@@ -380,6 +380,18 @@
     </div>
   </div>
 
+  <div id="excluir-serie-modal-overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:210;display:flex;align-items:center;justify-content:center;padding:16px;">
+    <div class="osp-card" style="max-width:380px;width:100%;">
+      <h3 style="margin-bottom:8px;">Excluir compromisso</h3>
+      <p style="font-size:0.88rem;color:#555;margin-bottom:18px;">Esse compromisso faz parte de uma série (semanal/quinzenal). O que você quer excluir?</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="btn btn--outline" style="justify-content:center;" onclick="confirmarExclusaoCompromisso(false)">Excluir só esse dia</button>
+        <button class="btn" style="justify-content:center;background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;" onclick="confirmarExclusaoCompromisso(true)">Excluir toda a série</button>
+        <button class="btn btn--outline" style="justify-content:center;" onclick="document.getElementById('excluir-serie-modal-overlay').classList.add('hidden')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     aplicarMascaraCelular(document.getElementById('edit-telefone'));
     const widgetExperienciasPainel = criarWidgetExperiencias('edit-experiencias-lista');
@@ -968,18 +980,28 @@
       }
     }
 
-    async function excluirCompromissoModal() {
+    function excluirCompromissoModal() {
       const id = document.getElementById('am-id').value;
       const serieId = document.getElementById('am-serie-id').value;
       if (!id) return;
 
-      let aplicarSerie = false;
+      // Compromisso de série (semanal/quinzenal) tem uma escolha real com
+      // 2 caminhos bem diferentes — em vez de um confirm() nativo onde
+      // "OK" apagava a série toda e "Cancelar" apagava só esse dia (fácil
+      // de clicar OK sem querer e apagar tudo), agora são 2 botões
+      // explícitos, cada um dizendo exatamente o que vai acontecer.
       if (serieId) {
-        aplicarSerie = confirm('Excluir todos os outros registros desse paciente nessa série também?\n\n"Cancelar" exclui só esse registro.');
-      } else if (!confirm('Excluir esse compromisso?')) {
+        document.getElementById('excluir-serie-modal-overlay').classList.remove('hidden');
         return;
       }
+      if (!confirm('Excluir esse compromisso?')) return;
+      confirmarExclusaoCompromisso(false);
+    }
 
+    async function confirmarExclusaoCompromisso(aplicarSerie) {
+      document.getElementById('excluir-serie-modal-overlay').classList.add('hidden');
+      const id = document.getElementById('am-id').value;
+      if (!id) return;
       const url = `/api/psicologos/me/compromissos/${id}${aplicarSerie ? '?serie=1' : ''}`;
       await fetch(url, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
       fecharModalAgenda();
