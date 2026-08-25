@@ -104,9 +104,12 @@ async function initDB(db) {
       instagram TEXT,
       site_pessoal TEXT,
       atende_adultos INTEGER DEFAULT 1,
+      atende_adolescentes INTEGER DEFAULT 0,
       atende_criancas INTEGER DEFAULT 0,
+      atende_idosos INTEGER DEFAULT 0,
       idade_minima_criancas INTEGER,
       atende_presencial INTEGER DEFAULT 0,
+      endereco_presencial TEXT,
       criado_em TEXT DEFAULT (datetime('now')),
       aprovado_em TEXT
     )`
@@ -955,8 +958,9 @@ export default {
         'pos_graduacoes', 'especialidades', 'abordagem', 'experiencias', 'hora_notificacao_diaria', 'receber_agenda_email',
         'horario_trabalho_inicio', 'horario_trabalho_fim', 'horario_trabalho_dias',
         'video_apresentacao_url', 'idiomas', 'instagram', 'site_pessoal',
-        'atende_adultos', 'atende_criancas', 'idade_minima_criancas', 'atende_presencial'];
-      const camposBooleanos = ['receber_agenda_email', 'atende_adultos', 'atende_criancas', 'atende_presencial'];
+        'atende_adultos', 'atende_adolescentes', 'atende_criancas', 'atende_idosos', 'idade_minima_criancas',
+        'atende_presencial', 'endereco_presencial'];
+      const camposBooleanos = ['receber_agenda_email', 'atende_adultos', 'atende_adolescentes', 'atende_criancas', 'atende_idosos', 'atende_presencial'];
       const sets = [], binds = [];
       campos.forEach(c => {
         if (body[c] !== undefined) { sets.push(`${c} = ?`); binds.push(camposBooleanos.includes(c) ? (body[c] ? 1 : 0) : body[c]); }
@@ -1170,7 +1174,8 @@ export default {
                 graduacao_curso, graduacao_instituicao, graduacao_mes_ano, pos_graduacoes,
                 experiencias, projetos_relevantes,
                 video_apresentacao_url, idiomas, instagram, site_pessoal,
-                atende_adultos, atende_criancas, idade_minima_criancas, atende_presencial
+                atende_adultos, atende_adolescentes, atende_criancas, atende_idosos, idade_minima_criancas,
+                atende_presencial, endereco_presencial
          FROM psicologos
          WHERE id = ? AND status_aprovacao = 'aprovado' AND licenca_validade_ate >= date('now')`
       ).bind(perfilMatch[1]).first();

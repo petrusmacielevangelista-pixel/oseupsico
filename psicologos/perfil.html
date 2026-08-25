@@ -543,12 +543,25 @@
         // funciona); presencial só aparece se o psicólogo marcou que atende.
         const pacientesPartes = [];
         if (p.atende_adultos == null || p.atende_adultos) pacientesPartes.push('<div class="perfil-fato">🧑 <strong>Adultos</strong></div>');
-        if (p.atende_criancas) pacientesPartes.push(`<div class="perfil-fato">🧒 <strong>Crianças e adolescentes${p.idade_minima_criancas ? ` a partir dos ${p.idade_minima_criancas} anos` : ''}</strong></div>`);
+        if (p.atende_adolescentes) pacientesPartes.push('<div class="perfil-fato">🧑‍🎓 <strong>Adolescentes</strong></div>');
+        if (p.atende_criancas) pacientesPartes.push(`<div class="perfil-fato">🧒 <strong>Crianças${p.idade_minima_criancas ? ` a partir dos ${p.idade_minima_criancas} anos` : ''}</strong></div>`);
+        if (p.atende_idosos) pacientesPartes.push('<div class="perfil-fato">👴 <strong>Idosos</strong></div>');
         const pacientesHtml = pacientesPartes.join('');
 
         const formatosPartes = ['<div class="perfil-fato">💻 <strong>Consulta por vídeo</strong></div>'];
         if (p.atende_presencial) formatosPartes.push('<div class="perfil-fato">🏢 <strong>Presencial</strong></div>');
         const formatosHtml = formatosPartes.join('');
+
+        // Mapa embutido do Google Maps — não precisa de chave de API pra
+        // esse formato simples (/maps?q=...&output=embed).
+        const mapaHtml = (p.atende_presencial && p.endereco_presencial)
+          ? `<div style="margin-top:12px;">
+               <p style="font-size:0.85rem;color:#555;margin-bottom:8px;">📍 ${p.endereco_presencial}</p>
+               <div style="border-radius:12px;overflow:hidden;border:1px solid #F0EDE4;">
+                 <iframe src="https://www.google.com/maps?q=${encodeURIComponent(p.endereco_presencial)}&output=embed" style="width:100%;height:220px;border:0;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Localização do consultório"></iframe>
+               </div>
+             </div>`
+          : '';
 
         document.getElementById('painel-sobre-conteudo').innerHTML = `
           ${p.bio ? `<p>${p.bio}</p>` : '<p style="color:#999;">Esse psicólogo ainda não escreveu uma apresentação.</p>'}
@@ -572,7 +585,7 @@
 
           ${pacientesHtml ? `<div class="perfil-secao-titulo">Pacientes que trato</div><div class="perfil-fatos">${pacientesHtml}</div>` : ''}
 
-          ${formatosHtml ? `<div class="perfil-secao-titulo">Formatos de consulta</div><div class="perfil-fatos">${formatosHtml}</div>` : ''}
+          ${formatosHtml ? `<div class="perfil-secao-titulo">Formatos de consulta</div><div class="perfil-fatos">${formatosHtml}</div>${mapaHtml}` : ''}
         `;
 
         // ── Aba "Serviços" — só aparece se houver algo cadastrado. Cada

@@ -175,12 +175,18 @@
                     <input type="checkbox" id="edit-atende-adultos" style="width:16px;height:16px;" /> Adultos
                   </label>
                   <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;">
-                    <input type="checkbox" id="edit-atende-criancas" onchange="toggleIdadeMinima()" style="width:16px;height:16px;" /> Crianças/adolescentes
+                    <input type="checkbox" id="edit-atende-adolescentes" style="width:16px;height:16px;" /> Adolescentes
+                  </label>
+                  <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;">
+                    <input type="checkbox" id="edit-atende-criancas" onchange="toggleIdadeMinima()" style="width:16px;height:16px;" /> Crianças
+                  </label>
+                  <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;">
+                    <input type="checkbox" id="edit-atende-idosos" style="width:16px;height:16px;" /> Idosos
                   </label>
                 </div>
                 <div id="wrap-idade-minima" class="hidden" style="margin-top:8px;max-width:220px;">
-                  <label>A partir de quantos anos?</label>
-                  <input type="number" id="edit-idade-minima" min="0" max="17" placeholder="Ex: 12" />
+                  <label>Crianças a partir de quantos anos?</label>
+                  <input type="number" id="edit-idade-minima" min="0" max="12" placeholder="Ex: 6" />
                 </div>
               </div>
 
@@ -190,8 +196,13 @@
                   <div style="font-size:0.85rem;color:#666;">💻 Consulta por vídeo <span style="color:#999;">(sempre ativo na plataforma)</span></div>
                 </div>
                 <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;margin-top:8px;">
-                  <input type="checkbox" id="edit-atende-presencial" style="width:16px;height:16px;" /> Também atendo presencialmente
+                  <input type="checkbox" id="edit-atende-presencial" onchange="toggleEnderecoPresencial()" style="width:16px;height:16px;" /> Também atendo presencialmente
                 </label>
+                <div id="wrap-endereco-presencial" class="hidden" style="margin-top:8px;">
+                  <label>Endereço do consultório</label>
+                  <input type="text" id="edit-endereco-presencial" placeholder="Ex: Av. Paulista, 1000 — Bela Vista, São Paulo/SP" />
+                  <p style="font-size:0.78rem;color:#999;margin-top:4px;">Aparece no seu perfil público com um mapa, como no Doctoralia.</p>
+                </div>
               </div>
 
               <div class="form-group">
@@ -485,10 +496,14 @@
       document.getElementById('edit-instagram').value = p.instagram || '';
       document.getElementById('edit-site-pessoal').value = p.site_pessoal || '';
       document.getElementById('edit-atende-adultos').checked = p.atende_adultos == null ? true : !!p.atende_adultos;
+      document.getElementById('edit-atende-adolescentes').checked = !!p.atende_adolescentes;
       document.getElementById('edit-atende-criancas').checked = !!p.atende_criancas;
+      document.getElementById('edit-atende-idosos').checked = !!p.atende_idosos;
       document.getElementById('edit-idade-minima').value = p.idade_minima_criancas || '';
       document.getElementById('edit-atende-presencial').checked = !!p.atende_presencial;
+      document.getElementById('edit-endereco-presencial').value = p.endereco_presencial || '';
       toggleIdadeMinima();
+      toggleEnderecoPresencial();
       document.getElementById('edit-graduacao-curso').value = p.graduacao_curso || '';
       document.getElementById('edit-graduacao-instituicao').value = p.graduacao_instituicao || '';
       let posGraduacoesSalvas = [];
@@ -1012,6 +1027,10 @@
       document.getElementById('wrap-idade-minima').classList.toggle('hidden', !document.getElementById('edit-atende-criancas').checked);
     }
 
+    function toggleEnderecoPresencial() {
+      document.getElementById('wrap-endereco-presencial').classList.toggle('hidden', !document.getElementById('edit-atende-presencial').checked);
+    }
+
     /* ── Certificados/diplomas ── */
 
     async function carregarCertificados() {
@@ -1174,9 +1193,12 @@
             instagram: document.getElementById('edit-instagram').value.trim(),
             site_pessoal: document.getElementById('edit-site-pessoal').value.trim(),
             atende_adultos: document.getElementById('edit-atende-adultos').checked,
+            atende_adolescentes: document.getElementById('edit-atende-adolescentes').checked,
             atende_criancas: document.getElementById('edit-atende-criancas').checked,
+            atende_idosos: document.getElementById('edit-atende-idosos').checked,
             idade_minima_criancas: document.getElementById('edit-idade-minima').value ? Number(document.getElementById('edit-idade-minima').value) : null,
             atende_presencial: document.getElementById('edit-atende-presencial').checked,
+            endereco_presencial: document.getElementById('edit-endereco-presencial').value.trim(),
             experiencias: JSON.stringify(widgetExperienciasPainel.getItens()),
           }),
         });
