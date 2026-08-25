@@ -1,5 +1,0 @@
-Icone do Instagram no perfil ganha o degrade de marca
-
-O botao circular ficava sem cor (so contorno cinza igual ao do site
-pessoal). Agora usa o gradiente oficial do Instagram (amarelo->rosa->roxo)
-com o icone em branco, pra ficar reconhecivel de relance.
