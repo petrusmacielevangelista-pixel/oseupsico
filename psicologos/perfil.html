@@ -96,6 +96,16 @@
     .perfil-galeria-ver-btn:hover { background: #E8E2CC; }
     .perfil-galeria-modal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
     .perfil-galeria-modal-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; cursor: pointer; }
+    .perfil-galeria-modal-grid__video {
+      position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; cursor: pointer; background: #1A1A1A;
+    }
+    .perfil-galeria-modal-grid__video img { width: 100%; height: 100%; object-fit: cover; opacity: 0.75; }
+    /* Ícone de play sobreposto na miniatura do vídeo — tanto na prévia
+       quanto no modal — deixa claro que aquele item abre o vídeo, não uma foto. */
+    .perfil-galeria-preview__play {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 1.6rem; text-shadow: 0 2px 8px rgba(0,0,0,0.5); pointer-events: none;
+    }
 
     /* Abas Sobre / Serviços / Avaliações — não trocam de painel, só levam
        até a seção via scroll (ver .perfil-secao-feed). Não ficam fixas ao
@@ -198,6 +208,15 @@
     .perfil-fatos { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
     .perfil-fato { display: flex; align-items: center; gap: 8px; background: #FAF8F2; border: 1px solid #F0EDE4; border-radius: 12px; padding: 8px 14px; font-size: 0.82rem; color: #444; }
     .perfil-fato strong { color: #1A1A1A; }
+    /* "Consulta por vídeo"/"Presencial" clicáveis — levam até o calendário
+       de agendamento na lateral, com destaque passageiro nele ao chegar. */
+    button.perfil-fato.perfil-fato--clicavel { cursor: pointer; font: inherit; transition: border-color .15s, background .15s; }
+    button.perfil-fato.perfil-fato--clicavel:hover { border-color: #D4A800; background: #FFFBEF; }
+    @keyframes perfil-agendar-pulso {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(245,197,24,0); }
+      15%, 60% { box-shadow: 0 0 0 4px rgba(245,197,24,0.55); }
+    }
+    .perfil-agendar-destaque { animation: perfil-agendar-pulso 1.4s ease-in-out; }
 
     /* Linha do tempo de formação/experiências — cada item com borda colorida
        à esquerda em vez de um parágrafo solto atrás do outro. */
@@ -234,11 +253,21 @@
     .avaliacao-autor { color: #6b6b6b; font-size: 0.78rem; margin-top: 6px; font-weight: 600; }
 
     .horario-btn {
-      font-size: 0.82rem; padding: 9px 14px; border-radius: 10px; border: 1.5px solid #E8E2CC;
-      background: #fff; color: #1A1A1A; cursor: pointer; transition: all .15s;
+      font-size: 0.82rem; padding: 9px 4px; border-radius: 10px; border: 1.5px solid #E8E2CC;
+      background: #fff; color: #1A1A1A; cursor: pointer; transition: all .15s; width: 100%;
     }
     .horario-btn:hover { border-color: #D4A800; }
     .horario-btn.selecionado { background: #1A1A1A; border-color: #1A1A1A; color: #fff; }
+
+    /* Grade de horários agrupada por dia, em colunas lado a lado — no
+       estilo do Doctoralia, em vez de uma lista corrida com data+hora
+       escritas em cada botão. */
+    #horarios-lista { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+    .horario-dia-coluna { flex-shrink: 0; width: 92px; display: flex; flex-direction: column; gap: 6px; }
+    .horario-dia-coluna__cabecalho {
+      font-size: 0.72rem; font-weight: 700; color: #666; text-align: center; text-transform: capitalize;
+      padding-bottom: 6px; border-bottom: 1.5px solid #F0EDE4; margin-bottom: 2px;
+    }
 
     .estrelas-input { font-size: 1.9rem; color: #D4A800; }
     .estrela-btn { background: none; border: none; cursor: pointer; padding: 0 2px; display: inline-block; font-size: inherit; color: inherit; line-height: 1; }
@@ -292,7 +321,6 @@
               </nav>
 
               <div id="perfil-tab-sobre" class="perfil-secao-feed">
-                <div id="painel-video-conteudo"></div>
                 <div id="painel-sobre-conteudo"></div>
               </div>
 
@@ -340,7 +368,7 @@
             <div class="perfil-painel hidden perfil-agendar-sticky" id="secao-agendar">
               <div class="perfil-painel__head"><div class="perfil-painel__icon perfil-painel__icon--agendar">📅</div><h2>Agendar entrevista inicial</h2></div>
               <p style="font-size:0.85rem;color:#666;margin:-10px 0 14px;">Escolha um horário pra uma primeira conversa — sem compromisso, pra vocês se conhecerem.</p>
-              <div id="horarios-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">Carregando horários...</div>
+              <div id="horarios-lista" style="margin-bottom:18px;">Carregando horários...</div>
 
               <form id="form-agendar" class="hidden">
                 <p style="font-size:0.88rem;color:#555;margin-bottom:14px;">Horário selecionado: <strong id="horario-selecionado-texto" style="color:#1A1A1A;"></strong></p>
@@ -377,7 +405,7 @@
   <div id="galeria-modal-overlay" class="hidden perfil-modal-overlay" onclick="if (event.target === this) fecharModalGaleria();">
     <div class="perfil-painel perfil-modal-card" style="max-width:680px;" role="dialog" aria-modal="true" aria-labelledby="galeria-modal-titulo">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-        <h2 id="galeria-modal-titulo" style="margin:0;">Fotos e vídeos</h2>
+        <h2 id="galeria-modal-titulo" style="margin:0;">Fotos</h2>
         <button type="button" class="perfil-modal-fechar" aria-label="Fechar" onclick="fecharModalGaleria()">×</button>
       </div>
       <div id="galeria-modal-conteudo" class="perfil-galeria-modal-grid"></div>
@@ -513,15 +541,11 @@
 
         const anoFormacao = p.graduacao_mes_ano ? p.graduacao_mes_ano.split('/')[1] : '';
 
-        // ── Vídeo de apresentação — topo da aba Sobre, só se cadastrado
+        // Vídeo de apresentação — nunca fica guardado na nossa nuvem (é só
+        // um link do YouTube/Vimeo digitado pelo psicólogo); em vez de um
+        // bloco próprio no topo, agora vira o primeiro item da galeria de
+        // Fotos, abrindo o vídeo original ao clicar.
         const videoSrc = embedVideoSrc(p.video_apresentacao_url);
-        document.getElementById('painel-video-conteudo').innerHTML = p.video_apresentacao_url
-          ? (videoSrc
-              ? `<div style="position:relative;padding-top:56.25%;border-radius:12px;overflow:hidden;margin-bottom:20px;">
-                   <iframe src="${videoSrc}" style="position:absolute;inset:0;width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                 </div>`
-              : `<p style="margin-bottom:16px;"><a href="${p.video_apresentacao_url}" target="_blank" rel="noopener">🎥 Assistir vídeo de apresentação →</a></p>`)
-          : '';
 
         // ── Monta as peças de Formação/Certificados/Doenças tratadas — usadas
         // tanto no resumo da aba Sobre quanto no modal "Formação" completo.
@@ -586,8 +610,11 @@
         if (p.atende_idosos) pacientesPartes.push('<div class="perfil-fato">👴 <strong>Idosos</strong></div>');
         const pacientesHtml = pacientesPartes.join('');
 
-        const formatosPartes = ['<div class="perfil-fato">💻 <strong>Consulta por vídeo</strong></div>'];
-        if (p.atende_presencial) formatosPartes.push('<div class="perfil-fato">🏢 <strong>Presencial</strong></div>');
+        // "Consulta por vídeo" (e Presencial) levam até o calendário de
+        // agendamento na lateral, com um destaque visual passageiro —
+        // mesmo padrão do "Ver calendário online" do Doctoralia.
+        const formatosPartes = ['<button type="button" class="perfil-fato perfil-fato--clicavel" onclick="scrollParaAgendar()">💻 <strong>Consulta por vídeo</strong></button>'];
+        if (p.atende_presencial) formatosPartes.push('<button type="button" class="perfil-fato perfil-fato--clicavel" onclick="scrollParaAgendar()">🏢 <strong>Presencial</strong></button>');
         const formatosHtml = formatosPartes.join('');
 
         // Mapa embutido do Google Maps — não precisa de chave de API pra
@@ -601,21 +628,47 @@
              </div>`
           : '';
 
-        // "Fotos e vídeos" — prévia com as 3 primeiras + botão que abre a
-        // galeria completa no modal (mesmo padrão do Doctoralia).
-        const galeria = perfilData.galeria || [];
-        const LIMITE_PREVIA_GALERIA = 3;
-        const galeriaPreviaHtml = galeria.slice(0, LIMITE_PREVIA_GALERIA).map((f, i) => {
-          const ultimoVisivelComSobra = i === LIMITE_PREVIA_GALERIA - 1 && galeria.length > LIMITE_PREVIA_GALERIA;
+        // "Fotos" — prévia com as 3 primeiras + botão que abre a galeria
+        // completa no modal (mesmo padrão do Doctoralia). O vídeo de
+        // apresentação entra como o primeiro item, mas nunca é armazenado
+        // na nossa nuvem — é só o link do YouTube/Vimeo, abre numa aba nova.
+        let thumbVideo = null;
+        if (videoSrc) {
+          const m = videoSrc.match(/embed\/([\w-]+)$/);
+          if (m && videoSrc.includes('youtube')) thumbVideo = `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg`;
+        }
+        const itensGaleria = [];
+        if (p.video_apresentacao_url) itensGaleria.push({ tipo: 'video', thumb: thumbVideo, link: p.video_apresentacao_url });
+        (perfilData.galeria || []).forEach(f => itensGaleria.push({ tipo: 'foto', imagem_url: f.imagem_url }));
+
+        function tileGaleria(item, overlayMais) {
+          if (item.tipo === 'video') {
+            return `<div class="perfil-galeria-preview__item" onclick="window.open('${item.link}', '_blank')">
+              ${item.thumb ? `<img src="${item.thumb}" alt="Vídeo de apresentação" />` : `<div style="width:100%;height:100%;background:#1A1A1A;"></div>`}
+              <div class="perfil-galeria-preview__play">▶</div>
+              ${overlayMais || ''}
+            </div>`;
+          }
           return `<div class="perfil-galeria-preview__item" onclick="abrirModalGaleria()">
-            <img src="${f.imagem_url}" alt="Foto do perfil" />
-            ${ultimoVisivelComSobra ? `<div class="perfil-galeria-preview__mais">+${galeria.length - LIMITE_PREVIA_GALERIA}</div>` : ''}
+            <img src="${item.imagem_url}" alt="Foto do perfil" />
+            ${overlayMais || ''}
           </div>`;
+        }
+
+        const LIMITE_PREVIA_GALERIA = 3;
+        const galeriaPreviaHtml = itensGaleria.slice(0, LIMITE_PREVIA_GALERIA).map((item, i) => {
+          const ultimoVisivelComSobra = i === LIMITE_PREVIA_GALERIA - 1 && itensGaleria.length > LIMITE_PREVIA_GALERIA;
+          const overlay = ultimoVisivelComSobra ? `<div class="perfil-galeria-preview__mais">+${itensGaleria.length - LIMITE_PREVIA_GALERIA}</div>` : '';
+          return tileGaleria(item, overlay);
         }).join('');
 
         window.abrirModalGaleria = function () {
-          document.getElementById('galeria-modal-conteudo').innerHTML = galeria.map(f =>
-            `<img src="${f.imagem_url}" alt="Foto do perfil" onclick="window.open('${f.imagem_url}', '_blank')" />`
+          document.getElementById('galeria-modal-conteudo').innerHTML = itensGaleria.map(item => item.tipo === 'video'
+            ? `<div class="perfil-galeria-modal-grid__video" onclick="window.open('${item.link}', '_blank')">
+                 ${item.thumb ? `<img src="${item.thumb}" alt="Vídeo de apresentação" />` : ''}
+                 <div class="perfil-galeria-preview__play">▶</div>
+               </div>`
+            : `<img src="${item.imagem_url}" alt="Foto do perfil" onclick="window.open('${item.imagem_url}', '_blank')" />`
           ).join('');
           elementoQueAbriuGaleria = document.activeElement;
           document.getElementById('galeria-modal-overlay').classList.remove('hidden');
@@ -646,10 +699,10 @@
 
           ${formatosHtml ? `<div class="perfil-secao-titulo">Formatos de consulta</div><div class="perfil-fatos">${formatosHtml}</div>${mapaHtml}` : ''}
 
-          ${galeria.length ? `
-            <div class="perfil-secao-titulo">Fotos e vídeos</div>
+          ${itensGaleria.length ? `
+            <div class="perfil-secao-titulo">Fotos</div>
             <div class="perfil-galeria-preview">${galeriaPreviaHtml}</div>
-            <button type="button" class="perfil-galeria-ver-btn" onclick="abrirModalGaleria()">🖼️ Ver galeria (${galeria.length})</button>
+            <button type="button" class="perfil-galeria-ver-btn" onclick="abrirModalGaleria()">🖼️ Ver galeria (${itensGaleria.length})</button>
           ` : ''}
         `;
 
@@ -711,7 +764,12 @@
     }
 
     function scrollParaAgendar() {
-      document.getElementById('secao-agendar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const el = document.getElementById('secao-agendar');
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.classList.remove('perfil-agendar-destaque');
+      void el.offsetWidth; // força reinício da animação mesmo se já rodou antes
+      el.classList.add('perfil-agendar-destaque');
+      setTimeout(() => el.classList.remove('perfil-agendar-destaque'), 1500);
     }
     function registrarEvento(tipo) {
       fetch(`/api/psicologos/${id}/evento`, {
@@ -778,10 +836,25 @@
         const data = await res.json();
         const horarios = data.horarios || [];
         if (!horarios.length) { el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Nenhum horário disponível nos próximos dias.</p>'; return; }
-        el.innerHTML = horarios.slice(0, 30).map(h => {
-          const dt = new Date(h.replace(' ', 'T'));
-          const label = dt.toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-          return `<button type="button" class="horario-btn" onclick="selecionarHorario('${h}', this)">${label}</button>`;
+
+        // Agrupa por dia e monta uma coluna por dia (cabeçalho "qua., 26/08"
+        // + horas empilhadas embaixo), em vez de uma lista corrida com
+        // data+hora escritas em cada botão.
+        const porDia = new Map();
+        horarios.slice(0, 60).forEach(h => {
+          const diaISO = h.slice(0, 10);
+          if (!porDia.has(diaISO)) porDia.set(diaISO, []);
+          porDia.get(diaISO).push(h);
+        });
+
+        el.innerHTML = [...porDia.entries()].map(([diaISO, horariosDoDia]) => {
+          const dt = new Date(diaISO + 'T00:00:00');
+          const cabecalho = dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+          const botoes = horariosDoDia.map(h => {
+            const hora = h.slice(11, 16);
+            return `<button type="button" class="horario-btn" onclick="selecionarHorario('${h}', this)">${hora}</button>`;
+          }).join('');
+          return `<div class="horario-dia-coluna"><div class="horario-dia-coluna__cabecalho">${cabecalho}</div>${botoes}</div>`;
         }).join('');
       } catch {
         el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Erro ao carregar horários. <button type="button" class="perfil-nota-link" onclick="fetch(\'/api/psicologos/' + id + '/horarios-disponiveis\').then(r=>renderizarHorarios(r))">Tentar novamente</button></p>';
