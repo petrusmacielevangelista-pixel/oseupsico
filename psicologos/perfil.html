@@ -52,6 +52,13 @@
     }
     .perfil-social-btn:hover { border-color: #D4A800; color: #1A1A1A; }
     .perfil-social-btn svg { width: 18px; height: 18px; fill: currentColor; }
+    /* Instagram com o degradê de marca — sem isso o ícone ficava sem cor,
+       perdido ao lado dos outros botões neutros. */
+    .perfil-social-btn--instagram {
+      background: radial-gradient(circle at 30% 110%, #ffdb8c 0%, #ee2a7b 45%, #6228d7 90%);
+      border-color: transparent; color: #fff;
+    }
+    .perfil-social-btn--instagram:hover { border-color: transparent; color: #fff; filter: brightness(1.08); }
 
     /* Resumo de formação — uma linha, sempre visível na aba Sobre; o
        currículo completo mora no modal (ver .perfil-stat-btn). */
@@ -408,7 +415,7 @@
               <div class="perfil-cta-row">
                 <a href="#secao-agendar" class="btn btn--yellow" onclick="document.getElementById('secao-agendar').scrollIntoView({behavior:'smooth',block:'start'});">📅 Agendar consulta</a>
                 ${linkWhats ? `<a href="${linkWhats}" target="_blank" rel="noopener" class="btn btn--suave" onclick="registrarEvento('whatsapp_click')">➤ Enviar mensagem</a>` : ''}
-                ${p.instagram ? `<a href="https://instagram.com/${p.instagram.replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '')}" target="_blank" rel="noopener" class="perfil-social-btn" aria-label="Instagram" title="Instagram">${iconInstagram}</a>` : ''}
+                ${p.instagram ? `<a href="https://instagram.com/${p.instagram.replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '')}" target="_blank" rel="noopener" class="perfil-social-btn perfil-social-btn--instagram" aria-label="Instagram" title="Instagram">${iconInstagram}</a>` : ''}
                 ${p.site_pessoal ? `<a href="${p.site_pessoal}" target="_blank" rel="noopener" class="perfil-social-btn" aria-label="Site pessoal" title="Site pessoal">${iconSite}</a>` : ''}
               </div>
             </div>
