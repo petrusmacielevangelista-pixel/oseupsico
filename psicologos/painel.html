@@ -139,7 +139,7 @@
 
               <div class="form-group">
                 <label>Especialidades <span style="font-weight:400;color:#999;">(aparecem no seu perfil público e nos filtros da listagem)</span></label>
-                <div id="edit-especialidades-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">Carregando...</div>
+                <div id="edit-especialidades-lista" style="column-count:2;column-gap:24px;margin-top:6px;">Carregando...</div>
               </div>
 
               <div class="form-group">
@@ -203,6 +203,13 @@
                   <input type="text" id="edit-endereco-presencial" placeholder="Ex: Av. Paulista, 1000 — Bela Vista, São Paulo/SP" />
                   <p style="font-size:0.78rem;color:#999;margin-top:4px;">Aparece no seu perfil público com um mapa, como no Doctoralia.</p>
                 </div>
+              </div>
+
+              <div class="form-group">
+                <label>Fotos e vídeos <span style="font-weight:400;color:#999;">(consultório, fotos profissionais — aparecem no seu perfil público)</span></label>
+                <div id="lista-galeria" style="display:flex;flex-wrap:wrap;gap:10px;margin:8px 0;"></div>
+                <input type="file" id="galeria-imagem-input" accept="image/*" onchange="uploadFotoGaleria()" />
+                <p id="galeria-msg" style="font-size:0.78rem;margin-top:6px;"></p>
               </div>
 
               <div class="form-group">
@@ -442,8 +449,8 @@
         const res = await fetch('/api/especialidades');
         const data = await res.json();
         el.innerHTML = (data.especialidades || []).map(e => `
-          <label style="display:flex;align-items:center;gap:6px;background:#FFF8E6;color:#7a6200;border:1px solid #F3EFE3;padding:8px 14px;border-radius:20px;font-size:0.85rem;font-weight:600;cursor:pointer;">
-            <input type="checkbox" value="${e.nome}" class="chk-edit-especialidade" ${selecionadas.includes(e.nome) ? 'checked' : ''} /> ${e.nome}
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid #F3EFE3;font-size:0.85rem;color:#333;cursor:pointer;break-inside:avoid;">
+            <input type="checkbox" value="${e.nome}" class="chk-edit-especialidade" style="flex-shrink:0;width:16px;height:16px;" ${selecionadas.includes(e.nome) ? 'checked' : ''} /> ${e.nome}
           </label>
         `).join('');
       } catch {
@@ -541,6 +548,7 @@
       carregarAgendamentos();
       carregarVisibilidade();
       carregarCertificados();
+      carregarGaleria();
       recarregarAgenda();
     }
 
@@ -1029,6 +1037,47 @@
 
     function toggleEnderecoPresencial() {
       document.getElementById('wrap-endereco-presencial').classList.toggle('hidden', !document.getElementById('edit-atende-presencial').checked);
+    }
+
+    /* ── Fotos e vídeos (galeria geral) ── */
+
+    async function carregarGaleria() {
+      const lista = document.getElementById('lista-galeria');
+      const res = await fetch('/api/psicologos/me/galeria', { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      const galeria = data.galeria || [];
+      lista.innerHTML = galeria.length
+        ? galeria.map(f => `
+            <div style="position:relative;width:100px;">
+              <img src="${f.imagem_url}" style="width:100px;height:100px;object-fit:cover;border-radius:10px;border:1.5px solid #F0EDE4;" />
+              <button type="button" onclick="removerFotoGaleria(${f.id})" title="Remover" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:#991B1B;color:#fff;border:2px solid #fff;cursor:pointer;font-size:0.75rem;line-height:1;">×</button>
+            </div>
+          `).join('')
+        : '<p style="color:#999;font-size:0.82rem;">Nenhuma foto enviada ainda.</p>';
+    }
+
+    async function uploadFotoGaleria() {
+      const input = document.getElementById('galeria-imagem-input');
+      const msgEl = document.getElementById('galeria-msg');
+      msgEl.textContent = '';
+      if (!input.files.length) return;
+      const form = new FormData();
+      form.append('imagem', input.files[0]);
+      try {
+        const res = await fetch('/api/psicologos/me/galeria', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
+        const data = await res.json();
+        input.value = '';
+        if (!data.ok) { msgEl.style.color = '#991B1B'; msgEl.textContent = data.error || 'Erro ao enviar.'; return; }
+        msgEl.style.color = '#065F46';
+        msgEl.textContent = 'Enviado!';
+        carregarGaleria();
+      } catch { msgEl.style.color = '#991B1B'; msgEl.textContent = 'Erro de conexão.'; }
+    }
+
+    async function removerFotoGaleria(id) {
+      if (!confirm('Remover essa foto do seu perfil público?')) return;
+      await fetch(`/api/psicologos/me/galeria/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+      carregarGaleria();
     }
 
     /* ── Certificados/diplomas ── */
