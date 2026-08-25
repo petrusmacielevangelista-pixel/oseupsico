@@ -1,8 +1,0 @@
-Corrige abas nao ficarem fixas: overflow-x:hidden do body quebrava o sticky
-
-A barra de abas tinha position:sticky mas nao funcionava porque o body
-global do site define overflow-x:hidden (pra evitar scroll horizontal no
-site todo) — qualquer ancestral com overflow diferente de visible quebra
-position:sticky dos descendentes, mesmo so no eixo X. Reabilita
-overflow-x:visible em html/body especificamente nesta pagina (ja testada
-sem overflow horizontal, tanto desktop quanto mobile).
