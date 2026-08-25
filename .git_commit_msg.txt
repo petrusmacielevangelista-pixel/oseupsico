@@ -1,0 +1,17 @@
+Perfil do psicologo: CTAs, redes sociais, certificados, formacao resumida e 42 avaliacoes seed
+
+Segunda leva de ajustes no perfil publico, comparando de perto com o
+Doctoralia:
+
+- Hero ganha linha de acoes: botao Agendar consulta (ancora pra sidebar) +
+  Enviar mensagem (abre WhatsApp com .btn--whatsapp) + icones de
+  Instagram/site como botoes circulares (SVG, nao mais link de texto solto)
+- Card Formacao vira resumo de uma linha (curso + anos de experiencia +
+  qtd de pos) com toggle Ver formacao completa que expande o detalhe
+  completo (pos-graduacoes + experiencias) — reduz a enfase que o bloco
+  tinha antes, deixando mais espaco pra bio
+- Nova secao Certificados: tabela certificados + upload de imagem (R2,
+  mesmo padrao de fotos de perfil) + aba correspondente em Meu perfil no
+  painel; card so aparece no perfil publico se houver imagem enviada
+- 42 avaliacoes de teste inseridas no psicologo id=18 (34x5 + 8x4 estrelas,
+  media 4.81 -> exibe 4.8), a pedido do usuario pra validar visualmente

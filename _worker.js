@@ -18,6 +18,7 @@
      DELETE /api/admin/avaliacoes/:id         → remove avaliação (protegido)
      GET  /api/admin/campanhas-email          → histórico de disparos (protegido)
      GET/POST/PUT/DELETE /api/psicologos/me/servicos → valores/serviços (autenticado)
+     GET/POST/DELETE /api/psicologos/me/certificados → galeria de diplomas (autenticado)
      GET  /api/admin/campanhas-email/destinatarios → conta público-alvo (protegido)
      POST /api/admin/campanhas-email/preview  → renderiza HTML sem enviar (protegido)
      POST /api/admin/campanhas-email/imagem   → upload de imagem pro corpo do e-mail (protegido)
@@ -268,6 +269,19 @@ async function initDB(db) {
       nome TEXT NOT NULL,
       valor REAL,
       descricao TEXT,
+      ordem INTEGER NOT NULL DEFAULT 0,
+      criado_em TEXT DEFAULT (datetime('now'))
+    )`
+  ).run();
+
+  // Certificados/diplomas (fotos) que o psicólogo sobe pro perfil público —
+  // galeria simples, mesmo bucket R2 das fotos de perfil.
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS certificados (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      psicologo_id INTEGER NOT NULL,
+      imagem_url TEXT NOT NULL,
+      titulo TEXT,
       ordem INTEGER NOT NULL DEFAULT 0,
       criado_em TEXT DEFAULT (datetime('now'))
     )`
@@ -989,6 +1003,56 @@ export default {
       return json({ ok: true });
     }
 
+    /* ── Certificados/diplomas (galeria de fotos no perfil) ── */
+
+    if (pathname === '/api/psicologos/me/certificados' && request.method === 'GET') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { results } = await env.DB.prepare(
+        'SELECT id, imagem_url, titulo, ordem FROM certificados WHERE psicologo_id = ? ORDER BY ordem, id'
+      ).bind(psicologoId).all();
+      return json({ ok: true, certificados: results });
+    }
+
+    if (pathname === '/api/psicologos/me/certificados' && request.method === 'POST') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      if (!env.FOTOS_BUCKET) return json({ ok: false, error: 'Upload temporariamente indisponível.' }, 503);
+      await initDB(env.DB);
+      try {
+        const form = await request.formData();
+        const imagem = form.get('imagem');
+        const titulo = form.get('titulo') || null;
+        if (!imagem || !imagem.size) return json({ ok: false, error: 'Nenhuma imagem enviada.' }, 400);
+        if (imagem.size > 4 * 1024 * 1024) return json({ ok: false, error: 'Imagem muito grande (máx. 4MB).' }, 400);
+        const ext = (imagem.name || '').split('.').pop() || 'jpg';
+        const key = `certificados/${psicologoId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        await env.FOTOS_BUCKET.put(key, await imagem.arrayBuffer(), { httpMetadata: { contentType: imagem.type } });
+        const { results } = await env.DB.prepare('SELECT COALESCE(MAX(ordem), -1) + 1 as prox FROM certificados WHERE psicologo_id = ?').bind(psicologoId).all();
+        const r = await env.DB.prepare(
+          'INSERT INTO certificados (psicologo_id, imagem_url, titulo, ordem) VALUES (?, ?, ?, ?)'
+        ).bind(psicologoId, `${url.origin}/fotos/${key}`, titulo, results[0].prox).run();
+        return json({ ok: true, id: r.meta.last_row_id, imagem_url: `${url.origin}/fotos/${key}` });
+      } catch (e) {
+        return json({ ok: false, error: e.message }, 500);
+      }
+    }
+
+    const certificadoMatch = pathname.match(/^\/api\/psicologos\/me\/certificados\/(\d+)$/);
+    if (certificadoMatch && request.method === 'DELETE') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const cert = await env.DB.prepare('SELECT imagem_url FROM certificados WHERE id = ? AND psicologo_id = ?').bind(certificadoMatch[1], psicologoId).first();
+      await env.DB.prepare('DELETE FROM certificados WHERE id = ? AND psicologo_id = ?').bind(certificadoMatch[1], psicologoId).run();
+      if (cert?.imagem_url && env.FOTOS_BUCKET) {
+        const key = cert.imagem_url.split('/fotos/')[1];
+        if (key) await env.FOTOS_BUCKET.delete(key).catch(() => {});
+      }
+      return json({ ok: true });
+    }
+
     if (pathname === '/api/psicologos/me/foto' && request.method === 'POST') {
       const psicologoId = autenticadoPsicologo(request, env);
       if (!psicologoId) return json({ ok: false }, 401);
@@ -1110,7 +1174,11 @@ export default {
         `SELECT id, nome, valor, descricao FROM servicos_precos WHERE psicologo_id = ? ORDER BY ordem, id`
       ).bind(perfilMatch[1]).all();
 
-      return json({ ok: true, psicologo: p, avaliacao_media: media, total_avaliacoes: avals.length, servicos });
+      const { results: certificados } = await env.DB.prepare(
+        `SELECT id, imagem_url, titulo FROM certificados WHERE psicologo_id = ? ORDER BY ordem, id`
+      ).bind(perfilMatch[1]).all();
+
+      return json({ ok: true, psicologo: p, avaliacao_media: media, total_avaliacoes: avals.length, servicos, certificados });
     }
 
     // Tracking leve de visualização de perfil / clique no WhatsApp — público,

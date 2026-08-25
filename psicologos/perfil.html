@@ -31,9 +31,41 @@
     .perfil-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 700; padding: 6px 13px; border-radius: 20px; }
     .perfil-badge--verificado { background: #E0F2FE; color: #0369A1; }
     .perfil-badge--experiencia { background: #FFF3C4; color: #7a6200; }
-    .perfil-links { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; }
-    .perfil-links a { display: inline-flex; align-items: center; gap: 6px; color: #666; font-size: 0.85rem; font-weight: 600; text-decoration: none; }
-    .perfil-links a:hover { color: #1A1A1A; }
+    /* Linha de ações principais do hero — os dois CTAs que o Doctoralia
+       coloca logo abaixo do nome, pra converter sem precisar rolar a
+       página: agendar (âncora pra sidebar) e falar no WhatsApp. */
+    .perfil-cta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; }
+    .perfil-cta-row .btn { padding: 12px 22px; font-size: 0.88rem; }
+
+    /* Redes sociais como botões-ícone circulares — antes eram links de
+       texto soltos com emoji, meio perdidos embaixo dos badges. */
+    .perfil-social-btn {
+      width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center;
+      justify-content: center; background: #fff; border: 1.5px solid #E8E2CC; color: #555;
+      flex-shrink: 0; transition: border-color .15s, color .15s;
+    }
+    .perfil-social-btn:hover { border-color: #D4A800; color: #1A1A1A; }
+    .perfil-social-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+    /* Card "Formação" — resumo sempre visível + detalhe completo escondido
+       atrás de um toggle, pra não pesar visualmente a página com um bloco
+       longo de experiências (era a principal queixa: dava ênfase demais). */
+    .perfil-formacao-resumo { color: #555; line-height: 1.7; margin-bottom: 4px; }
+    .perfil-formacao-toggle {
+      background: none; border: none; color: #B8940A; font-weight: 700; font-size: 0.85rem;
+      cursor: pointer; padding: 8px 0 0; display: inline-flex; align-items: center; gap: 4px;
+    }
+    .perfil-formacao-toggle:hover { color: #7a6200; }
+    .perfil-formacao-toggle .seta { transition: transform .2s; display: inline-block; }
+    .perfil-formacao-toggle.aberto .seta { transform: rotate(180deg); }
+    .perfil-formacao-detalhe { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid #F0EDE4; }
+    .perfil-formacao-detalhe.aberto { display: block; }
+
+    /* Galeria de certificados/diplomas */
+    .perfil-certificados-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+    .perfil-certificados-grid img {
+      width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; border: 1px solid #F0EDE4; cursor: pointer;
+    }
 
     .perfil-corpo { padding: 36px 0 64px; }
     /* Avaliações sempre por último: no desktop fica embaixo de "Sobre" na
@@ -183,6 +215,11 @@
               <div id="painel-formacao-conteudo"></div>
             </div>
 
+            <div class="perfil-painel hidden" id="painel-certificados">
+              <div class="perfil-painel__head"><div class="perfil-painel__icon perfil-painel__icon--formacao">📜</div><h2>Certificados</h2></div>
+              <div id="painel-certificados-conteudo" class="perfil-certificados-grid"></div>
+            </div>
+
             <div class="perfil-painel hidden" id="painel-valores">
               <div class="perfil-painel__head"><div class="perfil-painel__icon perfil-painel__icon--valores">💰</div><h2>Valores</h2></div>
               <div id="painel-valores-conteudo"></div>
@@ -313,6 +350,19 @@
 
         document.title = `${p.nome} · O Seu Psico`;
 
+        // Link do WhatsApp calculado aqui em cima porque é usado tanto no
+        // botão "Enviar mensagem" do hero quanto no botão flutuante.
+        let linkWhats = null;
+        if (p.telefone) {
+          const telLimpo = p.telefone.replace(/\D/g, '');
+          const telComDDI = telLimpo.length <= 11 ? '55' + telLimpo : telLimpo; // assume BR se vier sem DDI
+          const mensagem = encodeURIComponent(`Olá, ${p.nome.split(' ')[0]}! Vi seu perfil no O Seu Psico e gostaria de saber mais sobre atendimento.`);
+          linkWhats = `https://wa.me/${telComDDI}?text=${mensagem}`;
+        }
+
+        const iconInstagram = `<svg viewBox="0 0 24 24"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 3.25.15 4.77 1.69 4.92 4.92.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.15 3.23-1.66 4.77-4.92 4.92-1.27.06-1.64.07-4.85.07s-3.58-.01-4.85-.07c-3.26-.15-4.77-1.7-4.92-4.92-.06-1.27-.07-1.65-.07-4.85s.01-3.58.07-4.85C2.31 3.9 3.83 2.35 7.09 2.2 8.35 2.16 8.74 2.16 12 2.16Zm0 5.4a4.44 4.44 0 1 0 0 8.88 4.44 4.44 0 0 0 0-8.88Zm0 7.32a2.88 2.88 0 1 1 0-5.76 2.88 2.88 0 0 1 0 5.76Zm5.66-7.5a1.04 1.04 0 1 1-2.08 0 1.04 1.04 0 0 1 2.08 0Z"/></svg>`;
+        const iconSite = `<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm7.94 9h-3.05a15.6 15.6 0 0 0-1.36-6.06A8.02 8.02 0 0 1 19.94 11ZM12 4.06c.82 1.16 1.83 3.4 2.06 6.94H9.94c.23-3.55 1.24-5.78 2.06-6.94ZM9.94 13h4.12c-.23 3.55-1.24 5.78-2.06 6.94-.82-1.16-1.83-3.4-2.06-6.94ZM8.47 4.94A15.6 15.6 0 0 0 7.11 11H4.06a8.02 8.02 0 0 1 4.41-6.06ZM4.06 13h3.05c.15 2.3.6 4.35 1.36 6.06A8.02 8.02 0 0 1 4.06 13Zm11.47 6.06c.76-1.71 1.21-3.76 1.36-6.06h3.05a8.02 8.02 0 0 1-4.41 6.06Z"/></svg>`;
+
         heroEl.innerHTML = `
           <div class="perfil-hero__topo">
             <div class="perfil-foto-ring">
@@ -328,10 +378,12 @@
                 ${badgeExperiencia}
                 ${p.crp_numero ? `<span class="perfil-badge" style="background:#F0EDE4;color:#555;">CRP ${p.crp_numero}/${p.crp_estado}</span>` : ''}
               </div>
-              ${p.instagram || p.site_pessoal ? `<div class="perfil-links">
-                ${p.instagram ? `<a href="https://instagram.com/${p.instagram.replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '')}" target="_blank" rel="noopener">📷 Instagram</a>` : ''}
-                ${p.site_pessoal ? `<a href="${p.site_pessoal}" target="_blank" rel="noopener">🔗 Site pessoal</a>` : ''}
-              </div>` : ''}
+              <div class="perfil-cta-row">
+                <a href="#secao-agendar" class="btn btn--yellow" onclick="document.getElementById('secao-agendar').scrollIntoView({behavior:'smooth',block:'start'});">📅 Agendar consulta</a>
+                ${linkWhats ? `<a href="${linkWhats}" target="_blank" rel="noopener" class="btn btn--whatsapp" onclick="registrarEvento('whatsapp_click')">💬 Enviar mensagem</a>` : ''}
+                ${p.instagram ? `<a href="https://instagram.com/${p.instagram.replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '')}" target="_blank" rel="noopener" class="perfil-social-btn" aria-label="Instagram" title="Instagram">${iconInstagram}</a>` : ''}
+                ${p.site_pessoal ? `<a href="${p.site_pessoal}" target="_blank" rel="noopener" class="perfil-social-btn" aria-label="Site pessoal" title="Site pessoal">${iconSite}</a>` : ''}
+              </div>
             </div>
           </div>
         `;
@@ -359,10 +411,19 @@
           ${especialidades.length ? `<div class="perfil-secao-titulo">Especialidades</div><div class="perfil-tags">${especialidades.map(e => `<span class="perfil-tag">${e}</span>`).join('')}</div>` : ''}
         `;
 
-        // ── Card "Formação e experiência" — cada item como linha do tempo
-        // (borda colorida à esquerda) em vez de parágrafos soltos.
+        // ── Card "Formação" — resumo de uma linha sempre visível (curso +
+        // instituição + anos de experiência), com o detalhe completo (linha
+        // do tempo de pós-graduações e experiências) escondido atrás de um
+        // toggle "Ver formação completa" — evita o bloco pesado que ficava
+        // sempre aberto brigando por espaço com a bio.
         let experiencias = [];
         try { experiencias = JSON.parse(p.experiencias || '[]'); } catch {}
+
+        const resumoPartes = [];
+        if (p.graduacao_curso) resumoPartes.push(`${p.graduacao_curso}${p.graduacao_instituicao ? ' — ' + p.graduacao_instituicao : ''}${anoFormacao ? ` (${anoFormacao})` : ''}`);
+        if (anosExperiencia != null) resumoPartes.push(`${anosExperiencia} ano${anosExperiencia === 1 ? '' : 's'} de experiência`);
+        if (posGraduacoes.length) resumoPartes.push(`${posGraduacoes.length} pós-graduação${posGraduacoes.length === 1 ? '' : 'ões'}`);
+
         const graduacaoHtml = (p.graduacao_curso || p.graduacao_instituicao)
           ? `<div class="perfil-item perfil-item--destaque">
                <div class="perfil-item__titulo">${p.graduacao_curso || 'Graduação'}</div>
@@ -374,12 +435,31 @@
           ? experiencias.map(e => `<div class="perfil-item"><div class="perfil-item__titulo">${e.titulo}</div>${e.inicio ? `<div class="perfil-item__sub">${e.inicio} – ${e.atual ? 'atual' : (e.fim || '')}</div>` : ''}</div>`).join('')
           : (p.projetos_relevantes ? `<div class="perfil-item"><p style="margin:0;">${p.projetos_relevantes}</p></div>` : '');
 
+        const temDetalhe = !!(posGraduacoesHtml || experienciasHtml);
+
         document.getElementById('painel-formacao-conteudo').innerHTML = `
-          ${graduacaoHtml}
-          ${posGraduacoesHtml ? `<div class="perfil-secao-titulo">Pós-graduações</div>${posGraduacoesHtml}` : ''}
-          ${experienciasHtml ? `<div class="perfil-secao-titulo">Experiências de trabalho e vivências relevantes</div>${experienciasHtml}` : ''}
-          ${!graduacaoHtml && !posGraduacoesHtml && !experienciasHtml ? '<p style="color:#999;">Nenhuma formação cadastrada ainda.</p>' : ''}
+          ${resumoPartes.length
+            ? `<p class="perfil-formacao-resumo">${resumoPartes.join(' · ')}</p>`
+            : (graduacaoHtml ? '' : '<p style="color:#999;">Nenhuma formação cadastrada ainda.</p>')}
+          ${graduacaoHtml && !resumoPartes.length ? graduacaoHtml : ''}
+          ${temDetalhe ? `
+            <button type="button" class="perfil-formacao-toggle" id="formacao-toggle-btn" onclick="toggleFormacaoDetalhe()">Ver formação completa e experiências <span class="seta">▾</span></button>
+            <div class="perfil-formacao-detalhe" id="formacao-detalhe">
+              ${graduacaoHtml && resumoPartes.length ? graduacaoHtml : ''}
+              ${posGraduacoesHtml ? `<div class="perfil-secao-titulo">Pós-graduações</div>${posGraduacoesHtml}` : ''}
+              ${experienciasHtml ? `<div class="perfil-secao-titulo">Experiências de trabalho e vivências relevantes</div>${experienciasHtml}` : ''}
+            </div>
+          ` : ''}
         `;
+
+        // ── Card "Certificados" — galeria de fotos de diplomas/certificações
+        const certificados = perfilData.certificados || [];
+        if (certificados.length) {
+          document.getElementById('painel-certificados').classList.remove('hidden');
+          document.getElementById('painel-certificados-conteudo').innerHTML = certificados.map(c =>
+            `<img src="${c.imagem_url}" alt="${c.titulo || 'Certificado'}" onclick="window.open('${c.imagem_url}', '_blank')" />`
+          ).join('');
+        }
 
         // ── Card "Valores" — só aparece se houver serviços cadastrados.
         // Deliberadamente neutro (sem cor de destaque/badge de promoção):
@@ -412,12 +492,9 @@
         document.getElementById('secao-avaliar').classList.remove('hidden');
         carregarHorarios();
 
-        if (p.telefone) {
-          const telLimpo = p.telefone.replace(/\D/g, '');
-          const telComDDI = telLimpo.length <= 11 ? '55' + telLimpo : telLimpo; // assume BR se vier sem DDI
-          const mensagem = encodeURIComponent(`Olá, ${p.nome.split(' ')[0]}! Vi seu perfil no O Seu Psico e gostaria de saber mais sobre atendimento.`);
+        if (linkWhats) {
           const btnWhats = document.getElementById('whatsapp-flutuante');
-          btnWhats.href = `https://wa.me/${telComDDI}?text=${mensagem}`;
+          btnWhats.href = linkWhats;
           btnWhats.classList.remove('hidden');
           btnWhats.addEventListener('click', () => registrarEvento('whatsapp_click'));
         }
@@ -440,6 +517,14 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo }),
       }).catch(() => {});
+    }
+
+    function toggleFormacaoDetalhe() {
+      document.getElementById('formacao-toggle-btn').classList.toggle('aberto');
+      const detalhe = document.getElementById('formacao-detalhe').classList.toggle('aberto');
+      document.getElementById('formacao-toggle-btn').firstChild.textContent = detalhe
+        ? 'Ver menos '
+        : 'Ver formação completa e experiências ';
     }
 
     carregar();
