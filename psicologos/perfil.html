@@ -24,13 +24,16 @@
     .perfil-foto { width: 100%; height: 100%; border-radius: 50%; background: #F0EDE0; overflow: hidden; border: 3px solid #fff; }
     .perfil-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-    .perfil-nome { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.5rem, 3vw, 2rem); color: #1A1A1A; letter-spacing: -0.02em; margin-bottom: 6px; }
-    .perfil-nota { font-size: 0.95rem; color: #666; margin-bottom: 10px; }
+    .perfil-nome { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.5rem, 3vw, 2rem); color: #1A1A1A; letter-spacing: -0.02em; margin-bottom: 8px; }
+    .perfil-nota { font-size: 0.95rem; color: #666; margin-bottom: 12px; }
     .perfil-nota .estrela { color: #B8940A; font-weight: 700; }
-    .perfil-badges { display: flex; flex-wrap: wrap; gap: 8px; }
-    .perfil-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 700; padding: 5px 12px; border-radius: 20px; }
+    .perfil-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+    .perfil-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 700; padding: 6px 13px; border-radius: 20px; }
     .perfil-badge--verificado { background: #E0F2FE; color: #0369A1; }
     .perfil-badge--experiencia { background: #FFF3C4; color: #7a6200; }
+    .perfil-links { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; }
+    .perfil-links a { display: inline-flex; align-items: center; gap: 6px; color: #666; font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+    .perfil-links a:hover { color: #1A1A1A; }
 
     .perfil-corpo { padding: 36px 0 64px; }
     /* Avaliações sempre por último: no desktop fica embaixo de "Sobre" na
@@ -47,11 +50,6 @@
       .perfil-grid { grid-template-columns: 1fr; grid-template-areas: "sobre" "agendar" "avaliacoes"; }
     }
 
-    /* Lista de valores/serviços — deliberadamente neutra, sem destaque
-       visual (ver Art. 20-d do Código de Ética: preço não pode virar
-       propaganda). Mesma tipografia do resto do texto do perfil. */
-    .perfil-valores p { margin-bottom: 6px; }
-
     .perfil-painel {
       background: #fff; border: 1px solid #F0EDE4; border-radius: 20px; padding: 28px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.04); color: #1A1A1A; margin-bottom: 20px;
@@ -61,8 +59,55 @@
     .perfil-painel h3:first-of-type { margin-top: 0; }
     .perfil-painel p { color: #555; line-height: 1.7; }
 
-    .perfil-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    /* Cabeçalho de cada card de seção: ícone colorido + título — dá pra
+       "escanear" a página rapidamente, em vez de um bloco de texto corrido. */
+    .perfil-painel__head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .perfil-painel__head h2 { margin-bottom: 0; }
+    .perfil-painel__icon {
+      width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center;
+      justify-content: center; font-size: 1.1rem; flex-shrink: 0;
+    }
+    .perfil-painel__icon--sobre { background: #FFF3C4; }
+    .perfil-painel__icon--formacao { background: #E0F2FE; }
+    .perfil-painel__icon--valores { background: #D1FAE5; }
+    .perfil-painel__icon--video { background: #1A1A1A; }
+    .perfil-painel__icon--avaliacoes { background: #FDE8C8; }
+    .perfil-painel__icon--agendar { background: #F5C518; }
+
+    .perfil-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
     .perfil-tag { background: #FFF8E6; color: #7a6200; font-size: 0.82rem; font-weight: 600; padding: 6px 14px; border-radius: 20px; border: 1px solid #F5E5A8; }
+
+    /* Faixa de "fatos rápidos" logo abaixo da bio — idiomas, abordagem —
+       cada um como um chip com ícone, fácil de escanear. */
+    .perfil-fatos { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .perfil-fato { display: flex; align-items: center; gap: 8px; background: #FAF8F2; border: 1px solid #F0EDE4; border-radius: 12px; padding: 8px 14px; font-size: 0.82rem; color: #444; }
+    .perfil-fato strong { color: #1A1A1A; }
+
+    /* Linha do tempo de formação/experiências — cada item com borda colorida
+       à esquerda em vez de um parágrafo solto atrás do outro. */
+    .perfil-item {
+      border-left: 3px solid #F0EDE4; padding: 4px 0 4px 16px; margin-bottom: 14px;
+    }
+    .perfil-item:last-child { margin-bottom: 0; }
+    .perfil-item--destaque { border-left-color: #F5C518; }
+    .perfil-item__titulo { font-weight: 700; color: #1A1A1A; font-size: 0.92rem; }
+    .perfil-item__sub { color: #777; font-size: 0.8rem; margin-top: 2px; }
+
+    .perfil-secao-titulo { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #999; margin: 22px 0 10px; }
+    .perfil-secao-titulo:first-child { margin-top: 0; }
+
+    /* Valores — cards leves, sem cor de destaque/promocional (Art. 20-d do
+       Código de Ética: preço não pode ser usado como propaganda), mas ainda
+       organizados em linhas separadas em vez de texto corrido. */
+    .perfil-valor-item {
+      display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+      padding: 12px 0; border-bottom: 1px solid #F0EDE4;
+    }
+    .perfil-valor-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .perfil-valor-item:first-child { padding-top: 0; }
+    .perfil-valor-item__nome { font-weight: 600; color: #1A1A1A; font-size: 0.92rem; }
+    .perfil-valor-item__desc { color: #999; font-size: 0.8rem; margin-top: 2px; }
+    .perfil-valor-item__preco { color: #555; font-size: 0.92rem; white-space: nowrap; }
 
     .avaliacao-item { border-bottom: 1px solid #F0EDE4; padding: 16px 0; }
     .avaliacao-item:last-child { border-bottom: none; padding-bottom: 0; }
@@ -70,7 +115,7 @@
     .avaliacao-item .estrelas { color: #D4A800; font-size: 0.95rem; }
     .avaliacao-verificado { background: #D1FAE5; color: #065F46; font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; margin-left: 8px; }
     .avaliacao-comentario { color: #444; margin-top: 6px; line-height: 1.6; }
-    .avaliacao-autor { color: #999; font-size: 0.78rem; margin-top: 6px; }
+    .avaliacao-autor { color: #999; font-size: 0.78rem; margin-top: 6px; font-weight: 600; }
 
     .horario-btn {
       font-size: 0.82rem; padding: 9px 14px; border-radius: 10px; border: 1.5px solid #E8E2CC;
@@ -123,13 +168,31 @@
         <div class="perfil-grid">
 
           <div class="perfil-area-sobre">
-            <div class="perfil-painel" id="painel-sobre"></div>
+            <div class="perfil-painel hidden" id="painel-video">
+              <div class="perfil-painel__head"><div class="perfil-painel__icon perfil-painel__icon--video">🎥</div><h2>Vídeo de apresentação</h2></div>
+              <div id="painel-video-conteudo"></div>
+            </div>
+
+            <div class="perfil-painel" id="painel-sobre">
+              <div class="perfil-painel__head"><div class="perfil-painel__icon perfil-painel__icon--sobre">👤</div><h2>Sobre</h2></div>
+              <div id="painel-sobre-conteudo"></div>
+            </div>
+
+            <div class="perfil-painel" id="painel-formacao">
+              <div class="perfil-painel__head"><div class="perfil-painel__icon perfil-painel__icon--formacao">🎓</div><h2>Formação e experiência</h2></div>
+              <div id="painel-formacao-conteudo"></div>
+            </div>
+
+            <div class="perfil-painel hidden" id="painel-valores">
+              <div class="perfil-painel__head"><div class="perfil-painel__icon perfil-painel__icon--valores">💰</div><h2>Valores</h2></div>
+              <div id="painel-valores-conteudo"></div>
+            </div>
           </div>
 
           <div class="perfil-area-agendar">
             <div class="perfil-painel hidden" id="secao-agendar" style="position:sticky;top:88px;">
-              <h2>📅 Agendar entrevista inicial</h2>
-              <p style="font-size:0.85rem;color:#666;margin:-6px 0 14px;">Escolha um horário pra uma primeira conversa — sem compromisso, pra vocês se conhecerem.</p>
+              <div class="perfil-painel__head"><div class="perfil-painel__icon perfil-painel__icon--agendar">📅</div><h2>Agendar entrevista inicial</h2></div>
+              <p style="font-size:0.85rem;color:#666;margin:-10px 0 14px;">Escolha um horário pra uma primeira conversa — sem compromisso, pra vocês se conhecerem.</p>
               <div id="horarios-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">Carregando horários...</div>
 
               <form id="form-agendar" class="hidden">
@@ -151,7 +214,7 @@
 
           <div class="perfil-area-avaliacoes">
             <div class="perfil-painel">
-              <h2>Avaliações</h2>
+              <div class="perfil-painel__head"><div class="perfil-painel__icon perfil-painel__icon--avaliacoes">⭐</div><h2>Avaliações</h2></div>
               <div id="lista-avaliacoes"></div>
             </div>
 
@@ -227,7 +290,6 @@
 
     async function carregar() {
       const heroEl = document.getElementById('hero-conteudo');
-      const sobreEl = document.getElementById('painel-sobre');
       if (!id) { heroEl.innerHTML = '<p style="color:#888;">Psicólogo não encontrado.</p>'; return; }
 
       try {
@@ -266,9 +328,9 @@
                 ${badgeExperiencia}
                 ${p.crp_numero ? `<span class="perfil-badge" style="background:#F0EDE4;color:#555;">CRP ${p.crp_numero}/${p.crp_estado}</span>` : ''}
               </div>
-              ${p.instagram || p.site_pessoal ? `<div style="display:flex;gap:12px;margin-top:8px;font-size:0.85rem;">
-                ${p.instagram ? `<a href="https://instagram.com/${p.instagram.replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '')}" target="_blank" rel="noopener" style="color:#555;">📷 Instagram</a>` : ''}
-                ${p.site_pessoal ? `<a href="${p.site_pessoal}" target="_blank" rel="noopener" style="color:#555;">🔗 Site</a>` : ''}
+              ${p.instagram || p.site_pessoal ? `<div class="perfil-links">
+                ${p.instagram ? `<a href="https://instagram.com/${p.instagram.replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '')}" target="_blank" rel="noopener">📷 Instagram</a>` : ''}
+                ${p.site_pessoal ? `<a href="${p.site_pessoal}" target="_blank" rel="noopener">🔗 Site pessoal</a>` : ''}
               </div>` : ''}
             </div>
           </div>
@@ -276,55 +338,65 @@
 
         const anoFormacao = p.graduacao_mes_ano ? p.graduacao_mes_ano.split('/')[1] : '';
 
-        // Experiências: formato novo é uma lista estruturada (título + período);
-        // perfis antigos ainda têm só o texto livre em projetos_relevantes —
-        // mostramos qualquer um dos dois formatos que existir, sempre dentro
-        // de um único bloco (não um heading por item).
+        // ── Card "Vídeo de apresentação" — só aparece se o psicólogo cadastrou
+        const videoSrc = embedVideoSrc(p.video_apresentacao_url);
+        if (p.video_apresentacao_url) {
+          document.getElementById('painel-video').classList.remove('hidden');
+          document.getElementById('painel-video-conteudo').innerHTML = videoSrc
+            ? `<div style="position:relative;padding-top:56.25%;border-radius:12px;overflow:hidden;">
+                 <iframe src="${videoSrc}" style="position:absolute;inset:0;width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+               </div>`
+            : `<p><a href="${p.video_apresentacao_url}" target="_blank" rel="noopener">Assistir vídeo de apresentação →</a></p>`;
+        }
+
+        // ── Card "Sobre" — bio + especialidades + idiomas/abordagem como fatos rápidos
+        const fatos = [];
+        if (p.idiomas) fatos.push(`<div class="perfil-fato">🗣️ <strong>${p.idiomas}</strong></div>`);
+        if (p.abordagem) fatos.push(`<div class="perfil-fato">🧠 <strong>${p.abordagem}</strong></div>`);
+        document.getElementById('painel-sobre-conteudo').innerHTML = `
+          ${p.bio ? `<p>${p.bio}</p>` : '<p style="color:#999;">Esse psicólogo ainda não escreveu uma apresentação.</p>'}
+          ${fatos.length ? `<div class="perfil-fatos">${fatos.join('')}</div>` : ''}
+          ${especialidades.length ? `<div class="perfil-secao-titulo">Especialidades</div><div class="perfil-tags">${especialidades.map(e => `<span class="perfil-tag">${e}</span>`).join('')}</div>` : ''}
+        `;
+
+        // ── Card "Formação e experiência" — cada item como linha do tempo
+        // (borda colorida à esquerda) em vez de parágrafos soltos.
         let experiencias = [];
         try { experiencias = JSON.parse(p.experiencias || '[]'); } catch {}
-        const experienciasHtml = experiencias.length
-          ? `<h3>Experiências de trabalho e vivências relevantes</h3>
-             <div class="perfil-experiencias">
-               ${experiencias.map(e => `<p>• <strong>${e.titulo}</strong>${e.inicio ? ` (${e.inicio} – ${e.atual ? 'atual' : (e.fim || '')})` : ''}</p>`).join('')}
+        const graduacaoHtml = (p.graduacao_curso || p.graduacao_instituicao)
+          ? `<div class="perfil-item perfil-item--destaque">
+               <div class="perfil-item__titulo">${p.graduacao_curso || 'Graduação'}</div>
+               <div class="perfil-item__sub">${p.graduacao_instituicao || ''}${anoFormacao ? ` · ${anoFormacao}` : ''}</div>
              </div>`
-          : (p.projetos_relevantes ? `<h3>Experiências de trabalho e vivências relevantes</h3><p>${p.projetos_relevantes}</p>` : '');
-
-        const videoSrc = embedVideoSrc(p.video_apresentacao_url);
-        const videoHtml = p.video_apresentacao_url
-          ? `<h3>Vídeo de apresentação</h3>${videoSrc
-              ? `<div style="position:relative;padding-top:56.25%;border-radius:12px;overflow:hidden;margin-bottom:16px;"><iframe src="${videoSrc}" style="position:absolute;inset:0;width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
-              : `<p><a href="${p.video_apresentacao_url}" target="_blank" rel="noopener">Assistir vídeo de apresentação →</a></p>`}`
           : '';
+        const posGraduacoesHtml = posGraduacoes.map(pg => `<div class="perfil-item"><div class="perfil-item__titulo">${pg}</div></div>`).join('');
+        const experienciasHtml = experiencias.length
+          ? experiencias.map(e => `<div class="perfil-item"><div class="perfil-item__titulo">${e.titulo}</div>${e.inicio ? `<div class="perfil-item__sub">${e.inicio} – ${e.atual ? 'atual' : (e.fim || '')}</div>` : ''}</div>`).join('')
+          : (p.projetos_relevantes ? `<div class="perfil-item"><p style="margin:0;">${p.projetos_relevantes}</p></div>` : '');
 
-        const servicos = perfilData.servicos || [];
-        // Lista neutra, sem destaque visual — Art. 20-d do Código de Ética
-        // do Psicólogo veda usar o preço como forma de propaganda (ver
-        // memória do projeto). Nada de badge, cor chamativa ou "a partir de".
-        const valoresHtml = servicos.length
-          ? `<h3>Valores</h3><div class="perfil-valores">
-              ${servicos.map(s => `<p>${s.nome}${s.valor != null ? ` — R$ ${Number(s.valor).toFixed(2).replace('.', ',')}` : ' — a combinar'}${s.descricao ? ` <span style="color:#999;">(${s.descricao})</span>` : ''}</p>`).join('')}
-            </div>`
-          : '';
-
-        sobreEl.innerHTML = `
-          ${videoHtml}
-
-          ${p.bio ? `<h2>Sobre</h2><p>${p.bio}</p>` : ''}
-
-          ${especialidades.length ? `<h3>Especialidades</h3><div class="perfil-tags">${especialidades.map(e => `<span class="perfil-tag">${e}</span>`).join('')}</div>` : ''}
-
-          ${p.idiomas ? `<h3>Idiomas de atendimento</h3><p>${p.idiomas}</p>` : ''}
-
-          <h3>Formação</h3>
-          <p>${p.graduacao_curso || ''}${p.graduacao_instituicao ? ' — ' + p.graduacao_instituicao : ''}${anoFormacao ? ' (' + anoFormacao + ')' : ''}</p>
-          ${posGraduacoes.map(pg => `<p>${pg}</p>`).join('')}
-
-          ${p.abordagem ? `<h3>Abordagem</h3><p>${p.abordagem}</p>` : ''}
-
-          ${experienciasHtml}
-
-          ${valoresHtml}
+        document.getElementById('painel-formacao-conteudo').innerHTML = `
+          ${graduacaoHtml}
+          ${posGraduacoesHtml ? `<div class="perfil-secao-titulo">Pós-graduações</div>${posGraduacoesHtml}` : ''}
+          ${experienciasHtml ? `<div class="perfil-secao-titulo">Experiências de trabalho e vivências relevantes</div>${experienciasHtml}` : ''}
+          ${!graduacaoHtml && !posGraduacoesHtml && !experienciasHtml ? '<p style="color:#999;">Nenhuma formação cadastrada ainda.</p>' : ''}
         `;
+
+        // ── Card "Valores" — só aparece se houver serviços cadastrados.
+        // Deliberadamente neutro (sem cor de destaque/badge de promoção):
+        // Art. 20-d do Código de Ética veda usar preço como propaganda.
+        const servicos = perfilData.servicos || [];
+        if (servicos.length) {
+          document.getElementById('painel-valores').classList.remove('hidden');
+          document.getElementById('painel-valores-conteudo').innerHTML = servicos.map(s => `
+            <div class="perfil-valor-item">
+              <div>
+                <div class="perfil-valor-item__nome">${s.nome}</div>
+                ${s.descricao ? `<div class="perfil-valor-item__desc">${s.descricao}</div>` : ''}
+              </div>
+              <div class="perfil-valor-item__preco">${s.valor != null ? `R$ ${Number(s.valor).toFixed(2).replace('.', ',')}` : 'a combinar'}</div>
+            </div>
+          `).join('');
+        }
 
         document.getElementById('lista-avaliacoes').innerHTML = avaliacoes.length
           ? avaliacoes.map(a => `
