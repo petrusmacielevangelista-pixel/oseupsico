@@ -450,7 +450,7 @@
         const res = await fetch('/api/especialidades');
         const data = await res.json();
         el.innerHTML = (data.especialidades || []).map(e => `
-          <label style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid #F3EFE3;font-size:0.85rem;color:#333;cursor:pointer;break-inside:avoid;">
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:8px;background:#FFF8E6;border:1px solid #F5E5A8;border-radius:10px;font-size:0.85rem;color:#7a6200;font-weight:600;cursor:pointer;break-inside:avoid;">
             <input type="checkbox" value="${e.nome}" class="chk-edit-especialidade" style="flex-shrink:0;width:16px;height:16px;" ${selecionadas.includes(e.nome) ? 'checked' : ''} /> ${e.nome}
           </label>
         `).join('');

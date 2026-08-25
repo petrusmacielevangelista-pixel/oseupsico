@@ -1,0 +1,6 @@
+Restaura o fundo/contorno amarelo das especialidades na lista de 2 colunas
+
+A reorganizacao em lista uniforme tinha perdido a cor de marca (fundo
+creme, borda amarela) que os chips antigos tinham. Agora cada linha da
+lista mantem essa identidade visual, so que organizada — nao mais chips
+de largura variavel.
