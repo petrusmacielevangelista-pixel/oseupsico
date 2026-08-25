@@ -98,7 +98,7 @@
     /* Cada seção do feed — espaço generoso entre elas e um título visível,
        já que agora todas ficam abertas ao mesmo tempo (não dá mais pra
        saber "em que aba você está" só pelo destaque da aba). */
-    .perfil-secao-feed { padding-top: 8px; scroll-margin-top: 110px; }
+    .perfil-secao-feed { padding-top: 8px; scroll-margin-top: 145px; }
     .perfil-secao-feed + .perfil-secao-feed { margin-top: 8px; padding-top: 32px; border-top: 1px solid #F0EDE4; }
     .perfil-secao-feed__titulo { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: #1A1A1A; margin-bottom: 16px; }
     .perfil-tab {
@@ -645,8 +645,9 @@
     function irParaSecao(nome) {
       const el = document.getElementById('perfil-tab-' + nome);
       if (!el) return;
-      const offset = el.getBoundingClientRect().top + window.scrollY - 100; // some espaço pro cabeçalho fixo do site
-      window.scrollTo({ top: offset, behavior: 'smooth' });
+      // scrollIntoView + scroll-margin-top (CSS) em vez de calcular o
+      // offset na mão — mais robusto, o navegador cuida da conta.
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function marcarAbaAtiva(nome) {

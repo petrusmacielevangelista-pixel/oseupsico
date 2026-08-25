@@ -1,0 +1,9 @@
+Corrige clique nas abas nao rolando + folga insuficiente sob a barra fixa
+
+Troca o calculo manual de offset (window.scrollTo com matematica propria)
+por scrollIntoView nativo + scroll-margin-top no CSS — mais robusto, o
+navegador cuida da conta. Tambem aumenta scroll-margin-top de 110px pra
+145px: a barra fixa (top:88px + proprio tamanho) tinha ~138px de altura
+total, entao 110px de folga deixava o conteudo comecando por baixo da
+barra (visivel no print do usuario, texto da avaliacao cortado atras da
+barra de abas).
