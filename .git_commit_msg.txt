@@ -1,6 +1,0 @@
-Remove mencao ao Doctoralia do texto visivel do endereco do consultorio
-
-Era texto voltado ao usuario final (o psicologo cadastrando o perfil), nao
-faz sentido citar concorrente ali. Mantive as referencias em comentarios
-de codigo (invisiveis pro usuario), so uteis pra contexto de quem mexe no
-codigo depois.
