@@ -7,6 +7,14 @@
   <link rel="icon" href="/assets/logo.png" />
   <link rel="stylesheet" href="/css/style.css" />
   <style>
+    /* O body global do site tem overflow-x:hidden (evita scroll horizontal
+       no site todo) — mas QUALQUER ancestral com overflow diferente de
+       "visible" quebra position:sticky dos descendentes, mesmo só no eixo
+       X. É por isso que a barra de abas não ficava fixa. Essa página já
+       não tem overflow horizontal (grid/flex com wrap testados), então
+       é seguro reabilitar aqui. */
+    html, body { overflow-x: visible; }
+
     /* Tema fixo claro pra essa seção — não herda o modo escuro automático
        do site institucional (que deixava texto claro em cima de fundo
        claro em vários pontos, quase ilegível). */
