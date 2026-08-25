@@ -7,14 +7,6 @@
   <link rel="icon" href="/assets/logo.png" />
   <link rel="stylesheet" href="/css/style.css" />
   <style>
-    /* O body global do site tem overflow-x:hidden (evita scroll horizontal
-       no site todo) — mas QUALQUER ancestral com overflow diferente de
-       "visible" quebra position:sticky dos descendentes, mesmo só no eixo
-       X. É por isso que a barra de abas não ficava fixa. Essa página já
-       não tem overflow horizontal (grid/flex com wrap testados), então
-       é seguro reabilitar aqui. */
-    html, body { overflow-x: visible; }
-
     /* Tema fixo claro pra essa seção — não herda o modo escuro automático
        do site institucional (que deixava texto claro em cima de fundo
        claro em vários pontos, quase ilegível). */
@@ -85,20 +77,17 @@
     }
 
     /* Abas Sobre / Serviços / Avaliações — não trocam de painel, só levam
-       até a seção via scroll (ver .perfil-secao-feed) — exatamente como no
-       Doctoralia, onde tudo fica num feed único e a barra de abas funciona
-       como sumário fixo no topo enquanto a pessoa rola a página. */
+       até a seção via scroll (ver .perfil-secao-feed). Não ficam fixas ao
+       rolar (o usuário pediu pra tirar) — rolam junto com o resto da página. */
     .perfil-tabs {
-      display: flex; gap: 26px; border-bottom: 1.5px solid #F0EDE4; margin: -4px -28px 24px; padding: 0 28px 0;
-      overflow-x: auto; position: sticky; top: 88px; background: #fff; z-index: 5;
+      display: flex; gap: 26px; border-bottom: 1.5px solid #F0EDE4; margin: -4px 0 24px;
+      overflow-x: auto;
     }
-    /* No mobile o header do site não é fixo, então a barra pode ficar bem mais alta. */
-    @media (max-width: 860px) { .perfil-tabs { top: 0; } }
 
     /* Cada seção do feed — espaço generoso entre elas e um título visível,
        já que agora todas ficam abertas ao mesmo tempo (não dá mais pra
        saber "em que aba você está" só pelo destaque da aba). */
-    .perfil-secao-feed { padding-top: 8px; scroll-margin-top: 145px; }
+    .perfil-secao-feed { padding-top: 8px; scroll-margin-top: 20px; }
     .perfil-secao-feed + .perfil-secao-feed { margin-top: 8px; padding-top: 32px; border-top: 1px solid #F0EDE4; }
     .perfil-secao-feed__titulo { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: #1A1A1A; margin-bottom: 16px; }
     .perfil-tab {
@@ -660,7 +649,7 @@
     const scrollSpy = new IntersectionObserver((entries) => {
       const visivel = entries.filter(en => en.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
       if (visivel) marcarAbaAtiva(visivel.target.id.replace('perfil-tab-', ''));
-    }, { rootMargin: '-110px 0px -60% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] });
+    }, { rootMargin: '-20px 0px -60% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] });
     ['sobre', 'servicos', 'avaliacoes'].forEach(t => scrollSpy.observe(document.getElementById('perfil-tab-' + t)));
 
     carregar();

@@ -1,0 +1,7 @@
+Remove barra de abas fixa (sticky) do perfil, a pedido do usuario
+
+A barra Sobre/Servicos/Avaliacoes volta a rolar junto com o resto da
+pagina, sem ficar grudada no topo. Reverte tambem o overflow-x:visible
+que so existia pra viabilizar o sticky, e recalibra o scroll-margin-top
+das secoes e o rootMargin do scrollspy pra nao considerar mais uma barra
+fixa que nao existe mais.
