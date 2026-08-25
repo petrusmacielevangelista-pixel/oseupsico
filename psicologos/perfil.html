@@ -76,9 +76,23 @@
       width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; border: 1px solid #F0EDE4; cursor: pointer;
     }
 
-    /* Abas Sobre / Serviços / Avaliações — no estilo sublinhado do
-       Doctoralia, dentro de um único card em vez de vários cards empilhados. */
-    .perfil-tabs { display: flex; gap: 26px; border-bottom: 1.5px solid #F0EDE4; margin: -4px 0 24px; overflow-x: auto; }
+    /* Abas Sobre / Serviços / Avaliações — não trocam de painel, só levam
+       até a seção via scroll (ver .perfil-secao-feed) — exatamente como no
+       Doctoralia, onde tudo fica num feed único e a barra de abas funciona
+       como sumário fixo no topo enquanto a pessoa rola a página. */
+    .perfil-tabs {
+      display: flex; gap: 26px; border-bottom: 1.5px solid #F0EDE4; margin: -4px -28px 24px; padding: 0 28px 0;
+      overflow-x: auto; position: sticky; top: 88px; background: #fff; z-index: 5;
+    }
+    /* No mobile o header do site não é fixo, então a barra pode ficar bem mais alta. */
+    @media (max-width: 860px) { .perfil-tabs { top: 0; } }
+
+    /* Cada seção do feed — espaço generoso entre elas e um título visível,
+       já que agora todas ficam abertas ao mesmo tempo (não dá mais pra
+       saber "em que aba você está" só pelo destaque da aba). */
+    .perfil-secao-feed { padding-top: 8px; scroll-margin-top: 110px; }
+    .perfil-secao-feed + .perfil-secao-feed { margin-top: 8px; padding-top: 32px; border-top: 1px solid #F0EDE4; }
+    .perfil-secao-feed__titulo { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: #1A1A1A; margin-bottom: 16px; }
     .perfil-tab {
       background: none; border: none; border-bottom: 2.5px solid transparent; cursor: pointer;
       font-size: 0.92rem; font-weight: 700; color: #666; padding: 4px 2px 12px; white-space: nowrap;
@@ -253,22 +267,24 @@
 
           <div class="perfil-area-sobre">
             <div class="perfil-painel">
-              <div class="perfil-tabs" role="tablist" aria-label="Seções do perfil">
-                <button class="perfil-tab ativo" role="tab" aria-selected="true" aria-controls="perfil-tab-sobre" id="tab-btn-sobre" data-tab="sobre" onclick="mudarPerfilTab('sobre')">Sobre</button>
-                <button class="perfil-tab hidden" role="tab" aria-selected="false" aria-controls="perfil-tab-servicos" data-tab="servicos" id="tab-btn-servicos" onclick="mudarPerfilTab('servicos')">Serviços</button>
-                <button class="perfil-tab" role="tab" aria-selected="false" aria-controls="perfil-tab-avaliacoes" id="tab-btn-avaliacoes" data-tab="avaliacoes" onclick="mudarPerfilTab('avaliacoes')">Avaliações <span id="tab-avaliacoes-contagem"></span></button>
-              </div>
+              <nav class="perfil-tabs" aria-label="Ir para seção">
+                <button class="perfil-tab ativo" id="tab-btn-sobre" data-tab="sobre" onclick="irParaSecao('sobre')">Sobre</button>
+                <button class="perfil-tab hidden" data-tab="servicos" id="tab-btn-servicos" onclick="irParaSecao('servicos')">Serviços</button>
+                <button class="perfil-tab" data-tab="avaliacoes" id="tab-btn-avaliacoes" onclick="irParaSecao('avaliacoes')">Avaliações <span id="tab-avaliacoes-contagem"></span></button>
+              </nav>
 
-              <div id="perfil-tab-sobre" role="tabpanel" aria-labelledby="tab-btn-sobre">
+              <div id="perfil-tab-sobre" class="perfil-secao-feed">
                 <div id="painel-video-conteudo"></div>
                 <div id="painel-sobre-conteudo"></div>
               </div>
 
-              <div id="perfil-tab-servicos" role="tabpanel" aria-labelledby="tab-btn-servicos" class="hidden">
+              <div id="perfil-tab-servicos" class="perfil-secao-feed hidden">
+                <h2 class="perfil-secao-feed__titulo">Serviços</h2>
                 <div id="painel-valores-conteudo"></div>
               </div>
 
-              <div id="perfil-tab-avaliacoes" role="tabpanel" aria-labelledby="tab-btn-avaliacoes" class="hidden">
+              <div id="perfil-tab-avaliacoes" class="perfil-secao-feed">
+                <h2 class="perfil-secao-feed__titulo">Avaliações</h2>
                 <div id="lista-avaliacoes"></div>
 
                 <div class="hidden" id="secao-avaliar" style="margin-top:24px;padding-top:24px;border-top:1px solid #F0EDE4;">
@@ -444,7 +460,7 @@
             </div>
             <div>
               <h1 class="perfil-nome">${p.nome}</h1>
-              <div class="perfil-nota">${media ? `<button type="button" class="perfil-nota-link" onclick="mudarPerfilTab('avaliacoes');document.getElementById('tab-btn-avaliacoes').scrollIntoView({behavior:'smooth',block:'center'});"><span class="estrela">⭐ ${media.toFixed(1)}</span> (${perfilData.total_avaliacoes} avaliações)</button>` : 'Ainda sem avaliações'}</div>
+              <div class="perfil-nota">${media ? `<button type="button" class="perfil-nota-link" onclick="irParaSecao('avaliacoes')"><span class="estrela">⭐ ${media.toFixed(1)}</span> (${perfilData.total_avaliacoes} avaliações)</button>` : 'Ainda sem avaliações'}</div>
               <div class="perfil-badges">
                 <span class="perfil-badge perfil-badge--verificado">✓ Perfil verificado</span>
                 ${badgeExperiencia}
@@ -553,6 +569,7 @@
         const servicos = perfilData.servicos || [];
         if (servicos.length) {
           document.getElementById('tab-btn-servicos').classList.remove('hidden');
+          document.getElementById('perfil-tab-servicos').classList.remove('hidden');
           document.getElementById('painel-valores-conteudo').innerHTML = servicos.map(s => `
             <div class="perfil-valor-item">
               <div>
@@ -612,14 +629,30 @@
       }).catch(() => {});
     }
 
-    function mudarPerfilTab(nome) {
-      document.querySelectorAll('.perfil-tab').forEach(b => {
-        const ativo = b.dataset.tab === nome;
-        b.classList.toggle('ativo', ativo);
-        b.setAttribute('aria-selected', String(ativo));
-      });
-      ['sobre', 'servicos', 'avaliacoes'].forEach(t => document.getElementById('perfil-tab-' + t).classList.toggle('hidden', t !== nome));
+    // Não é mais um "trocador" de painéis — todas as seções (Sobre,
+    // Serviços, Avaliações) ficam visíveis ao mesmo tempo, empilhadas num
+    // feed único, igual ao Doctoralia. As "abas" só levam até a seção via
+    // scroll suave; qual aba fica destacada é decidido por scrollspy
+    // (ver observador mais abaixo), não por clique.
+    function irParaSecao(nome) {
+      const el = document.getElementById('perfil-tab-' + nome);
+      if (!el) return;
+      const offset = el.getBoundingClientRect().top + window.scrollY - 100; // some espaço pro cabeçalho fixo do site
+      window.scrollTo({ top: offset, behavior: 'smooth' });
     }
+
+    function marcarAbaAtiva(nome) {
+      document.querySelectorAll('.perfil-tab').forEach(b => b.classList.toggle('ativo', b.dataset.tab === nome));
+    }
+
+    // Scrollspy: observa qual seção está mais visível na tela agora e
+    // destaca a aba correspondente — mesmo comportamento do Doctoralia,
+    // onde a aba muda sozinha conforme a pessoa rola a página.
+    const scrollSpy = new IntersectionObserver((entries) => {
+      const visivel = entries.filter(en => en.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visivel) marcarAbaAtiva(visivel.target.id.replace('perfil-tab-', ''));
+    }, { rootMargin: '-110px 0px -60% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] });
+    ['sobre', 'servicos', 'avaliacoes'].forEach(t => scrollSpy.observe(document.getElementById('perfil-tab-' + t)));
 
     carregar();
 
