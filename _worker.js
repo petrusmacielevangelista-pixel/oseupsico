@@ -31,6 +31,10 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -1982,6 +1986,50 @@ export default {
       ).bind(assunto, JSON.stringify(paragrafos), imagem_url || null, botao_texto || null, botao_link || null, publico || 'todos', enviados).run();
 
       return json({ ok: true, enviados, total: destinatarios.length });
+    }
+
+    // Meta tags dinâmicas (og:title/description/image) pro link de cada
+    // psicólogo — sem isso, compartilhar o perfil no WhatsApp/Facebook
+    // mostrava sempre o preview genérico "Perfil do Psicólogo · O Seu
+    // Psico" (o <title> real só era setado via JS, depois que o link
+    // preview já tinha sido gerado pelo servidor de quem compartilhou).
+    if (pathname === '/psicologos/perfil.html' && url.searchParams.get('id')) {
+      try {
+        await initDB(env.DB);
+        const p = await env.DB.prepare(
+          `SELECT nome, foto_url, bio FROM psicologos WHERE id = ? AND status_aprovacao = 'aprovado' AND licenca_validade_ate >= date('now')`
+        ).bind(url.searchParams.get('id')).first();
+        if (p) {
+          // env.ASSETS.fetch às vezes devolve um 307 interno (normaliza
+          // "/perfil.html" -> "/perfil") em vez do HTML — segue esse
+          // redirect manualmente antes de reescrever, senão o HTMLRewriter
+          // roda em cima de uma resposta vazia.
+          let assetResponse = await env.ASSETS.fetch(request);
+          if ([301, 302, 307, 308].includes(assetResponse.status) && assetResponse.headers.get('Location')) {
+            const redirectUrl = new URL(assetResponse.headers.get('Location'), url.origin);
+            assetResponse = await env.ASSETS.fetch(new Request(redirectUrl, request));
+          }
+          const titulo = escapeHtml(`${p.nome} · O Seu Psico`);
+          const descricao = escapeHtml((p.bio || 'Perfil de psicólogo verificado em O Seu Psico.').slice(0, 160));
+          // og:image precisa ser URL absoluta — foto_url é salva como
+          // caminho relativo (/fotos/...), então completa com a origem.
+          const imagemBase = p.foto_url ? (p.foto_url.startsWith('http') ? p.foto_url : `${url.origin}${p.foto_url}`) : `${url.origin}/assets/logo.png`;
+          const imagem = escapeHtml(imagemBase);
+          return new HTMLRewriter()
+            .on('head', { element(el) {
+              el.append(
+                `<meta property="og:title" content="${titulo}" />` +
+                `<meta property="og:description" content="${descricao}" />` +
+                `<meta property="og:image" content="${imagem}" />` +
+                `<meta property="og:type" content="profile" />` +
+                `<meta name="twitter:card" content="summary_large_image" />`,
+                { html: true }
+              );
+            } })
+            .on('title', { element(el) { el.setInnerContent(titulo); } })
+            .transform(assetResponse);
+        }
+      } catch {} // qualquer erro aqui cai no fallback normal, sem quebrar a página
     }
 
     return env.ASSETS.fetch(request);
