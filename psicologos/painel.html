@@ -392,6 +392,18 @@
     </div>
   </div>
 
+  <div id="editar-serie-modal-overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:210;display:flex;align-items:center;justify-content:center;padding:16px;">
+    <div class="osp-card" style="max-width:380px;width:100%;">
+      <h3 style="margin-bottom:8px;">Salvar alteração</h3>
+      <p style="font-size:0.88rem;color:#555;margin-bottom:18px;">Esse compromisso faz parte de uma série (semanal/quinzenal). Nome, observação e tipo mudam onde você aplicar — a data/hora muda só nesse registro. O que você quer alterar?</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="btn btn--outline" style="justify-content:center;" onclick="continuarSalvarCompromisso(false)">Alterar só esse registro</button>
+        <button class="btn btn--yellow" style="justify-content:center;" onclick="continuarSalvarCompromisso(true)">Alterar todos os futuros dessa série</button>
+        <button class="btn btn--outline" style="justify-content:center;" onclick="document.getElementById('editar-serie-modal-overlay').classList.add('hidden')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     aplicarMascaraCelular(document.getElementById('edit-telefone'));
     const widgetExperienciasPainel = criarWidgetExperiencias('edit-experiencias-lista');
@@ -934,7 +946,7 @@
       document.getElementById('agenda-modal-overlay').classList.add('hidden');
     }
 
-    async function salvarCompromissoModal() {
+    function salvarCompromissoModal() {
       const erroEl = document.getElementById('am-erro');
       erroEl.textContent = '';
       const btnSalvar = document.getElementById('am-btn-salvar');
@@ -945,18 +957,34 @@
       const nome = document.getElementById('am-nome').value.trim();
       const data = document.getElementById('am-data').value;
       const hora = document.getElementById('am-hora').value;
-      const descricao = document.getElementById('am-descricao').value.trim();
       const tipoRadio = document.querySelector('input[name="am-tipo"]:checked');
 
       if (!tipoRadio) { erroEl.textContent = 'Selecione o tipo: Semanal, Quinzenal, Entrevista ou Avulso.'; return; }
-      const tipo = tipoRadio.value;
       if (!nome || !data || !hora) { erroEl.textContent = 'Preencha nome, data e hora.'; return; }
-      const data_hora = `${data} ${hora}:00`;
 
-      let aplicarSerie = false;
-      if (id && serieId && (tipo === 'semanal' || tipo === 'quinzenal')) {
-        aplicarSerie = confirm('Aplicar essa alteração (nome, descrição e tipo) a todos os outros registros desse paciente nessa série também?\n\nA data/hora muda só nesse registro.');
+      // Registro de série (semanal/quinzenal) editado tem uma escolha real
+      // com 2 caminhos bem diferentes — em vez de um confirm() nativo onde
+      // "OK" aplicava a todos e "Cancelar" aplicava só a esse (fácil de
+      // clicar OK sem querer achando que só confirmaria a mudança pontual),
+      // agora são 2 botões explícitos dizendo exatamente o que acontece.
+      if (id && serieId && (tipoRadio.value === 'semanal' || tipoRadio.value === 'quinzenal')) {
+        document.getElementById('editar-serie-modal-overlay').classList.remove('hidden');
+        return;
       }
+      continuarSalvarCompromisso(false);
+    }
+
+    async function continuarSalvarCompromisso(aplicarSerie) {
+      document.getElementById('editar-serie-modal-overlay').classList.add('hidden');
+      const erroEl = document.getElementById('am-erro');
+      const btnSalvar = document.getElementById('am-btn-salvar');
+      const id = document.getElementById('am-id').value;
+      const nome = document.getElementById('am-nome').value.trim();
+      const data = document.getElementById('am-data').value;
+      const hora = document.getElementById('am-hora').value;
+      const descricao = document.getElementById('am-descricao').value.trim();
+      const tipo = document.querySelector('input[name="am-tipo"]:checked').value;
+      const data_hora = `${data} ${hora}:00`;
 
       const url = id ? `/api/psicologos/me/compromissos/${id}` : '/api/psicologos/me/compromissos';
       const body = { paciente_nome: nome, descricao, data_hora, tipo, aplicar_serie: aplicarSerie };
