@@ -409,11 +409,34 @@ function horariosDoDiaPeloTrabalho(psicologo, diaSemana) {
   return horas;
 }
 
+// Os horários públicos são gerados só de hora em hora (08:00, 09:00...),
+// mas um compromisso pode estar marcado numa hora quebrada (19:30, 13:30 —
+// comum quando o psicólogo já tinha esses pacientes num horário próprio
+// antes de entrar na plataforma). Comparar o horário ocupado direto contra
+// o Set de slots gerados nunca bate nesses casos, e a vaga aparece como
+// livre mesmo estando ocupada (ou colada demais na sessão anterior).
+// Por isso, em vez de checar o horário exato, "arredondamos" cada horário
+// ocupado pra hora cheia em que ele cai — e, se começar depois de :00,
+// bloqueamos também a hora cheia seguinte (a sessão anterior ainda deve
+// estar rolando quando ela começaria).
+function bloquearHorasCheias(ocupados) {
+  const bloqueadas = new Set();
+  for (const dataHora of ocupados) {
+    const [data, hora] = dataHora.split(' ');
+    const [h, m] = hora.split(':').map(Number);
+    bloqueadas.add(`${data} ${String(h).padStart(2, '0')}:00`);
+    if (m > 0) bloqueadas.add(`${data} ${String(h + 1).padStart(2, '0')}:00`);
+  }
+  return bloqueadas;
+}
+
 // ocupadosSet deve conter os data_hora já normalizados pra "AAAA-MM-DD HH:MM"
 // (16 caracteres) — agendamentos e compromissos guardam formatos com
 // granularidade diferente (com/sem segundos), então quem monta o Set
-// precisa normalizar antes de passar aqui.
-function proximaVagaLivre(psicologo, ocupadosSet, diasAFrente = 15, feriadosSet = null) {
+// precisa normalizar antes de passar aqui. Internamente já passa por
+// bloquearHorasCheias(), então pode conter horários quebrados sem problema.
+function proximaVagaLivre(psicologo, ocupadosSetBruto, diasAFrente = 15, feriadosSet = null) {
+  const ocupadosSet = bloquearHorasCheias(ocupadosSetBruto);
   const agora = new Date();
   for (let d = 1; d <= diasAFrente; d++) {
     const dia = new Date(agora);
@@ -1724,7 +1747,7 @@ export default {
       const { results: ocupadosCompromissos } = await env.DB.prepare(
         `SELECT data_hora FROM compromissos WHERE psicologo_id = ? AND data_hora >= datetime('now')`
       ).bind(psicologoId).all();
-      const ocupadosSet = new Set([...ocupadosAgendamentos, ...ocupadosCompromissos].map(o => o.data_hora.slice(0, 16)));
+      const ocupadosSet = bloquearHorasCheias([...ocupadosAgendamentos, ...ocupadosCompromissos].map(o => o.data_hora.slice(0, 16)));
 
       const slots = [];
       const agora = new Date();

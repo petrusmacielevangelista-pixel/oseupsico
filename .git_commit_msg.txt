@@ -1,0 +1,18 @@
+Corrige agenda publica nao considerar compromissos em horario quebrado
+
+Os horarios oferecidos publicamente sao gerados so de hora em hora (08:00,
+09:00...), mas varios compromissos reais do psicologo estao em horas
+quebradas (19:30, 20:30, 13:30 - comum em pacientes que ja tinha antes de
+entrar na plataforma). Comparar o horario ocupado direto contra o horario
+gerado nunca batia nesses casos, entao a vaga aparecia como livre mesmo
+tendo uma sessao rolando ali perto.
+
+Nova funcao bloquearHorasCheias() arredonda cada horario ocupado pra hora
+cheia em que ele cai e, se comecar depois de :00, bloqueia tambem a hora
+cheia seguinte (a sessao anterior ainda deve estar rolando). Aplicada em
+proximaVagaLivre() (usada na listagem publica /psicologos) e na rota
+/horarios-disponiveis (usada no perfil individual).
+
+Testado ao vivo com dados reais do psicologo id=18: sessoes as 19:30 e
+20:30 agora bloqueiam corretamente 19:00, 20:00 e 21:00; sessao as 13:30
+bloqueia 13:00 e 14:00.
