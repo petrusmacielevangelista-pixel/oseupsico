@@ -1537,18 +1537,24 @@ export default {
       }
 
       if (aplicar_serie) {
-        // Propaga nome/descrição/tipo pra todos os outros registros da mesma
-        // série — mas NÃO a data/hora, que é específica de cada ocorrência.
-        const atual = await env.DB.prepare('SELECT serie_id FROM compromissos WHERE id = ? AND psicologo_id = ?')
+        // Propaga nome/descrição/tipo pra todos os registros da série, e o
+        // HORÁRIO (só a hora, não a data — cada ocorrência mantém seu
+        // próprio dia) pra essa ocorrência em diante, pensando no caso real:
+        // "meu paciente passou a vir sempre às 19h em vez de 13h30, dessa
+        // data em diante" — antes só a ocorrência clicada mudava de horário
+        // e todas as outras futuras continuavam no horário antigo.
+        const atual = await env.DB.prepare('SELECT serie_id, data_hora FROM compromissos WHERE id = ? AND psicologo_id = ?')
           .bind(compromissoMatch[1], psicologoId).first();
         if (atual?.serie_id) {
+          const novoHorario = data_hora.slice(11); // "HH:MM:SS"
+          const dataDaOcorrenciaEditada = atual.data_hora.slice(0, 10);
           await env.DB.prepare(
             `UPDATE compromissos SET paciente_nome = ?, descricao = ?, tipo = ? WHERE serie_id = ? AND psicologo_id = ?`
           ).bind(paciente_nome, descricao || null, tipo, atual.serie_id, psicologoId).run();
-          // A ocorrência clicada também recebe a nova data/hora individualmente.
           await env.DB.prepare(
-            `UPDATE compromissos SET data_hora = ? WHERE id = ? AND psicologo_id = ?`
-          ).bind(data_hora, compromissoMatch[1], psicologoId).run();
+            `UPDATE compromissos SET data_hora = date(data_hora) || ' ' || ?
+             WHERE serie_id = ? AND psicologo_id = ? AND date(data_hora) >= ?`
+          ).bind(novoHorario, atual.serie_id, psicologoId, dataDaOcorrenciaEditada).run();
           return json({ ok: true });
         }
       }
