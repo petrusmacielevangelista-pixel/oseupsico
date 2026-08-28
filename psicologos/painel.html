@@ -666,10 +666,11 @@
     const AGENDA_PX_POR_HORA = 40;
     function agendaAltura() { return (AGENDA_HORA_FIM - AGENDA_HORA_INICIO) * AGENDA_PX_POR_HORA; }
 
-    // No celular, "Semana" fica com colunas estreitas demais pra ler os
-    // nomes — começa em "Dia" (cabe inteira na tela) e deixa Semana/Mês
-    // disponíveis pra quem quiser rolar de propósito.
-    let agendaView = window.innerWidth < 640 ? 'dia' : 'semana';
+    // Sempre começa em "Semana" (desktop e mobile) — no celular as colunas
+    // ficam estreitas, mas o zoom/scroll automático pro horário atual (ver
+    // renderAgendaGradeHoraria) já resolve a legibilidade sem precisar cair
+    // pra "Dia" por padrão.
+    let agendaView = 'semana';
     document.querySelectorAll('.osp-view-toggle').forEach(b => b.classList.toggle('ativo', b.dataset.view === agendaView));
     let agendaReferencia = new Date(); agendaReferencia.setHours(0, 0, 0, 0);
     let agendaCache = { agendamentos: [], compromissos: [], feriados: [] };
@@ -833,16 +834,23 @@
 
       // No mobile, já abre "com zoom" perto do horário relevante — hora
       // atual se hoje estiver na tela, senão 08h — em vez de começar lá
-      // em cima nas 06h e obrigar a pessoa a rolar toda vez.
+      // em cima nas 06h e obrigar a pessoa a rolar toda vez. Na visão
+      // Semana, também rola horizontalmente até a coluna de hoje — sem
+      // isso a grade sempre abre mostrando domingo primeiro, e "hoje" podia
+      // ficar fora da tela exigindo rolar pro lado toda vez que abre.
       if (window.innerWidth < 640) {
-        const horaAlvo = diasArr.some(d => agendaDataISO(d) === isoHoje)
+        const indiceHoje = diasArr.findIndex(d => agendaDataISO(d) === isoHoje);
+        const horaAlvo = indiceHoje !== -1
           ? Math.max(AGENDA_HORA_INICIO, agora.getHours() - 1)
           : 8;
-        const alvoScroll = Math.max(0, (horaAlvo - AGENDA_HORA_INICIO) * AGENDA_PX_POR_HORA);
-        // O navegador só aceita um scrollTop != 0 depois que o layout do
-        // container com overflow-y calculado — setar na mesma tick do
-        // innerHTML às vezes é ignorado, então adia um frame.
-        setTimeout(() => { wrap.scrollTop = alvoScroll; }, 0);
+        const alvoScrollTop = Math.max(0, (horaAlvo - AGENDA_HORA_INICIO) * AGENDA_PX_POR_HORA);
+        const alvoScrollLeft = indiceHoje > 0
+          ? Math.max(0, (52 + indiceHoje * 112) - wrap.clientWidth / 2 + 56)
+          : 0;
+        // O navegador só aceita scrollTop/scrollLeft != 0 depois que o
+        // layout do container com overflow calculado — setar na mesma tick
+        // do innerHTML às vezes é ignorado, então adia um frame.
+        setTimeout(() => { wrap.scrollTop = alvoScrollTop; wrap.scrollLeft = alvoScrollLeft; }, 0);
       }
     }
 
