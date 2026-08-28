@@ -2,10 +2,19 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Painel do Psicólogo · O Seu Psico</title>
   <link rel="icon" href="/assets/logo.png" />
   <link rel="stylesheet" href="/css/style.css" />
+
+  <!-- PWA — permite "Adicionar à Tela de Início" no iPhone e abrir como
+       app próprio (sem barra do Safari), direto neste painel. -->
+  <link rel="manifest" href="/psicologos/manifest-painel.json" />
+  <link rel="apple-touch-icon" href="/assets/logo.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Painel Psi" />
+  <meta name="theme-color" content="#1A1A1A" />
   <script src="/psicologos/js/comprimir-foto.js"></script>
   <script src="/psicologos/js/celular-mask.js"></script>
   <script src="/psicologos/js/experiencias-widget.js"></script>

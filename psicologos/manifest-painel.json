@@ -1,0 +1,16 @@
+{
+  "name": "Painel do Psicólogo · O Seu Psico",
+  "short_name": "Painel Psi",
+  "description": "Painel do psicólogo — agenda, perfil e agendamentos do O Seu Psico",
+  "start_url": "/psicologos/painel.html",
+  "scope": "/psicologos/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF8F2",
+  "theme_color": "#1A1A1A",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "/assets/logo.png", "sizes": "560x560", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/logo-original.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

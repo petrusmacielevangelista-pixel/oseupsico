@@ -1,0 +1,15 @@
+Painel do psicologo vira PWA instalavel no iPhone (Adicionar a Tela de Inicio)
+
+Caminho mais simples pra ter um "app" no celular sem passar pela App
+Store: manifest.json + meta tags do iOS. Reaproveita o icone da marca
+(logo.png/logo-original.png) que ja existia.
+
+- Novo psicologos/manifest-painel.json (nome, icones, tema, start_url
+  apontando direto pro painel)
+- painel.html ganha link rel=manifest, apple-touch-icon, e as meta tags
+  apple-mobile-web-app-* que fazem o Safari oferecer "Adicionar a Tela de
+  Inicio" abrindo em tela cheia (sem barra do navegador), como um app
+  proprio
+
+Pra usar: abrir oseupsico.com.br/psicologos/painel no Safari do iPhone,
+tocar em Compartilhar -> Adicionar a Tela de Inicio.
