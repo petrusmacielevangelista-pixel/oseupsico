@@ -1538,23 +1538,30 @@ export default {
 
       if (aplicar_serie) {
         // Propaga nome/descrição/tipo pra todos os registros da série, e o
-        // HORÁRIO (só a hora, não a data — cada ocorrência mantém seu
-        // próprio dia) pra essa ocorrência em diante, pensando no caso real:
-        // "meu paciente passou a vir sempre às 19h em vez de 13h30, dessa
-        // data em diante" — antes só a ocorrência clicada mudava de horário
-        // e todas as outras futuras continuavam no horário antigo.
+        // HORÁRIO + DIA DA SEMANA (o delta entre a data antiga e a nova
+        // dessa ocorrência) pra essa ocorrência em diante — pensando no caso
+        // real: "meu paciente passou a vir sempre aos sábados às 10h em vez
+        // de sexta às 14h, dessa data em diante". Antes só o horário era
+        // propagado e a data de TODOS os registros — inclusive o que tinha
+        // acabado de ser editado — era recalculada a partir da data antiga
+        // dele mesmo no banco, then apagando silenciosamente a troca de dia
+        // da semana que o usuário tinha acabado de fazer.
         const atual = await env.DB.prepare('SELECT serie_id, data_hora FROM compromissos WHERE id = ? AND psicologo_id = ?')
           .bind(compromissoMatch[1], psicologoId).first();
         if (atual?.serie_id) {
           const novoHorario = data_hora.slice(11); // "HH:MM:SS"
-          const dataDaOcorrenciaEditada = atual.data_hora.slice(0, 10);
+          const dataAntiga = atual.data_hora.slice(0, 10);
+          const dataNova = data_hora.slice(0, 10);
+          const deltaDias = Math.round((new Date(dataNova + 'T00:00:00') - new Date(dataAntiga + 'T00:00:00')) / 86400000);
+          const modificadorDias = `${deltaDias >= 0 ? '+' : ''}${deltaDias} days`;
+
           await env.DB.prepare(
             `UPDATE compromissos SET paciente_nome = ?, descricao = ?, tipo = ? WHERE serie_id = ? AND psicologo_id = ?`
           ).bind(paciente_nome, descricao || null, tipo, atual.serie_id, psicologoId).run();
           await env.DB.prepare(
-            `UPDATE compromissos SET data_hora = date(data_hora) || ' ' || ?
+            `UPDATE compromissos SET data_hora = date(data_hora, ?) || ' ' || ?
              WHERE serie_id = ? AND psicologo_id = ? AND date(data_hora) >= ?`
-          ).bind(novoHorario, atual.serie_id, psicologoId, dataDaOcorrenciaEditada).run();
+          ).bind(modificadorDias, novoHorario, atual.serie_id, psicologoId, dataAntiga).run();
           return json({ ok: true });
         }
       }
