@@ -1553,16 +1553,40 @@ export default {
           const dataAntiga = atual.data_hora.slice(0, 10);
           const dataNova = data_hora.slice(0, 10);
           const deltaDias = Math.round((new Date(dataNova + 'T00:00:00') - new Date(dataAntiga + 'T00:00:00')) / 86400000);
-          const modificadorDias = `${deltaDias >= 0 ? '+' : ''}${deltaDias} days`;
 
           await env.DB.prepare(
             `UPDATE compromissos SET paciente_nome = ?, descricao = ?, tipo = ? WHERE serie_id = ? AND psicologo_id = ?`
           ).bind(paciente_nome, descricao || null, tipo, atual.serie_id, psicologoId).run();
-          await env.DB.prepare(
-            `UPDATE compromissos SET data_hora = date(data_hora, ?) || ' ' || ?
-             WHERE serie_id = ? AND psicologo_id = ? AND date(data_hora) >= ?`
-          ).bind(modificadorDias, novoHorario, atual.serie_id, psicologoId, dataAntiga).run();
-          return json({ ok: true });
+
+          // A checagem de conflito lá em cima só valida a ocorrência que
+          // está sendo editada — sem isso, deslocar a série inteira (dia
+          // e/ou hora) podia sobrescrever silenciosamente outro compromisso
+          // ou um agendamento público confirmado que já estivesse no novo
+          // horário calculado. Recalcula ocorrência por ocorrência e pula
+          // (sem aplicar) qualquer uma que colida, igual já era feito na
+          // criação da série.
+          const { results: ocorrencias } = await env.DB.prepare(
+            `SELECT id, data_hora FROM compromissos WHERE serie_id = ? AND psicologo_id = ? AND date(data_hora) >= ?`
+          ).bind(atual.serie_id, psicologoId, dataAntiga).all();
+
+          const { results: outrosCompromissos } = await env.DB.prepare(
+            `SELECT data_hora FROM compromissos WHERE psicologo_id = ? AND (serie_id IS NULL OR serie_id != ?)`
+          ).bind(psicologoId, atual.serie_id).all();
+          const { results: agendamentosOcupados } = await env.DB.prepare(
+            `SELECT data_hora FROM agendamentos WHERE psicologo_id = ? AND status IN ('confirmado', 'pendente_verificacao')`
+          ).bind(psicologoId).all();
+          const ocupadosSet = new Set([...outrosCompromissos, ...agendamentosOcupados].map(o => o.data_hora));
+
+          let aplicadas = 0, puladasPorConflito = 0;
+          for (const ocorrencia of ocorrencias) {
+            const novaData = new Date(ocorrencia.data_hora.slice(0, 10) + 'T00:00:00');
+            novaData.setDate(novaData.getDate() + deltaDias);
+            const novaDataHora = `${formatarDataISO(novaData)} ${novoHorario}`;
+            if (ocupadosSet.has(novaDataHora)) { puladasPorConflito++; continue; }
+            await env.DB.prepare('UPDATE compromissos SET data_hora = ? WHERE id = ?').bind(novaDataHora, ocorrencia.id).run();
+            aplicadas++;
+          }
+          return json({ ok: true, aplicadas, puladas_por_conflito: puladasPorConflito });
         }
       }
 

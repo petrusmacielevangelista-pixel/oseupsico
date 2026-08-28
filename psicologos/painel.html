@@ -1021,6 +1021,9 @@
         if (!resultado.ok) { erroEl.textContent = resultado.error || 'Erro ao salvar.'; return; }
         fecharModalAgenda();
         recarregarAgenda();
+        if (resultado.puladas_por_conflito) {
+          alert(`${resultado.puladas_por_conflito} ocorrência(s) da série não foram alteradas porque o novo horário já estava ocupado por outro compromisso ou agendamento.`);
+        }
       } finally {
         btnSalvar.disabled = false;
         btnSalvar.textContent = textoOriginal;
