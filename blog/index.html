@@ -208,7 +208,7 @@
 
         const mostrados = filtrados.slice(0, visiveis);
         const cards = mostrados.map(p => `
-          <a class="blog-card" href="/blog/post.html?slug=${encodeURIComponent(p.slug)}">
+          <a class="blog-card" href="/blog/post?slug=${encodeURIComponent(p.slug)}">
             ${p.cover ? `<img class="blog-card__cover" src="${p.cover}" alt="" loading="lazy" />` : '<div class="blog-card__cover"></div>'}
             <div class="blog-card__body">
               <span class="blog-card__category">${categorias[p.category] || p.category}</span>

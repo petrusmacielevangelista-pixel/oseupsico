@@ -185,14 +185,14 @@
           }
 
           const dataFormatada = new Date(post.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-          const url = `https://oseupsico.com.br/blog/post.html?slug=${encodeURIComponent(post.slug)}`;
+          const url = `https://oseupsico.com.br/blog/post?slug=${encodeURIComponent(post.slug)}`;
           const categorias = data.categories || {};
           const categoriaLabel = categorias[post.category] || post.category;
 
           const relacionados = (data.posts || []).filter(p => p.category === post.category && p.slug !== post.slug);
           const sorteado = relacionados.length ? relacionados[Math.floor(Math.random() * relacionados.length)] : null;
           const blocoRelacionado = sorteado ? `
-            <a class="post-related" href="/blog/post.html?slug=${encodeURIComponent(sorteado.slug)}">
+            <a class="post-related" href="/blog/post?slug=${encodeURIComponent(sorteado.slug)}">
               <div>
                 <div class="post-related__label">Outro artigo sobre ${categoriaLabel}</div>
                 <div class="post-related__title">${sorteado.title}</div>
