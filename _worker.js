@@ -1795,6 +1795,8 @@ export default {
       const ocupadosSet = bloquearHorasCheias([...ocupadosAgendamentos, ...ocupadosCompromissos].map(o => o.data_hora.slice(0, 16)));
 
       const slots = [];
+      const ocupados = []; // slots do horário de trabalho que já estão tomados —
+                           // o perfil mostra riscados pra pessoa se situar na grade
       const agora = new Date();
       const fimIntervalo = new Date(agora); fimIntervalo.setDate(fimIntervalo.getDate() + diasAFrente);
       const feriadosSet = new Set(feriadosNoIntervalo(agora, fimIntervalo).map(f => f.data));
@@ -1806,12 +1808,14 @@ export default {
 
         horariosDoDiaPeloTrabalho(psicologo, dia.getDay()).forEach(hora => {
           const iso = `${formatarDataISO(dia)} ${hora}`;
-          if (!ocupadosSet.has(iso)) slots.push(iso);
+          if (ocupadosSet.has(iso)) ocupados.push(iso);
+          else slots.push(iso);
         });
       }
 
       slots.sort();
-      return json({ ok: true, horarios: slots });
+      ocupados.sort();
+      return json({ ok: true, horarios: slots, ocupados });
     }
 
     const agendarMatch = pathname.match(/^\/api\/psicologos\/(\d+)\/agendar$/);

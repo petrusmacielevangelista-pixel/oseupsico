@@ -280,19 +280,36 @@
     .horario-btn {
       font-size: 0.82rem; padding: 9px 4px; border-radius: 10px; border: 1.5px solid #E8E2CC;
       background: #fff; color: #1A1A1A; cursor: pointer; transition: all .15s; width: 100%;
+      display: block; text-align: center;
     }
     .horario-btn:hover { border-color: #D4A800; }
     .horario-btn.selecionado { background: #1A1A1A; border-color: #1A1A1A; color: #fff; }
+    /* Horário já ocupado — aparece na grade (ajuda a pessoa a se situar),
+       mas riscado e sem clique. */
+    .horario-btn--indisponivel {
+      color: #B5AF9F; border-color: #EFEBE0; background: #FAF8F2;
+      text-decoration: line-through; cursor: not-allowed;
+    }
+    .horario-btn--indisponivel:hover { border-color: #EFEBE0; }
 
     /* Grade de horários agrupada por dia, em colunas lado a lado — no
        estilo do Doctoralia, em vez de uma lista corrida com data+hora
        escritas em cada botão. */
-    #horarios-lista { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+    .horarios-colunas { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
     .horario-dia-coluna { flex-shrink: 0; width: 92px; display: flex; flex-direction: column; gap: 6px; }
     .horario-dia-coluna__cabecalho {
       font-size: 0.72rem; font-weight: 700; color: #666; text-align: center; text-transform: capitalize;
       padding-bottom: 6px; border-bottom: 1.5px solid #F0EDE4; margin-bottom: 2px;
     }
+    /* Navegação entre "esta semana" e "próxima semana" (só duas). */
+    .horarios-semana-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+    .horarios-semana-nav__btn {
+      background: #F0EDE4; border: none; border-radius: 999px; padding: 7px 14px;
+      font-size: 0.78rem; font-weight: 700; color: #1A1A1A; cursor: pointer; white-space: nowrap;
+    }
+    .horarios-semana-nav__btn:hover:not(:disabled) { background: #E8E2CC; }
+    .horarios-semana-nav__btn:disabled { opacity: .3; cursor: default; }
+    .horarios-semana-nav__label { font-size: 0.78rem; font-weight: 700; color: #777; }
 
     .estrelas-input { font-size: 1.9rem; color: #D4A800; }
     .estrela-btn { background: none; border: none; cursor: pointer; padding: 0 2px; display: inline-block; font-size: inherit; color: inherit; line-height: 1; }
@@ -878,6 +895,13 @@
 
     let horarioSelecionado = null;
 
+    // Estado da grade de horários — a mesma carga da API é redesenhada quando
+    // a pessoa troca de semana ou pede "ver mais", sem nova chamada.
+    const HORARIOS_LINHAS = 5;               // linhas visíveis por dia antes do "Ver mais"
+    let horariosData = null;                 // { porDia: Map, semanas: [ [diaISO...], [diaISO...] ] }
+    let horariosSemana = 0;                  // 0 = esta semana, 1 = próxima
+    let horariosExpandido = false;           // "Ver mais horários" acionado
+
     // Recebe a Response já buscada em paralelo lá em carregar() (ou null,
     // se aquele fetch falhou) — evita uma 3ª chamada em série só pra isso.
     async function renderizarHorarios(res) {
@@ -885,36 +909,94 @@
       try {
         if (!res) throw new Error('sem resposta');
         const data = await res.json();
-        const horarios = data.horarios || [];
-        if (!horarios.length) { el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Nenhum horário disponível nos próximos dias.</p>'; return; }
+        const disponiveis = data.horarios || [];
+        const ocupados = data.ocupados || [];
+        if (!disponiveis.length && !ocupados.length) {
+          el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Nenhum horário disponível nos próximos dias.</p>';
+          return;
+        }
 
-        // Agrupa por dia e monta uma coluna por dia (cabeçalho "qua., 26/08"
-        // + horas empilhadas embaixo), em vez de uma lista corrida com
-        // data+hora escritas em cada botão.
+        // Agrupa por dia. Cada item guarda se está livre — o ocupado aparece
+        // na grade riscado, pra pessoa se localizar entre os horários.
         const porDia = new Map();
-        horarios.slice(0, 60).forEach(h => {
+        const adicionar = (h, disponivel) => {
           const diaISO = h.slice(0, 10);
           if (!porDia.has(diaISO)) porDia.set(diaISO, []);
-          porDia.get(diaISO).push(h);
-        });
+          porDia.get(diaISO).push({ iso: h, hora: h.slice(11, 16), disponivel });
+        };
+        disponiveis.forEach(h => adicionar(h, true));
+        ocupados.forEach(h => adicionar(h, false));
+        for (const arr of porDia.values()) arr.sort((a, b) => a.hora.localeCompare(b.hora));
 
-        el.innerHTML = [...porDia.entries()].map(([diaISO, horariosDoDia]) => {
-          const dt = new Date(diaISO + 'T00:00:00');
-          const cabecalho = dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
-          const botoes = horariosDoDia.map(h => {
-            const hora = h.slice(11, 16);
-            return `<button type="button" class="horario-btn" onclick="selecionarHorario('${h}', this)">${hora}</button>`;
-          }).join('');
-          return `<div class="horario-dia-coluna"><div class="horario-dia-coluna__cabecalho">${cabecalho}</div>${botoes}</div>`;
-        }).join('');
+        // Divide os dias em duas semanas a partir de hoje (só duas — a pessoa
+        // navega entre "esta semana" e "a próxima", e nada além disso).
+        const limiteSemana1 = new Date(); limiteSemana1.setHours(0, 0, 0, 0);
+        limiteSemana1.setDate(limiteSemana1.getDate() + 7);
+        const dias = [...porDia.keys()].sort();
+        const semana0 = dias.filter(d => new Date(d + 'T00:00:00') < limiteSemana1);
+        const semana1 = dias.filter(d => new Date(d + 'T00:00:00') >= limiteSemana1);
+
+        horariosData = { porDia, semanas: [semana0, semana1] };
+        horariosSemana = 0;
+        horariosExpandido = false;
+        desenharHorarios();
       } catch {
         el.innerHTML = '<p style="color:#999;font-size:0.85rem;">Erro ao carregar horários. <button type="button" class="perfil-nota-link" onclick="fetch(\'/api/psicologos/' + id + '/horarios-disponiveis\').then(r=>renderizarHorarios(r))">Tentar novamente</button></p>';
       }
     }
 
+    function desenharHorarios() {
+      const el = document.getElementById('horarios-lista');
+      const { porDia, semanas } = horariosData;
+      const diasDaSemana = semanas[horariosSemana] || [];
+      const temProximaSemana = (semanas[1] || []).length > 0;
+
+      const navHtml = (horariosSemana > 0 || temProximaSemana) ? `
+        <div class="horarios-semana-nav">
+          <button type="button" class="horarios-semana-nav__btn" ${horariosSemana === 0 ? 'disabled' : ''} onclick="mudarSemanaHorarios(-1)">‹ Voltar</button>
+          <span class="horarios-semana-nav__label">${horariosSemana === 0 ? 'Esta semana' : 'Próxima semana'}</span>
+          <button type="button" class="horarios-semana-nav__btn" ${(horariosSemana === 1 || !temProximaSemana) ? 'disabled' : ''} onclick="mudarSemanaHorarios(1)">Próxima semana ›</button>
+        </div>` : '';
+
+      if (!diasDaSemana.length) {
+        el.innerHTML = navHtml + '<p style="color:#999;font-size:0.85rem;">Nenhum horário nesta semana.</p>';
+        return;
+      }
+
+      const maxLinhas = Math.max(...diasDaSemana.map(d => porDia.get(d).length));
+      const precisaVerMais = maxLinhas > HORARIOS_LINHAS;
+      const limite = horariosExpandido ? Infinity : HORARIOS_LINHAS;
+
+      const colunasHtml = diasDaSemana.map(diaISO => {
+        const dt = new Date(diaISO + 'T00:00:00');
+        const cabecalho = dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+        const botoes = porDia.get(diaISO).slice(0, limite).map(s => s.disponivel
+          ? `<button type="button" class="horario-btn${s.iso === horarioSelecionado ? ' selecionado' : ''}" onclick="selecionarHorario('${s.iso}', this)">${s.hora}</button>`
+          : `<span class="horario-btn horario-btn--indisponivel" aria-disabled="true" title="Horário indisponível">${s.hora}</span>`
+        ).join('');
+        return `<div class="horario-dia-coluna"><div class="horario-dia-coluna__cabecalho">${cabecalho}</div>${botoes}</div>`;
+      }).join('');
+
+      const verMaisHtml = precisaVerMais
+        ? `<button type="button" class="perfil-galeria-ver-btn" onclick="alternarVerMaisHorarios()">${horariosExpandido ? 'Ver menos' : 'Ver mais horários'}</button>`
+        : '';
+
+      el.innerHTML = navHtml + `<div class="horarios-colunas">${colunasHtml}</div>` + verMaisHtml;
+    }
+
+    function mudarSemanaHorarios(delta) {
+      horariosSemana = Math.max(0, Math.min(1, horariosSemana + delta));
+      horariosExpandido = false;
+      desenharHorarios();
+    }
+    function alternarVerMaisHorarios() {
+      horariosExpandido = !horariosExpandido;
+      desenharHorarios();
+    }
+
     function selecionarHorario(horario, btn) {
       horarioSelecionado = horario;
-      document.querySelectorAll('#horarios-lista button').forEach(b => b.classList.remove('selecionado'));
+      document.querySelectorAll('#horarios-lista .horario-btn').forEach(b => b.classList.remove('selecionado'));
       btn.classList.add('selecionado');
       const dt = new Date(horario.replace(' ', 'T'));
       document.getElementById('horario-selecionado-texto').textContent = dt.toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' });
