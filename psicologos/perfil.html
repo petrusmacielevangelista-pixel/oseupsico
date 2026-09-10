@@ -765,15 +765,29 @@
 
         document.getElementById('tab-avaliacoes-contagem').textContent = perfilData.total_avaliacoes ? `(${perfilData.total_avaliacoes})` : '';
 
-        document.getElementById('lista-avaliacoes').innerHTML = avaliacoes.length
-          ? avaliacoes.map(a => `
+        // Mostra as 4 primeiras; "Ver todas" expande o resto sem recarregar.
+        const LIMITE_AVALIACOES = 4;
+        const avaliacaoItemHtml = a => `
               <div class="avaliacao-item">
                 <div><span class="estrelas">${'⭐'.repeat(a.nota)}</span>${a.verificado ? '<span class="avaliacao-verificado">✓ Consulta verificada</span>' : ''}</div>
                 ${a.comentario ? `<p class="avaliacao-comentario">${a.comentario}</p>` : ''}
                 <p class="avaliacao-autor">${a.avaliador_nome}</p>
-              </div>
-            `).join('')
-          : '<p style="color:#999;">Ainda não há avaliações públicas.</p>';
+              </div>`;
+        const listaAvaliacoesEl = document.getElementById('lista-avaliacoes');
+        if (!avaliacoes.length) {
+          listaAvaliacoesEl.innerHTML = '<p style="color:#999;">Ainda não há avaliações públicas.</p>';
+        } else {
+          listaAvaliacoesEl.innerHTML = avaliacoes.slice(0, LIMITE_AVALIACOES).map(avaliacaoItemHtml).join('')
+            + (avaliacoes.length > LIMITE_AVALIACOES
+              ? `<button type="button" class="perfil-galeria-ver-btn" id="ver-todas-avaliacoes">Ver todas as avaliações (${avaliacoes.length})</button>`
+              : '');
+          const btnVerTodas = document.getElementById('ver-todas-avaliacoes');
+          if (btnVerTodas) {
+            btnVerTodas.addEventListener('click', () => {
+              listaAvaliacoesEl.innerHTML = avaliacoes.map(avaliacaoItemHtml).join('');
+            });
+          }
+        }
 
         document.getElementById('secao-agendar').classList.remove('hidden');
         document.getElementById('secao-avaliar').classList.remove('hidden');
