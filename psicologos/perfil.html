@@ -446,6 +446,18 @@
       return null;
     }
 
+    // O psicólogo digita o site como quiser ("www.exemplo.com", "exemplo.com",
+    // "https://exemplo.com"). Sem protocolo o navegador trata como link
+    // relativo e manda pra /psicologos/www.exemplo.com. Normaliza pra URL
+    // absoluta; devolve null se não parecer um domínio.
+    function normalizarSite(url) {
+      if (!url) return null;
+      let s = String(url).trim().replace(/^\s*(https?:\/\/)?/i, '');
+      s = s.replace(/\/+$/, '');
+      if (!s || !/^[^\s/]+\.[^\s/]{2,}/.test(s)) return null;
+      return 'https://' + s;
+    }
+
     function calcularAnosExperiencia(graduacaoMesAno) {
       if (!graduacaoMesAno) return null;
       const [mes, ano] = graduacaoMesAno.split('/').map(Number);
@@ -544,7 +556,7 @@
                 <button type="button" class="btn btn--yellow" onclick="scrollParaAgendar()">📅 Agendar consulta</button>
                 ${linkWhats ? `<a href="${linkWhats}" target="_blank" rel="noopener" class="btn btn--suave" onclick="registrarEvento('whatsapp_click')">➤ Enviar mensagem</a>` : ''}
                 ${p.instagram ? `<a href="https://instagram.com/${p.instagram.replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '')}" target="_blank" rel="noopener" class="perfil-social-btn perfil-social-btn--instagram" aria-label="Instagram" title="Instagram">${iconInstagram}</a>` : ''}
-                ${p.site_pessoal ? `<a href="${p.site_pessoal}" target="_blank" rel="noopener" class="perfil-social-btn" aria-label="Site pessoal" title="Site pessoal">${iconSite}</a>` : ''}
+                ${normalizarSite(p.site_pessoal) ? `<a href="${normalizarSite(p.site_pessoal)}" target="_blank" rel="noopener" class="perfil-social-btn" aria-label="Site pessoal" title="Site pessoal">${iconSite}</a>` : ''}
               </div>
             </div>
           </div>

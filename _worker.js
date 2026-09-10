@@ -999,6 +999,14 @@ export default {
         'atende_adultos', 'atende_adolescentes', 'atende_criancas', 'atende_idosos', 'idade_minima_criancas',
         'atende_presencial', 'endereco_presencial'];
       const camposBooleanos = ['receber_agenda_email', 'atende_adultos', 'atende_adolescentes', 'atende_criancas', 'atende_idosos', 'atende_presencial'];
+
+      // Site pessoal digitado sem protocolo ("www.exemplo.com") vira link
+      // relativo no perfil e não abre. Normaliza pra URL absoluta ao salvar.
+      if (typeof body.site_pessoal === 'string' && body.site_pessoal.trim()) {
+        const limpo = body.site_pessoal.trim().replace(/^(https?:\/\/)?/i, '').replace(/\/+$/, '');
+        body.site_pessoal = /^[^\s/]+\.[^\s/]{2,}/.test(limpo) ? 'https://' + limpo : '';
+      }
+
       const sets = [], binds = [];
       campos.forEach(c => {
         if (body[c] !== undefined) { sets.push(`${c} = ?`); binds.push(camposBooleanos.includes(c) ? (body[c] ? 1 : 0) : body[c]); }
