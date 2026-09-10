@@ -185,11 +185,25 @@
     @media (max-width: 860px) {
       .perfil-grid { grid-template-columns: 1fr; grid-template-areas: "sobre" "agendar"; }
       .perfil-agendar-sticky { position: static; }
+      /* Coluna única: sem isto o "min-width:auto" dos itens de grid deixa
+         qualquer filho largo (grade de horários, iframe do mapa, chips longos)
+         esticar a coluna além da largura da tela — e o overflow-x:hidden do
+         body corta o texto em vez de rolar. Mesma correção do
+         .osp-painel-content lá no style.css. */
+      .perfil-area-sobre, .perfil-area-agendar { min-width: 0; }
     }
 
     .perfil-painel {
       background: #fff; border: 1px solid #F0EDE4; border-radius: 20px; padding: 28px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.04); color: #1A1A1A; margin-bottom: 20px;
+      min-width: 0;
+    }
+    /* No celular o padding de 28px + os 24px do .container comem quase um
+       terço da largura da tela; 18px devolve espaço pro texto. */
+    @media (max-width: 640px) {
+      .perfil-painel { padding: 18px; }
+      .perfil-corpo { padding: 24px 0 56px; }
+      .perfil-hero { padding: 32px 0 28px; }
     }
     .perfil-painel h2 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: #1A1A1A; margin-bottom: 14px; }
     .perfil-painel h3 { font-size: 0.95rem; font-weight: 700; color: #1A1A1A; margin: 20px 0 8px; }
