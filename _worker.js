@@ -775,6 +775,38 @@ export default {
       });
     }
 
+    /* ══════════════ Envio de e-mail para o bot do WhatsApp ══════════════
+       O bot não guarda a chave do Resend: ela vive só aqui. Ele pede o envio
+       por este endpoint, autenticado por um segredo compartilhado entre os
+       dois Workers. Assim a credencial fica num lugar só. */
+
+    if (pathname === '/api/interno/email' && request.method === 'POST') {
+      const token = (request.headers.get('Authorization') || '').replace('Bearer ', '');
+      const esperado = env.BOT_EMAIL_TOKEN || '';
+      if (!esperado || token.length !== esperado.length) return json({ ok: false }, 401);
+      let dif = 0;
+      for (let i = 0; i < esperado.length; i++) dif |= token.charCodeAt(i) ^ esperado.charCodeAt(i);
+      if (dif !== 0) return json({ ok: false }, 401);
+
+      let corpo;
+      try { corpo = await request.json(); } catch { return json({ ok: false, error: 'JSON inválido' }, 400); }
+      const { destinatario, assunto, html } = corpo || {};
+      if (!destinatario || !assunto || !html) return json({ ok: false, error: 'Faltam campos' }, 400);
+
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'O Seu Psico <naoresponder@oseupsico.com.br>',
+          to: [destinatario], subject: assunto, html,
+        }),
+      });
+      const detalhe = await res.text();
+      if (!res.ok) console.error('Resend (bot)', res.status, detalhe);
+      return json({ ok: res.ok, status: res.status, detalhe: res.ok ? undefined : detalhe.slice(0, 300) },
+                  res.ok ? 200 : 502);
+    }
+
     /* ══════════════ API: Especialidades (catálogo) ══════════════ */
 
     if (pathname === '/api/especialidades' && request.method === 'GET') {
@@ -2179,6 +2211,44 @@ export default {
               );
             } })
             .on('title', { element(el) { el.setInnerContent(titulo); } })
+            .transform(assetResponse);
+        }
+      } catch {} // qualquer erro aqui cai no fallback normal, sem quebrar a página
+    }
+
+    // Meta tags dinâmicas pro blog (post individual) — mesmo problema do
+    // perfil de psicólogo acima: a página é montada via JS lendo
+    // /data/blog.json, então o HTML bruto sempre trazia canonical/title
+    // genéricos apontando pra "/blog/". O Google lê o HTML antes do JS
+    // rodar em boa parte das vezes, então tratava TODO post individual como
+    // "página alternativa" de /blog/ e nunca indexava os posts — 71 páginas
+    // presas nesse estado no Search Console. Aqui resolvemos a tag certa
+    // (canonical, title, description, og:*) no servidor, igual já
+    // fazíamos pro perfil.
+    if (pathname === '/blog/post' && url.searchParams.get('slug')) {
+      try {
+        const slug = url.searchParams.get('slug');
+        const dadosRes = await env.ASSETS.fetch(new Request(`${url.origin}/data/blog.json`, request));
+        const dados = await dadosRes.json();
+        const post = (dados.posts || []).find(p => p.slug === slug);
+        if (post) {
+          let assetResponse = await env.ASSETS.fetch(request);
+          if ([301, 302, 307, 308].includes(assetResponse.status) && assetResponse.headers.get('Location')) {
+            const redirectUrl = new URL(assetResponse.headers.get('Location'), url.origin);
+            assetResponse = await env.ASSETS.fetch(new Request(redirectUrl, request));
+          }
+          const tituloPagina = escapeHtml(`${post.title} · O Seu Psico`);
+          const descricao = escapeHtml((post.excerpt || '').slice(0, 160));
+          const canonicalUrl = `${url.origin}/blog/post?slug=${encodeURIComponent(post.slug)}`;
+          const imagemBase = post.cover ? (post.cover.startsWith('http') ? post.cover : `${url.origin}${post.cover}`) : `${url.origin}/assets/logo.png`;
+          return new HTMLRewriter()
+            .on('title', { element(el) { el.setInnerContent(tituloPagina); } })
+            .on('#meta-description', { element(el) { el.setAttribute('content', descricao); } })
+            .on('#canonical-link', { element(el) { el.setAttribute('href', canonicalUrl); } })
+            .on('#og-url', { element(el) { el.setAttribute('content', canonicalUrl); } })
+            .on('#og-title', { element(el) { el.setAttribute('content', tituloPagina); } })
+            .on('#og-description', { element(el) { el.setAttribute('content', descricao); } })
+            .on('meta[property="og:image"]', { element(el) { el.setAttribute('content', escapeHtml(imagemBase)); } })
             .transform(assetResponse);
         }
       } catch {} // qualquer erro aqui cai no fallback normal, sem quebrar a página
