@@ -27,8 +27,8 @@
       },
       {
         "icon": "📅",
-        "title": "Agende sua sessão",
-        "text": "Você escolhe o melhor horário e realiza a sessão online, de onde estiver, com segurança e sigilo."
+        "title": "Sua primeira conversa é grátis",
+        "text": "Você agenda uma entrevista inicial com o psicólogo indicado — sem custo, sem compromisso, só para vocês se conhecerem. Tudo online e sigiloso."
       }
     ]
   },
@@ -116,7 +116,7 @@
     "subheadline": "Conectamos você a profissionais qualificados para atendimento online. Sem burocracia, sem lista de espera, com todo o acolhimento que você merece.",
     "cta": "Quero encontrar meu psicólogo",
     "ctaSub": "Fale com nossa equipe no WhatsApp",
-    "trust": "CRP verificado • Match em menos de 24h • Atendimento em todo o Brasil",
+    "trust": "CRP verificado • Primeira conversa é grátis • Match em menos de 24h",
     "photo": ""
   },
   "specialties": {
