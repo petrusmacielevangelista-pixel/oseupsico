@@ -156,6 +156,7 @@ async function initDB(db) {
   try { await db.prepare('ALTER TABLE psicologos ADD COLUMN plano_id INTEGER').run(); } catch {}
   try { await db.prepare('ALTER TABLE psicologos ADD COLUMN asaas_customer_id TEXT').run(); } catch {}
   try { await db.prepare('ALTER TABLE psicologos ADD COLUMN asaas_subscription_id TEXT').run(); } catch {}
+  try { await db.prepare('ALTER TABLE psicologos ADD COLUMN licenca_grupo_liberado TEXT').run(); } catch {}
 
   // Planos de assinatura oferecidos ao psicólogo. Trimestral é o único
   // precificado hoje; semestral/anual entram "ativo=0" até o Petrus decidir
@@ -2305,36 +2306,71 @@ export default {
       const pagamento = body?.payment;
       if (!evento || !pagamento) return json({ ok: true }); // evento que não reconhecemos — confirma recebimento mesmo assim
 
-      const psicologo = await env.DB.prepare('SELECT id FROM psicologos WHERE asaas_customer_id = ?').bind(pagamento.customer).first();
+      const psicologo = await env.DB.prepare('SELECT id, plano_id FROM psicologos WHERE asaas_customer_id = ?').bind(pagamento.customer).first();
       if (!psicologo) { console.error('webhook Asaas: cliente sem psicólogo', pagamento.customer); return json({ ok: true }); }
+
+      const grupoId = pagamento.installment || pagamento.subscription || null;
 
       await env.DB.prepare(
         `INSERT INTO pagamentos (psicologo_id, asaas_payment_id, asaas_subscription_id, valor, status, forma_pagamento, invoice_url, vencimento, pago_em, payload)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(asaas_payment_id) DO UPDATE SET status = excluded.status, pago_em = excluded.pago_em, atualizado_em = datetime('now'), payload = excluded.payload`
       ).bind(
-        psicologo.id, pagamento.id, pagamento.installment || pagamento.subscription || null, pagamento.value, pagamento.status,
+        psicologo.id, pagamento.id, grupoId, pagamento.value, pagamento.status,
         pagamento.billingType, pagamento.invoiceUrl, pagamento.dueDate,
         (evento === 'PAYMENT_CONFIRMED' || evento === 'PAYMENT_RECEIVED') ? formatarDataISO(new Date()) : null,
         JSON.stringify(body)
       ).run();
 
-      if (evento === 'PAYMENT_CONFIRMED' || evento === 'PAYMENT_RECEIVED') {
-        // Estende 1 ciclo (mensal) a partir da validade atual (ou de hoje, se
-        // já tiver vencido) — é isso que reabre o perfil pro público. O
-        // licenca_status é só informativo; quem manda na visibilidade
-        // continua sendo licenca_validade_ate, igual já era pro fluxo manual.
-        const atual = await env.DB.prepare('SELECT licenca_validade_ate FROM psicologos WHERE id = ?').bind(psicologo.id).first();
-        const base = atual?.licenca_validade_ate && atual.licenca_validade_ate >= formatarDataISO(new Date())
-          ? atual.licenca_validade_ate : formatarDataISO(new Date());
-        const novaValidade = somarMeses(base, 1);
-        await env.DB.prepare(`UPDATE psicologos SET licenca_status = 'ativa', licenca_validade_ate = ? WHERE id = ?`)
-          .bind(novaValidade, psicologo.id).run();
+      // No cartão parcelado, a operadora autoriza a compra inteira de uma vez
+      // — testado em sandbox: as 3 parcelas de um trimestral confirmam juntas
+      // no mesmo instante, só a data de REPASSE pro psicólogo é que fica
+      // escalonada (isso é problema de fluxo de caixa do Asaas, não de risco
+      // de calote). Por isso a regra não é "a 1ª parcela libera" — é somar o
+      // que já confirmou no pedido (grupo "installment") e comparar com o
+      // valor total do pedido. Assim que a soma bate o total, libera o plano
+      // inteiro de uma vez só; funciona tanto se tudo confirma junto (o caso
+      // normal) quanto se algum dia confirmar aos poucos.
+      //
+      // "licenca_grupo_liberado" evita liberar 2x o mesmo pedido: como as N
+      // parcelas costumam confirmar quase juntas, mais de um webhook cruzaria
+      // o total sem essa checagem. Um pedido novo (renovação) sempre tem um
+      // "installment" novo, então libera de novo normalmente.
+      if ((evento === 'PAYMENT_CONFIRMED' || evento === 'PAYMENT_RECEIVED') && grupoId) {
+        const psicologoAtual = await env.DB.prepare('SELECT licenca_grupo_liberado FROM psicologos WHERE id = ?').bind(psicologo.id).first();
+        const plano = psicologo.plano_id ? await env.DB.prepare('SELECT duracao_meses, valor_parcela FROM planos WHERE id = ?').bind(psicologo.plano_id).first() : null;
+
+        if (plano && psicologoAtual?.licenca_grupo_liberado !== grupoId) {
+          const { pago } = await env.DB.prepare(
+            `SELECT COALESCE(SUM(valor), 0) as pago FROM pagamentos WHERE asaas_subscription_id = ? AND status IN ('CONFIRMED', 'RECEIVED')`
+          ).bind(grupoId).first();
+          const valorTotalPedido = plano.duracao_meses * plano.valor_parcela;
+          // Centavo de arredondamento não pode travar a liberação — compara com folga de 1 centavo.
+          if (pago >= valorTotalPedido - 0.01) {
+            const atual = await env.DB.prepare('SELECT licenca_validade_ate FROM psicologos WHERE id = ?').bind(psicologo.id).first();
+            const base = atual?.licenca_validade_ate && atual.licenca_validade_ate >= formatarDataISO(new Date())
+              ? atual.licenca_validade_ate : formatarDataISO(new Date());
+            const novaValidade = somarMeses(base, plano.duracao_meses);
+            await env.DB.prepare(`UPDATE psicologos SET licenca_status = 'ativa', licenca_validade_ate = ?, licenca_grupo_liberado = ? WHERE id = ?`)
+              .bind(novaValidade, grupoId, psicologo.id).run();
+          }
+        }
       } else if (evento === 'PAYMENT_OVERDUE') {
-        // Não derruba na hora — licenca_validade_ate (já paga até o fim do
-        // ciclo anterior) segue valendo como prazo de graça natural. Isso só
-        // marca o alerta no admin/painel.
+        // Não derruba na hora — a licença já liberada segue valendo. Isso só
+        // marca o alerta no admin/painel (raro acontecer numa parcela de
+        // cartão já autorizada, mas cobre cartão cancelado/vencido no meio).
         await env.DB.prepare(`UPDATE psicologos SET licenca_status = 'inadimplente' WHERE id = ?`).bind(psicologo.id).run();
+      } else if (['PAYMENT_REFUNDED', 'PAYMENT_CHARGEBACK_REQUESTED', 'PAYMENT_CHARGEBACK_DISPUTE', 'PAYMENT_AWAITING_CHARGEBACK_REVERSAL'].includes(evento)) {
+        // A operadora pediu estorno/contestou a compra — é o único caso em
+        // que a licença precisa reverter de fato, já que o dinheiro (ou parte
+        // dele) está sendo tirado de volta. Derruba a visibilidade na hora
+        // (não espera a validade vencer sozinha) e marca pro admin investigar.
+        console.error('ESTORNO/CHARGEBACK', evento, '| psicólogo', psicologo.id, '| pagamento', pagamento.id);
+        await env.DB.prepare(
+          // licenca_validade_ate no passado tira a visibilidade pública na hora
+          // (mesma regra de sempre) — não espera vencer sozinho.
+          `UPDATE psicologos SET licenca_status = 'suspensa', licenca_validade_ate = date('now', '-1 day'), licenca_observacoes = ? WHERE id = ?`
+        ).bind(`Suspenso automaticamente: ${evento} no pagamento ${pagamento.id} em ${formatarDataISO(new Date())}`, psicologo.id).run();
       }
 
       return json({ ok: true });
