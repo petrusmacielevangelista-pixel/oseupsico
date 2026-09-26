@@ -548,7 +548,11 @@ function asaasBaseUrl(env) {
 async function asaasFetch(env, path, opts = {}) {
   const res = await fetch(`${asaasBaseUrl(env)}${path}`, {
     ...opts,
-    headers: { 'Content-Type': 'application/json', access_token: env.ASAAS_API_KEY, ...(opts.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json', access_token: env.ASAAS_API_KEY,
+      'User-Agent': 'OSeuPsico/1.0 (petrusmaciel@live.com)', // exigido pela API do Asaas — sem isso ela rejeita a requisição
+      ...(opts.headers || {}),
+    },
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
