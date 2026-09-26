@@ -2245,42 +2245,44 @@ export default {
           await env.DB.prepare('UPDATE psicologos SET asaas_customer_id = ? WHERE id = ?').bind(customerId, psicologoId).run();
         }
 
+        // Parcelamento de verdade no cartão (não "assinatura" recorrente):
+        // o Asaas cria as N parcelas de uma vez, ligadas por um "installment"
+        // (grupo). Travado em CREDIT_CARD de propósito — é o único meio em
+        // que a compra inteira é autorizada na hora pela operadora; nas
+        // parcelas seguintes ela mesma cobra o cartão sozinha, sem depender
+        // de o psicólogo voltar a pagar todo mês (diferente de Pix/boleto
+        // recorrente, onde cada ciclo é uma cobrança nova e independente).
         const hoje = formatarDataISO(new Date());
-        const dataFim = somarMeses(hoje, plano.duracao_meses);
-        const assinatura = await asaasFetch(env, '/subscriptions', {
+        const primeiraParcela = await asaasFetch(env, '/payments', {
           method: 'POST',
           body: JSON.stringify({
             customer: customerId,
-            billingType: 'UNDEFINED', // deixa a pessoa escolher Pix/boleto/cartão na fatura
-            cycle: 'MONTHLY',
-            value: plano.valor_parcela,
-            nextDueDate: hoje, // sem período de teste — a 1ª cobrança vale já
-            endDate: dataFim, // compromisso mínimo do plano — depois disso a assinatura encerra sozinha
+            billingType: 'CREDIT_CARD',
+            installmentCount: plano.duracao_meses,
+            installmentValue: plano.valor_parcela,
+            dueDate: hoje, // sem período de teste — a 1ª parcela vale já
             description: `O Seu Psico — Plano ${plano.nome}`,
             externalReference: `psicologo_${psicologoId}`,
           }),
         });
 
+        // "asaas_subscription_id" guarda o id do grupo de parcelas (campo
+        // "installment") — nome do campo ficou do desenho anterior
+        // (assinatura recorrente), mas o uso — impedir criar 2 cobranças
+        // ativas — continua o mesmo.
         await env.DB.prepare('UPDATE psicologos SET plano_id = ?, asaas_subscription_id = ? WHERE id = ?')
-          .bind(plano.id, assinatura.id, psicologoId).run();
+          .bind(plano.id, primeiraParcela.installment || primeiraParcela.id, psicologoId).run();
 
-        // Busca a 1ª cobrança gerada pra devolver o link de pagamento na hora —
-        // sem esperar o webhook, que pode levar alguns segundos.
-        let invoiceUrl = null;
-        try {
-          const cobranças = await asaasFetch(env, `/payments?subscription=${assinatura.id}`);
-          const primeira = cobranças.data?.[0];
-          if (primeira) {
-            invoiceUrl = primeira.invoiceUrl;
-            await env.DB.prepare(
-              `INSERT INTO pagamentos (psicologo_id, asaas_payment_id, asaas_subscription_id, valor, status, forma_pagamento, invoice_url, vencimento)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-               ON CONFLICT(asaas_payment_id) DO UPDATE SET status = excluded.status, invoice_url = excluded.invoice_url, atualizado_em = datetime('now')`
-            ).bind(psicologoId, primeira.id, assinatura.id, primeira.value, primeira.status, primeira.billingType, primeira.invoiceUrl, primeira.dueDate).run();
-          }
-        } catch (e) { console.error('buscar 1ª cobrança:', e.message); }
+        await env.DB.prepare(
+          `INSERT INTO pagamentos (psicologo_id, asaas_payment_id, asaas_subscription_id, valor, status, forma_pagamento, invoice_url, vencimento)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(asaas_payment_id) DO UPDATE SET status = excluded.status, invoice_url = excluded.invoice_url, atualizado_em = datetime('now')`
+        ).bind(
+          psicologoId, primeiraParcela.id, primeiraParcela.installment || null, primeiraParcela.value,
+          primeiraParcela.status, primeiraParcela.billingType, primeiraParcela.invoiceUrl, primeiraParcela.dueDate
+        ).run();
 
-        return json({ ok: true, invoice_url: invoiceUrl });
+        return json({ ok: true, invoice_url: primeiraParcela.invoiceUrl });
       } catch (e) {
         console.error('Asaas assinatura:', e.message);
         return json({ ok: false, error: 'Não foi possível criar a assinatura: ' + e.message }, 500);
@@ -2311,7 +2313,7 @@ export default {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(asaas_payment_id) DO UPDATE SET status = excluded.status, pago_em = excluded.pago_em, atualizado_em = datetime('now'), payload = excluded.payload`
       ).bind(
-        psicologo.id, pagamento.id, pagamento.subscription || null, pagamento.value, pagamento.status,
+        psicologo.id, pagamento.id, pagamento.installment || pagamento.subscription || null, pagamento.value, pagamento.status,
         pagamento.billingType, pagamento.invoiceUrl, pagamento.dueDate,
         (evento === 'PAYMENT_CONFIRMED' || evento === 'PAYMENT_RECEIVED') ? formatarDataISO(new Date()) : null,
         JSON.stringify(body)
