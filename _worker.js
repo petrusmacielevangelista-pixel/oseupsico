@@ -2338,15 +2338,24 @@ export default {
       // "installment" novo, então libera de novo normalmente.
       if ((evento === 'PAYMENT_CONFIRMED' || evento === 'PAYMENT_RECEIVED') && grupoId) {
         const psicologoAtual = await env.DB.prepare('SELECT licenca_grupo_liberado FROM psicologos WHERE id = ?').bind(psicologo.id).first();
-        const plano = psicologo.plano_id ? await env.DB.prepare('SELECT duracao_meses, valor_parcela FROM planos WHERE id = ?').bind(psicologo.plano_id).first() : null;
+        const plano = psicologo.plano_id ? await env.DB.prepare('SELECT duracao_meses FROM planos WHERE id = ?').bind(psicologo.plano_id).first() : null;
 
         if (plano && psicologoAtual?.licenca_grupo_liberado !== grupoId) {
-          const { pago } = await env.DB.prepare(
-            `SELECT COALESCE(SUM(valor), 0) as pago FROM pagamentos WHERE asaas_subscription_id = ? AND status IN ('CONFIRMED', 'RECEIVED')`
-          ).bind(grupoId).first();
-          const valorTotalPedido = plano.duracao_meses * plano.valor_parcela;
-          // Centavo de arredondamento não pode travar a liberação — compara com folga de 1 centavo.
-          if (pago >= valorTotalPedido - 0.01) {
+          // Não confia em soma de valor (juros de atraso, desconto, taxa do
+          // Asaas mudam "value"/"netValue" e podem nunca bater um total
+          // calculado aqui) — em vez disso pergunta pro próprio Asaas quantas
+          // das N parcelas do pedido já estão confirmadas. Contagem, não
+          // dinheiro: a fonte da verdade é sempre o Asaas, nunca uma conta
+          // nossa por cima do webhook.
+          let todasConfirmadas = false;
+          try {
+            const parcelas = await asaasFetch(env, `/payments?installment=${grupoId}&limit=100`);
+            const total = parcelas.data?.length || 0;
+            const confirmadas = (parcelas.data || []).filter(p => ['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'].includes(p.status)).length;
+            todasConfirmadas = total > 0 && confirmadas >= total;
+          } catch (e) { console.error('checar parcelas do pedido:', e.message); }
+
+          if (todasConfirmadas) {
             const atual = await env.DB.prepare('SELECT licenca_validade_ate FROM psicologos WHERE id = ?').bind(psicologo.id).first();
             const base = atual?.licenca_validade_ate && atual.licenca_validade_ate >= formatarDataISO(new Date())
               ? atual.licenca_validade_ate : formatarDataISO(new Date());
