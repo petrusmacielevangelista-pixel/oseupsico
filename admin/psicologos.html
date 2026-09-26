@@ -30,6 +30,7 @@
     .badge--rejeitado { background: #FEE2E2; color: #991B1B; }
     .badge--ativa { background: #D1FAE5; color: #065F46; }
     .badge--inativa, .badge--suspensa { background: #FEE2E2; color: #991B1B; }
+    .badge--inadimplente { background: #FDE68A; color: #92400E; }
     .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
     .row-actions button { font-size: 0.75rem; padding: 6px 10px; border-radius: 8px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
     .hidden { display: none !important; }
@@ -70,8 +71,8 @@
 
     <div id="tab-licencas" class="hidden">
       <table>
-        <thead><tr><th>Nome</th><th>Status</th><th>Válida até</th><th>Observação</th><th></th></tr></thead>
-        <tbody id="tbody-licencas"><tr><td colspan="5">Carregando...</td></tr></tbody>
+        <thead><tr><th>Nome</th><th>Plano</th><th>Status</th><th>Válida até</th><th>Observação</th><th></th></tr></thead>
+        <tbody id="tbody-licencas"><tr><td colspan="6">Carregando...</td></tr></tbody>
       </table>
     </div>
 
@@ -256,11 +257,18 @@
       carregarEspecialidades();
     }
 
+    let planosMap = {};
+
     async function carregarPsicologos() {
-      const res = await fetch('/api/admin/psicologos', { headers: { Authorization: 'Bearer ' + token } });
-      if (res.status === 401) { sair(); return; }
-      const data = await res.json();
+      const [resPsic, resPlanos] = await Promise.all([
+        fetch('/api/admin/psicologos', { headers: { Authorization: 'Bearer ' + token } }),
+        fetch('/api/admin/planos', { headers: { Authorization: 'Bearer ' + token } }),
+      ]);
+      if (resPsic.status === 401) { sair(); return; }
+      const data = await resPsic.json();
       todosPsicologos = data.psicologos || [];
+      const dataPlanos = await resPlanos.json().catch(() => ({}));
+      planosMap = Object.fromEntries((dataPlanos.planos || []).map(p => [p.id, p.nome]));
       renderCadastros();
       renderLicencas();
       renderSelectAvaliacoes();
@@ -295,7 +303,7 @@
     function renderLicencas() {
       const aprovados = todosPsicologos.filter(p => p.status_aprovacao === 'aprovado');
       const tbody = document.getElementById('tbody-licencas');
-      if (!aprovados.length) { tbody.innerHTML = '<tr><td colspan="5">Nenhum psicólogo aprovado ainda.</td></tr>'; return; }
+      if (!aprovados.length) { tbody.innerHTML = '<tr><td colspan="6">Nenhum psicólogo aprovado ainda.</td></tr>'; return; }
       const hoje = new Date().toISOString().slice(0, 10);
       tbody.innerHTML = aprovados.map(p => {
         const vencida = p.licenca_validade_ate && p.licenca_validade_ate < hoje;
@@ -303,6 +311,7 @@
         return `
         <tr>
           <td>${p.nome}</td>
+          <td>${p.plano_id ? (planosMap[p.plano_id] || '#' + p.plano_id) : '<span style="color:#bbb;">— sem assinatura —</span>'}</td>
           <td><span class="badge badge--${statusVisual}">${vencida ? 'vencida' : p.licenca_status}</span></td>
           <td>${p.licenca_validade_ate || '—'}</td>
           <td>${p.licenca_observacoes || '—'}</td>

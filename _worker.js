@@ -24,6 +24,9 @@
      POST /api/admin/campanhas-email/preview  → renderiza HTML sem enviar (protegido)
      POST /api/admin/campanhas-email/imagem   → upload de imagem pro corpo do e-mail (protegido)
      POST /api/admin/campanhas-email/enviar   → dispara campanha (protegido)
+     GET  /api/planos                         → planos de assinatura ativos (público)
+     GET/POST /api/psicologos/me/assinatura   → assinatura do psicólogo / cria no Asaas (autenticado)
+     POST /api/asaas/webhook                  → eventos de pagamento do Asaas (token no header)
    ============================================================ */
 
 const CORS = {
@@ -148,6 +151,55 @@ async function initDB(db) {
   // agendamento_id existir. CREATE TABLE IF NOT EXISTS não adiciona coluna
   // em tabela já existente, então garantimos aqui (idempotente).
   try { await db.prepare('ALTER TABLE avaliacoes ADD COLUMN agendamento_id INTEGER').run(); } catch {}
+
+  // Assinatura/cobrança (Asaas) — mesma migração incremental de cima.
+  try { await db.prepare('ALTER TABLE psicologos ADD COLUMN plano_id INTEGER').run(); } catch {}
+  try { await db.prepare('ALTER TABLE psicologos ADD COLUMN asaas_customer_id TEXT').run(); } catch {}
+  try { await db.prepare('ALTER TABLE psicologos ADD COLUMN asaas_subscription_id TEXT').run(); } catch {}
+
+  // Planos de assinatura oferecidos ao psicólogo. Trimestral é o único
+  // precificado hoje; semestral/anual entram "ativo=0" até o Petrus decidir
+  // o desconto — ficam invisíveis pro psicólogo até lá.
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS planos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL,
+      duracao_meses INTEGER NOT NULL,
+      valor_parcela REAL,
+      ativo INTEGER NOT NULL DEFAULT 1,
+      ordem INTEGER DEFAULT 0,
+      criado_em TEXT DEFAULT (datetime('now'))
+    )`
+  ).run();
+  const { results: planosExistentes } = await db.prepare('SELECT id FROM planos').all();
+  if (!planosExistentes.length) {
+    await db.batch([
+      db.prepare(`INSERT INTO planos (nome, duracao_meses, valor_parcela, ativo, ordem) VALUES ('Trimestral', 3, 297.90, 1, 1)`),
+      db.prepare(`INSERT INTO planos (nome, duracao_meses, valor_parcela, ativo, ordem) VALUES ('Semestral', 6, NULL, 0, 2)`),
+      db.prepare(`INSERT INTO planos (nome, duracao_meses, valor_parcela, ativo, ordem) VALUES ('Anual', 12, NULL, 0, 3)`),
+    ]);
+  }
+
+  // Cada cobrança individual gerada no Asaas pra uma assinatura — alimentada
+  // pelo webhook (ver /api/asaas/webhook). "payload" guarda o corpo bruto do
+  // evento mais recente, pra auditoria caso o Asaas mude o formato.
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS pagamentos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      psicologo_id INTEGER NOT NULL,
+      asaas_payment_id TEXT UNIQUE,
+      asaas_subscription_id TEXT,
+      valor REAL,
+      status TEXT,
+      forma_pagamento TEXT,
+      invoice_url TEXT,
+      vencimento TEXT,
+      pago_em TEXT,
+      criado_em TEXT DEFAULT (datetime('now')),
+      atualizado_em TEXT DEFAULT (datetime('now')),
+      payload TEXT
+    )`
+  ).run();
 
   await db.prepare(
     `CREATE TABLE IF NOT EXISTS avaliacoes_log (
@@ -483,6 +535,37 @@ function autenticadoPaciente(request, env) {
   const [prefixo, id, , pepper] = decodificado.split(':');
   if (prefixo !== 'paciente' || !id || pepper !== (env.SENHA_PEPPER || '')) return null;
   return Number(id);
+}
+
+// ── Asaas (cobrança dos psicólogos) ────────────────────────
+// ASAAS_ENV = 'production' usa a API real; qualquer outro valor (ou ausente)
+// usa o sandbox — assim dá pra testar sem arriscar cobrar cartão de verdade.
+// Secrets: ASAAS_API_KEY, ASAAS_ENV, ASAAS_WEBHOOK_TOKEN.
+function asaasBaseUrl(env) {
+  return env.ASAAS_ENV === 'production' ? 'https://api.asaas.com/v3' : 'https://sandbox.asaas.com/api/v3';
+}
+
+async function asaasFetch(env, path, opts = {}) {
+  const res = await fetch(`${asaasBaseUrl(env)}${path}`, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', access_token: env.ASAAS_API_KEY, ...(opts.headers || {}) },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = data?.errors?.[0]?.description || `Asaas respondeu ${res.status}`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+// Soma N meses a uma data ISO (AAAA-MM-DD) — usado pro endDate da assinatura,
+// que é o que faz o compromisso mínimo (trimestral/semestral/anual) valer:
+// depois disso o Asaas para de cobrar sozinho, e uma renovação é uma
+// assinatura nova (permitindo inclusive preço diferente na renovação).
+function somarMeses(dataISO, meses) {
+  const d = new Date(dataISO + 'T00:00:00');
+  d.setMonth(d.getMonth() + meses);
+  return formatarDataISO(d);
 }
 
 async function enviarEmailConfirmacaoAvaliacao(env, avaliacao, linkConfirmacao) {
@@ -2087,6 +2170,166 @@ export default {
         `INSERT INTO licenca_historico (psicologo_id, acao, dias_adicionados, validade_anterior, validade_nova, observacao)
          VALUES (?, ?, ?, ?, ?, ?)`
       ).bind(psicologoId, acao, diasAdicionados, atual?.licenca_validade_ate || null, novaValidade, observacao || null).run();
+
+      return json({ ok: true });
+    }
+
+    /* ── Planos e assinatura (Asaas) ── */
+
+    if (pathname === '/api/planos' && request.method === 'GET') {
+      await initDB(env.DB);
+      const { results } = await env.DB.prepare('SELECT * FROM planos WHERE ativo = 1 ORDER BY ordem').all();
+      return json({ ok: true, planos: results });
+    }
+
+    if (pathname === '/api/admin/planos' && request.method === 'GET') {
+      if (!autenticadoAdmin(request, env)) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { results } = await env.DB.prepare('SELECT * FROM planos ORDER BY ordem').all();
+      return json({ ok: true, planos: results });
+    }
+
+    if (pathname === '/api/psicologos/me/assinatura' && request.method === 'GET') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+
+      const p = await env.DB.prepare('SELECT plano_id, asaas_subscription_id, licenca_status, licenca_validade_ate FROM psicologos WHERE id = ?').bind(psicologoId).first();
+      const plano = p.plano_id ? await env.DB.prepare('SELECT * FROM planos WHERE id = ?').bind(p.plano_id).first() : null;
+      const { results: pagamentos } = await env.DB.prepare(
+        'SELECT asaas_payment_id, valor, status, forma_pagamento, invoice_url, vencimento, pago_em FROM pagamentos WHERE psicologo_id = ? ORDER BY criado_em DESC LIMIT 12'
+      ).bind(psicologoId).all();
+
+      return json({
+        ok: true,
+        plano,
+        licenca_status: p.licenca_status,
+        licenca_validade_ate: p.licenca_validade_ate,
+        pagamentos,
+      });
+    }
+
+    if (pathname === '/api/psicologos/me/assinatura' && request.method === 'POST') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+
+      const { plano_id } = await request.json().catch(() => ({}));
+      const plano = plano_id && await env.DB.prepare('SELECT * FROM planos WHERE id = ? AND ativo = 1').bind(plano_id).first();
+      if (!plano || plano.valor_parcela == null) return json({ ok: false, error: 'Plano inválido ou ainda sem preço definido.' }, 400);
+
+      const p = await env.DB.prepare('SELECT nome, email, telefone, cpf, asaas_customer_id, asaas_subscription_id FROM psicologos WHERE id = ?').bind(psicologoId).first();
+      if (!p) return json({ ok: false, error: 'Psicólogo não encontrado.' }, 404);
+      const cpfLimpo = (p.cpf || '').replace(/\D/g, '');
+      if (cpfLimpo.length !== 11) return json({ ok: false, error: 'Preencha seu CPF em "Meu perfil" antes de assinar.' }, 400);
+      if (p.asaas_subscription_id) return json({ ok: false, error: 'Você já tem uma assinatura ativa ou pendente.' }, 400);
+
+      try {
+        let customerId = p.asaas_customer_id;
+        if (!customerId) {
+          const cliente = await asaasFetch(env, '/customers', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: p.nome,
+              cpfCnpj: cpfLimpo,
+              email: p.email,
+              mobilePhone: (p.telefone || '').replace(/\D/g, '') || undefined,
+              externalReference: `psicologo_${psicologoId}`,
+            }),
+          });
+          customerId = cliente.id;
+          await env.DB.prepare('UPDATE psicologos SET asaas_customer_id = ? WHERE id = ?').bind(customerId, psicologoId).run();
+        }
+
+        const hoje = formatarDataISO(new Date());
+        const dataFim = somarMeses(hoje, plano.duracao_meses);
+        const assinatura = await asaasFetch(env, '/subscriptions', {
+          method: 'POST',
+          body: JSON.stringify({
+            customer: customerId,
+            billingType: 'UNDEFINED', // deixa a pessoa escolher Pix/boleto/cartão na fatura
+            cycle: 'MONTHLY',
+            value: plano.valor_parcela,
+            nextDueDate: hoje, // sem período de teste — a 1ª cobrança vale já
+            endDate: dataFim, // compromisso mínimo do plano — depois disso a assinatura encerra sozinha
+            description: `O Seu Psico — Plano ${plano.nome}`,
+            externalReference: `psicologo_${psicologoId}`,
+          }),
+        });
+
+        await env.DB.prepare('UPDATE psicologos SET plano_id = ?, asaas_subscription_id = ? WHERE id = ?')
+          .bind(plano.id, assinatura.id, psicologoId).run();
+
+        // Busca a 1ª cobrança gerada pra devolver o link de pagamento na hora —
+        // sem esperar o webhook, que pode levar alguns segundos.
+        let invoiceUrl = null;
+        try {
+          const cobranças = await asaasFetch(env, `/payments?subscription=${assinatura.id}`);
+          const primeira = cobranças.data?.[0];
+          if (primeira) {
+            invoiceUrl = primeira.invoiceUrl;
+            await env.DB.prepare(
+              `INSERT INTO pagamentos (psicologo_id, asaas_payment_id, asaas_subscription_id, valor, status, forma_pagamento, invoice_url, vencimento)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(asaas_payment_id) DO UPDATE SET status = excluded.status, invoice_url = excluded.invoice_url, atualizado_em = datetime('now')`
+            ).bind(psicologoId, primeira.id, assinatura.id, primeira.value, primeira.status, primeira.billingType, primeira.invoiceUrl, primeira.dueDate).run();
+          }
+        } catch (e) { console.error('buscar 1ª cobrança:', e.message); }
+
+        return json({ ok: true, invoice_url: invoiceUrl });
+      } catch (e) {
+        console.error('Asaas assinatura:', e.message);
+        return json({ ok: false, error: 'Não foi possível criar a assinatura: ' + e.message }, 500);
+      }
+    }
+
+    // Webhook do Asaas — configurado no painel deles (Integrações → Webhooks)
+    // apontando pra esta URL, com o "Token de acesso" = ASAAS_WEBHOOK_TOKEN
+    // (enviado de volta no header "asaas-access-token"). Sem essa checagem,
+    // qualquer um poderia forjar "pagamento confirmado" e liberar o perfil de graça.
+    if (pathname === '/api/asaas/webhook' && request.method === 'POST') {
+      const tokenRecebido = request.headers.get('asaas-access-token') || '';
+      if (!env.ASAAS_WEBHOOK_TOKEN || tokenRecebido !== env.ASAAS_WEBHOOK_TOKEN) {
+        return json({ ok: false }, 401);
+      }
+      await initDB(env.DB);
+
+      const body = await request.json().catch(() => null);
+      const evento = body?.event;
+      const pagamento = body?.payment;
+      if (!evento || !pagamento) return json({ ok: true }); // evento que não reconhecemos — confirma recebimento mesmo assim
+
+      const psicologo = await env.DB.prepare('SELECT id FROM psicologos WHERE asaas_customer_id = ?').bind(pagamento.customer).first();
+      if (!psicologo) { console.error('webhook Asaas: cliente sem psicólogo', pagamento.customer); return json({ ok: true }); }
+
+      await env.DB.prepare(
+        `INSERT INTO pagamentos (psicologo_id, asaas_payment_id, asaas_subscription_id, valor, status, forma_pagamento, invoice_url, vencimento, pago_em, payload)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(asaas_payment_id) DO UPDATE SET status = excluded.status, pago_em = excluded.pago_em, atualizado_em = datetime('now'), payload = excluded.payload`
+      ).bind(
+        psicologo.id, pagamento.id, pagamento.subscription || null, pagamento.value, pagamento.status,
+        pagamento.billingType, pagamento.invoiceUrl, pagamento.dueDate,
+        (evento === 'PAYMENT_CONFIRMED' || evento === 'PAYMENT_RECEIVED') ? formatarDataISO(new Date()) : null,
+        JSON.stringify(body)
+      ).run();
+
+      if (evento === 'PAYMENT_CONFIRMED' || evento === 'PAYMENT_RECEIVED') {
+        // Estende 1 ciclo (mensal) a partir da validade atual (ou de hoje, se
+        // já tiver vencido) — é isso que reabre o perfil pro público. O
+        // licenca_status é só informativo; quem manda na visibilidade
+        // continua sendo licenca_validade_ate, igual já era pro fluxo manual.
+        const atual = await env.DB.prepare('SELECT licenca_validade_ate FROM psicologos WHERE id = ?').bind(psicologo.id).first();
+        const base = atual?.licenca_validade_ate && atual.licenca_validade_ate >= formatarDataISO(new Date())
+          ? atual.licenca_validade_ate : formatarDataISO(new Date());
+        const novaValidade = somarMeses(base, 1);
+        await env.DB.prepare(`UPDATE psicologos SET licenca_status = 'ativa', licenca_validade_ate = ? WHERE id = ?`)
+          .bind(novaValidade, psicologo.id).run();
+      } else if (evento === 'PAYMENT_OVERDUE') {
+        // Não derruba na hora — licenca_validade_ate (já paga até o fim do
+        // ciclo anterior) segue valendo como prazo de graça natural. Isso só
+        // marca o alerta no admin/painel.
+        await env.DB.prepare(`UPDATE psicologos SET licenca_status = 'inadimplente' WHERE id = ?`).bind(psicologo.id).run();
+      }
 
       return json({ ok: true });
     }

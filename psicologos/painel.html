@@ -84,6 +84,7 @@
             <button data-painel="agendamentos" onclick="mostrarSecaoPainel('agendamentos')">✅ Entrevistas iniciais agendadas</button>
             <button data-painel="valores" onclick="mostrarSecaoPainel('valores')">💰 Valores</button>
             <button data-painel="visibilidade" onclick="mostrarSecaoPainel('visibilidade')">📊 Visibilidade</button>
+            <button data-painel="assinatura" onclick="mostrarSecaoPainel('assinatura')">💳 Assinatura</button>
           </nav>
 
           <div class="osp-painel-content">
@@ -349,6 +350,12 @@
               <div id="grafico-visibilidade" style="overflow-x:auto;"></div>
             </div>
 
+            <div class="osp-card hidden" id="secao-assinatura" data-secao>
+              <h2>Assinatura</h2>
+              <p style="font-size:0.85rem;color:#666;margin-bottom:16px;">Seu perfil só aparece na busca pública com a assinatura em dia.</p>
+              <div id="assinatura-conteudo">Carregando...</div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -460,6 +467,7 @@
       // scrollTop. Recalcula a rolagem de novo agora que ficou visível.
       if (nome === 'agenda' && typeof renderizarAgenda === 'function' && agendaCache) renderizarAgenda();
       if (nome === 'valores') carregarServicos();
+      if (nome === 'assinatura') carregarAssinatura();
     }
 
     function mostrarEsqueciSenha() {
@@ -528,7 +536,7 @@
       } else if (p.status_aprovacao === 'rejeitado') {
         statusHtml = `<div class="osp-alert osp-alert--erro">❌ Seu cadastro não foi aprovado. Entre em contato pra mais informações.</div>`;
       } else if (!licencaOk) {
-        statusHtml = `<div class="osp-alert osp-alert--erro">⚠️ Sua licença está inativa/vencida — seu perfil não aparece na busca pública. Entre em contato pra regularizar.</div>`;
+        statusHtml = `<div class="osp-alert osp-alert--erro">⚠️ Sua assinatura está inativa/vencida — seu perfil não aparece na busca pública. <a href="#" onclick="mostrarSecaoPainel('assinatura');return false;" style="text-decoration:underline;">Resolver agora →</a></div>`;
       } else {
         statusHtml = `<div class="osp-alert osp-alert--sucesso">✅ Perfil ativo e visível publicamente até ${p.licenca_validade_ate}.</div>`;
       }
@@ -652,6 +660,102 @@
       }).join('');
 
       el.innerHTML = `<svg width="${larguraTotal}" height="${altura + 44}" viewBox="0 0 ${larguraTotal} ${altura + 44}">${barras}</svg>`;
+    }
+
+    const STATUS_PAGAMENTO_LABEL = {
+      PENDING: 'Aguardando pagamento', RECEIVED: 'Pago', CONFIRMED: 'Pago',
+      OVERDUE: 'Vencido', REFUNDED: 'Estornado',
+    };
+
+    async function carregarAssinatura() {
+      const el = document.getElementById('assinatura-conteudo');
+      el.textContent = 'Carregando...';
+      try {
+        const [planosRes, assinaturaRes] = await Promise.all([
+          fetch('/api/planos'),
+          fetch('/api/psicologos/me/assinatura', { headers: { Authorization: 'Bearer ' + token } }),
+        ]);
+        const { planos } = await planosRes.json();
+        const dados = await assinaturaRes.json();
+        if (!dados.ok) { el.innerHTML = '<p style="color:#991B1B;">Erro ao carregar sua assinatura.</p>'; return; }
+
+        const hoje = new Date().toISOString().slice(0, 10);
+        const licencaOk = dados.licenca_validade_ate && dados.licenca_validade_ate >= hoje;
+        const ultimoPagamento = dados.pagamentos?.[0];
+        const pagamentoPendente = ultimoPagamento && ultimoPagamento.status === 'PENDING' ? ultimoPagamento : null;
+
+        let html = '';
+
+        if (!dados.plano) {
+          // Nunca assinou — mostra os planos disponíveis pra escolher.
+          html += '<div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:20px;">' + planos.map(p => `
+            <div style="border:1.5px solid #F0EDE4;border-radius:14px;padding:20px;min-width:220px;flex:1;">
+              <h3 style="margin:0 0 4px;">${p.nome}</h3>
+              <p style="font-size:1.3rem;font-weight:800;color:#1A1A1A;margin-bottom:2px;">R$ ${Number(p.valor_parcela).toFixed(2).replace('.', ',')}<span style="font-size:0.78rem;font-weight:400;color:#999;">/mês</span></p>
+              <p style="font-size:0.8rem;color:#666;margin-bottom:14px;">Compromisso de ${p.duracao_meses} meses, cobrado mensalmente.</p>
+              <button type="button" class="btn btn--yellow" style="width:100%;justify-content:center;" onclick="escolherPlano(${p.id}, this)">Assinar →</button>
+            </div>
+          `).join('') + '</div>';
+          html += '<p id="assinatura-erro" style="color:#991B1B;font-size:0.85rem;"></p>';
+        } else if (pagamentoPendente) {
+          html += `
+            <div class="osp-alert osp-alert--aviso" style="margin-bottom:16px;">⏳ Pagamento do plano <strong>${dados.plano.nome}</strong> aguardando confirmação.</div>
+            <a href="${pagamentoPendente.invoice_url}" target="_blank" rel="noopener" class="btn btn--yellow">Pagar agora (R$ ${Number(pagamentoPendente.valor).toFixed(2).replace('.', ',')}) →</a>
+            <p style="font-size:0.8rem;color:#999;margin-top:10px;">Escolha Pix, boleto ou cartão na página de pagamento. Assim que confirmar, seu perfil volta a aparecer na busca automaticamente — pode levar alguns minutos.</p>
+          `;
+        } else {
+          html += `
+            <div class="${licencaOk ? 'osp-alert osp-alert--sucesso' : 'osp-alert osp-alert--erro'}" style="margin-bottom:16px;">
+              ${licencaOk ? '✅' : '⚠️'} Plano <strong>${dados.plano.nome}</strong> — R$ ${Number(dados.plano.valor_parcela).toFixed(2).replace('.', ',')}/mês
+              ${dados.licenca_validade_ate ? ` · válido até ${dados.licenca_validade_ate}` : ''}
+              ${dados.licenca_status === 'inadimplente' ? ' · <strong>pagamento em atraso</strong>' : ''}
+            </div>
+          `;
+        }
+
+        if (dados.pagamentos?.length) {
+          html += `
+            <h3 style="margin-top:22px;">Histórico de pagamentos</h3>
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:8px;">
+                <thead><tr style="text-align:left;color:#999;"><th style="padding:6px 8px;">Vencimento</th><th style="padding:6px 8px;">Valor</th><th style="padding:6px 8px;">Status</th><th></th></tr></thead>
+                <tbody>${dados.pagamentos.map(pg => `
+                  <tr style="border-top:1px solid #F0EDE4;">
+                    <td style="padding:6px 8px;">${pg.vencimento || '—'}</td>
+                    <td style="padding:6px 8px;">R$ ${Number(pg.valor).toFixed(2).replace('.', ',')}</td>
+                    <td style="padding:6px 8px;">${STATUS_PAGAMENTO_LABEL[pg.status] || pg.status}</td>
+                    <td style="padding:6px 8px;">${pg.status === 'PENDING' && pg.invoice_url ? `<a href="${pg.invoice_url}" target="_blank" rel="noopener">Pagar →</a>` : ''}</td>
+                  </tr>`).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+        }
+
+        el.innerHTML = html;
+      } catch {
+        el.innerHTML = '<p style="color:#991B1B;">Erro de conexão ao carregar sua assinatura.</p>';
+      }
+    }
+
+    async function escolherPlano(planoId, btn) {
+      const erroEl = document.getElementById('assinatura-erro');
+      if (erroEl) erroEl.textContent = '';
+      btn.disabled = true;
+      btn.textContent = 'Criando assinatura...';
+      try {
+        const res = await fetch('/api/psicologos/me/assinatura', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ plano_id: planoId }),
+        });
+        const data = await res.json();
+        if (!data.ok) { if (erroEl) erroEl.textContent = data.error || 'Erro ao criar assinatura.'; btn.disabled = false; btn.textContent = 'Assinar →'; return; }
+        if (data.invoice_url) window.open(data.invoice_url, '_blank');
+        carregarAssinatura();
+      } catch {
+        if (erroEl) erroEl.textContent = 'Erro de conexão.';
+        btn.disabled = false; btn.textContent = 'Assinar →';
+      }
     }
 
     /* ══════════════ Agenda: calendário Dia/Semana/Mês ══════════════ */
