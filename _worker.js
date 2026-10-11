@@ -26,6 +26,9 @@
      POST /api/admin/campanhas-email/enviar   → dispara campanha (protegido)
      GET  /api/planos                         → planos de assinatura ativos (público)
      GET/POST /api/psicologos/me/assinatura   → assinatura do psicólogo / cria no Asaas (autenticado)
+     DELETE /api/psicologos/me/assinatura/pendente → cancela pedido ainda não pago (autenticado)
+     POST /api/psicologos/me/assinatura/cancelar   → pedido de cancelamento/arrependimento (autenticado)
+     POST /api/admin/psicologos/:id/reembolso → estorna o pedido inteiro no cartão (protegido)
      POST /api/asaas/webhook                  → eventos de pagamento do Asaas (token no header)
    ============================================================ */
 
@@ -157,6 +160,21 @@ async function initDB(db) {
   try { await db.prepare('ALTER TABLE psicologos ADD COLUMN asaas_customer_id TEXT').run(); } catch {}
   try { await db.prepare('ALTER TABLE psicologos ADD COLUMN asaas_subscription_id TEXT').run(); } catch {}
   try { await db.prepare('ALTER TABLE psicologos ADD COLUMN licenca_grupo_liberado TEXT').run(); } catch {}
+  // Aceite dos Termos de Adesão no momento de contratar (versão, data e IP).
+  try { await db.prepare('ALTER TABLE psicologos ADD COLUMN termos_versao TEXT').run(); } catch {}
+  try { await db.prepare('ALTER TABLE psicologos ADD COLUMN termos_aceitos_em TEXT').run(); } catch {}
+  try { await db.prepare('ALTER TABLE psicologos ADD COLUMN termos_ip TEXT').run(); } catch {}
+
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS avisos_licenca (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      psicologo_id INTEGER NOT NULL,
+      validade TEXT NOT NULL,
+      tipo TEXT NOT NULL,
+      enviado_em TEXT DEFAULT (datetime('now')),
+      UNIQUE(psicologo_id, validade, tipo)
+    )`
+  ).run();
 
   // Planos de assinatura oferecidos ao psicólogo. Trimestral é o único
   // precificado hoje; semestral/anual entram "ativo=0" até o Petrus decidir
@@ -573,6 +591,66 @@ function somarMeses(dataISO, meses) {
   return formatarDataISO(d);
 }
 
+function somarDias(dataISO, dias) {
+  const d = new Date(dataISO + 'T00:00:00');
+  d.setDate(d.getDate() + dias);
+  return formatarDataISO(d);
+}
+
+// Versão dos Termos de Adesão do psicólogo (psicologos/termos.html). Só sobe
+// quando o texto muda de verdade — fica gravada junto com data e IP do aceite,
+// que é a prova que a operadora do cartão pede numa contestação.
+const TERMOS_VERSAO = '2026-10-v1';
+const DIAS_JANELA_RENOVACAO = 30;     // renovação abre 30 dias antes do vencimento
+const EMAIL_ADMIN = 'petrusmaciel@live.com';
+const URL_PAINEL = 'https://oseupsico.com.br/psicologos/painel.html';
+
+// Aviso de vencimento por e-mail (30, 7 e 1 dia antes, e no dia seguinte ao
+// vencimento) — a licença NÃO renova sozinha, então sem aviso o perfil sairia
+// do ar sem o psicólogo saber. Cada aviso é "reservado" em avisos_licenca
+// (UNIQUE por psicólogo + validade + tipo) antes de enviar: reexecutar o cron
+// ou rodar 2x na mesma hora não duplica e-mail. Perfis de demonstração ficam
+// de fora (os e-mails deles não existem).
+async function avisarVencimentos(env) {
+  const marcos = [
+    { tipo: 'd30', sql: "date('now', '+30 days')", assunto: 'Sua assinatura do O Seu Psico vence em 30 dias',
+      texto: 'Sua assinatura vence em 30 dias. A renovação já está aberta: renovando agora, o novo período começa quando o atual terminar e seu perfil não sai do ar.' },
+    { tipo: 'd7', sql: "date('now', '+7 days')", assunto: 'Sua assinatura do O Seu Psico vence em 7 dias',
+      texto: 'Sua assinatura vence em 7 dias. Renove agora para o seu perfil continuar aparecendo na busca sem interrupção.' },
+    { tipo: 'd1', sql: "date('now', '+1 day')", assunto: 'Sua assinatura do O Seu Psico vence amanhã',
+      texto: 'Sua assinatura vence amanhã. Renove hoje para o seu perfil não sair do ar.' },
+    { tipo: 'vencida', sql: "date('now', '-1 day')", assunto: 'Seu perfil no O Seu Psico saiu do ar',
+      texto: 'Sua assinatura venceu e seu perfil deixou de aparecer na busca. Para voltar, é só escolher um plano na aba Assinatura do painel.' },
+  ];
+
+  for (const m of marcos) {
+    const { results } = await env.DB.prepare(
+      `SELECT id, nome, email, licenca_validade_ate FROM psicologos
+       WHERE status_aprovacao = 'aprovado' AND licenca_validade_ate = ${m.sql}
+         AND email NOT LIKE 'demo-%@oseupsico.com.br'`
+    ).all();
+
+    for (const p of results) {
+      const reserva = await env.DB.prepare(
+        'INSERT OR IGNORE INTO avisos_licenca (psicologo_id, validade, tipo) VALUES (?, ?, ?)'
+      ).bind(p.id, p.licenca_validade_ate, m.tipo).run();
+      if (!reserva.meta?.changes) continue; // já enviado
+
+      const ok = await enviarEmailBasico(env, {
+        destinatario: p.email,
+        assunto: m.assunto,
+        tituloBotao: 'Abrir minha assinatura',
+        linkBotao: URL_PAINEL,
+        paragrafos: [`Olá, ${escapeHtml(p.nome.split(' ')[0])}!`, m.texto,
+          `Validade atual: <strong>${p.licenca_validade_ate.split('-').reverse().join('/')}</strong>.`],
+      }).catch(() => false);
+      // Se o envio falhou, libera a reserva pra a próxima execução tentar de novo.
+      if (!ok) await env.DB.prepare('DELETE FROM avisos_licenca WHERE psicologo_id = ? AND validade = ? AND tipo = ?')
+        .bind(p.id, p.licenca_validade_ate, m.tipo).run();
+    }
+  }
+}
+
 async function enviarEmailConfirmacaoAvaliacao(env, avaliacao, linkConfirmacao) {
   const html = `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"/></head>
@@ -707,11 +785,12 @@ function montarHtmlEmailBasico({ tituloBotao, linkBotao, paragrafos, imagemUrl }
 
 async function enviarEmailBasico(env, { destinatario, assunto, tituloBotao, linkBotao, paragrafos, imagemUrl }) {
   const html = montarHtmlEmailBasico({ tituloBotao, linkBotao, paragrafos, imagemUrl });
-  await fetch('https://api.resend.com/emails', {
+  const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ from: 'O Seu Psico <naoresponder@oseupsico.com.br>', to: [destinatario], subject: assunto, html }),
   });
+  return res.ok; // quem precisa saber se o envio falhou (ex.: aviso de vencimento) confere; os demais ignoram
 }
 
 async function enviarEmailNovoAgendamentoPsicologo(env, psicologo, paciente, dataHora) {
@@ -2141,6 +2220,26 @@ export default {
       await env.DB.prepare(
         `UPDATE psicologos SET status_aprovacao = ?, aprovado_em = datetime('now') WHERE id = ?`
       ).bind(status, aprovarMatch[1]).run();
+
+      // Aprovado não significa no ar: o perfil só aparece com a assinatura
+      // paga. Sem este e-mail o psicólogo ficaria esperando sem saber o próximo
+      // passo (era o que acontecia).
+      if (status === 'aprovado') {
+        const aprovado = await env.DB.prepare('SELECT nome, email FROM psicologos WHERE id = ?').bind(aprovarMatch[1]).first();
+        if (aprovado && !/^demo-.*@oseupsico\.com\.br$/.test(aprovado.email)) {
+          await enviarEmailBasico(env, {
+            destinatario: aprovado.email,
+            assunto: 'Seu cadastro foi aprovado — O Seu Psico',
+            tituloBotao: 'Escolher meu plano',
+            linkBotao: URL_PAINEL,
+            paragrafos: [
+              `Olá, ${escapeHtml(aprovado.nome.split(' ')[0])}! Seu cadastro no O Seu Psico foi aprovado.`,
+              'Para o seu perfil aparecer na busca, falta um passo: escolher um plano na aba <strong>Assinatura</strong> do painel. O pagamento é feito no cartão de crédito, em até 3x, e o perfil entra no ar assim que o pagamento é confirmado.',
+              'Enquanto isso, você já pode completar seu perfil: foto, bio, especialidades e horários.',
+            ],
+          }).catch(() => {});
+        }
+      }
       return json({ ok: true });
     }
 
@@ -2199,17 +2298,27 @@ export default {
       if (!psicologoId) return json({ ok: false }, 401);
       await initDB(env.DB);
 
-      const p = await env.DB.prepare('SELECT plano_id, asaas_subscription_id, licenca_status, licenca_validade_ate FROM psicologos WHERE id = ?').bind(psicologoId).first();
+      const p = await env.DB.prepare('SELECT plano_id, asaas_subscription_id, licenca_status, licenca_validade_ate, licenca_grupo_liberado FROM psicologos WHERE id = ?').bind(psicologoId).first();
       const plano = p.plano_id ? await env.DB.prepare('SELECT * FROM planos WHERE id = ?').bind(p.plano_id).first() : null;
       const { results: pagamentos } = await env.DB.prepare(
         'SELECT asaas_payment_id, valor, status, forma_pagamento, invoice_url, vencimento, pago_em FROM pagamentos WHERE psicologo_id = ? ORDER BY criado_em DESC LIMIT 12'
       ).bind(psicologoId).all();
+
+      // "Pendente" = existe um pedido ainda não pago/liberado (o grupo atual
+      // é diferente do último que liberou licença). "Pode renovar" = não há
+      // pedido pendente e a licença vence em até 30 dias (ou já venceu / nunca teve).
+      const pendente = !!p.asaas_subscription_id && p.licenca_grupo_liberado !== p.asaas_subscription_id;
+      const limiteRenovacao = somarDias(formatarDataISO(new Date()), DIAS_JANELA_RENOVACAO);
+      const podeRenovar = !pendente && (!p.licenca_validade_ate || p.licenca_validade_ate <= limiteRenovacao);
 
       return json({
         ok: true,
         plano,
         licenca_status: p.licenca_status,
         licenca_validade_ate: p.licenca_validade_ate,
+        pendente,
+        pode_renovar: podeRenovar,
+        termos_versao: TERMOS_VERSAO,
         pagamentos,
       });
     }
@@ -2219,15 +2328,33 @@ export default {
       if (!psicologoId) return json({ ok: false }, 401);
       await initDB(env.DB);
 
-      const { plano_id } = await request.json().catch(() => ({}));
+      const { plano_id, aceite_termos } = await request.json().catch(() => ({}));
       const plano = plano_id && await env.DB.prepare('SELECT * FROM planos WHERE id = ? AND ativo = 1').bind(plano_id).first();
       if (!plano || plano.valor_parcela == null) return json({ ok: false, error: 'Plano inválido ou ainda sem preço definido.' }, 400);
+      if (aceite_termos !== true) return json({ ok: false, error: 'Para contratar é preciso aceitar os Termos de Adesão.' }, 400);
 
-      const p = await env.DB.prepare('SELECT nome, email, telefone, cpf, asaas_customer_id, asaas_subscription_id FROM psicologos WHERE id = ?').bind(psicologoId).first();
+      const p = await env.DB.prepare('SELECT nome, email, telefone, cpf, asaas_customer_id, asaas_subscription_id, licenca_validade_ate, licenca_grupo_liberado FROM psicologos WHERE id = ?').bind(psicologoId).first();
       if (!p) return json({ ok: false, error: 'Psicólogo não encontrado.' }, 404);
       const cpfLimpo = (p.cpf || '').replace(/\D/g, '');
       if (cpfLimpo.length !== 11) return json({ ok: false, error: 'Preencha seu CPF em "Meu perfil" antes de assinar.' }, 400);
-      if (p.asaas_subscription_id) return json({ ok: false, error: 'Você já tem uma assinatura ativa ou pendente.' }, 400);
+
+      if (p.asaas_subscription_id) {
+        if (p.licenca_grupo_liberado !== p.asaas_subscription_id) {
+          // Pedido anterior nunca foi pago (cartão recusado, desistiu, quer
+          // trocar de plano): cancela no Asaas pra ele não continuar mandando
+          // lembrete de cobrança pro psicólogo, e deixa recomeçar do zero.
+          try {
+            await asaasFetch(env, `/installments/${p.asaas_subscription_id}`, { method: 'DELETE' });
+          } catch (e) {
+            return json({ ok: false, error: 'Não foi possível cancelar o pedido anterior (ele pode já ter sido pago). Fale com o suporte: contato@oseupsico.com.br. Detalhe: ' + e.message }, 409);
+          }
+          await env.DB.prepare(`UPDATE pagamentos SET status = 'DELETED', atualizado_em = datetime('now') WHERE asaas_subscription_id = ? AND status = 'PENDING'`)
+            .bind(p.asaas_subscription_id).run();
+        } else if (p.licenca_validade_ate && p.licenca_validade_ate > somarDias(formatarDataISO(new Date()), DIAS_JANELA_RENOVACAO)) {
+          // Último pedido pago e ainda longe de vencer — evita comprar 2x sem querer.
+          return json({ ok: false, error: `Sua assinatura está em dia até ${p.licenca_validade_ate.split('-').reverse().join('/')}. A renovação abre ${DIAS_JANELA_RENOVACAO} dias antes do vencimento.` }, 400);
+        }
+      }
 
       try {
         let customerId = p.asaas_customer_id;
@@ -2271,8 +2398,12 @@ export default {
         // "installment") — nome do campo ficou do desenho anterior
         // (assinatura recorrente), mas o uso — impedir criar 2 cobranças
         // ativas — continua o mesmo.
-        await env.DB.prepare('UPDATE psicologos SET plano_id = ?, asaas_subscription_id = ? WHERE id = ?')
-          .bind(plano.id, primeiraParcela.installment || primeiraParcela.id, psicologoId).run();
+        // Aceite dos termos junto com o pedido: versão, data e IP — é a
+        // evidência que a operadora pede se o pagamento for contestado.
+        await env.DB.prepare(
+          `UPDATE psicologos SET plano_id = ?, asaas_subscription_id = ?, termos_versao = ?, termos_aceitos_em = datetime('now'), termos_ip = ? WHERE id = ?`
+        ).bind(plano.id, primeiraParcela.installment || primeiraParcela.id, TERMOS_VERSAO,
+          request.headers.get('CF-Connecting-IP') || null, psicologoId).run();
 
         await env.DB.prepare(
           `INSERT INTO pagamentos (psicologo_id, asaas_payment_id, asaas_subscription_id, valor, status, forma_pagamento, invoice_url, vencimento)
@@ -2288,6 +2419,91 @@ export default {
         console.error('Asaas assinatura:', e.message);
         return json({ ok: false, error: 'Não foi possível criar a assinatura: ' + e.message }, 500);
       }
+    }
+
+    // Cancela um pedido que nunca foi pago (cartão recusado, desistência,
+    // troca de plano). Só mexe em pedido pendente — pedido pago só sai por
+    // reembolso (ver abaixo), nunca por aqui.
+    if (pathname === '/api/psicologos/me/assinatura/pendente' && request.method === 'DELETE') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const p = await env.DB.prepare('SELECT asaas_subscription_id, licenca_grupo_liberado FROM psicologos WHERE id = ?').bind(psicologoId).first();
+      if (!p?.asaas_subscription_id || p.licenca_grupo_liberado === p.asaas_subscription_id) {
+        return json({ ok: false, error: 'Não há pedido pendente pra cancelar.' }, 400);
+      }
+      try {
+        await asaasFetch(env, `/installments/${p.asaas_subscription_id}`, { method: 'DELETE' });
+      } catch (e) {
+        return json({ ok: false, error: 'Não foi possível cancelar (o pedido pode já ter sido pago): ' + e.message }, 409);
+      }
+      await env.DB.prepare(`UPDATE pagamentos SET status = 'DELETED', atualizado_em = datetime('now') WHERE asaas_subscription_id = ? AND status = 'PENDING'`)
+        .bind(p.asaas_subscription_id).run();
+      // Volta pro último pedido que realmente liberou licença (ou nenhum).
+      await env.DB.prepare(
+        `UPDATE psicologos SET asaas_subscription_id = licenca_grupo_liberado,
+           plano_id = CASE WHEN licenca_grupo_liberado IS NULL THEN NULL ELSE plano_id END WHERE id = ?`
+      ).bind(psicologoId).run();
+      return json({ ok: true });
+    }
+
+    // Pedido de cancelamento/arrependimento feito pelo próprio painel — o
+    // mesmo canal da contratação (Decreto 7.962/2013). Registra, confirma
+    // na hora por e-mail pro psicólogo e avisa o admin, que faz o reembolso
+    // (botão "Reembolsar" na aba Licenças) dentro do prazo dos Termos.
+    if (pathname === '/api/psicologos/me/assinatura/cancelar' && request.method === 'POST') {
+      const psicologoId = autenticadoPsicologo(request, env);
+      if (!psicologoId) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const { motivo } = await request.json().catch(() => ({}));
+      const p = await env.DB.prepare('SELECT nome, email, licenca_validade_ate, licenca_grupo_liberado FROM psicologos WHERE id = ?').bind(psicologoId).first();
+      if (!p?.licenca_grupo_liberado) return json({ ok: false, error: 'Você não tem uma assinatura paga pra cancelar.' }, 400);
+
+      await env.DB.prepare(
+        `INSERT INTO licenca_historico (psicologo_id, acao, validade_anterior, observacao) VALUES (?, 'solicitou_cancelamento', ?, ?)`
+      ).bind(psicologoId, p.licenca_validade_ate, String(motivo || '').slice(0, 500) || null).run();
+
+      await enviarEmailBasico(env, {
+        destinatario: p.email,
+        assunto: 'Recebemos seu pedido de cancelamento — O Seu Psico',
+        paragrafos: [
+          `Olá, ${escapeHtml(p.nome.split(' ')[0])}. Recebemos seu pedido de cancelamento da assinatura.`,
+          'Vamos analisá-lo conforme os Termos de Adesão e responder por e-mail em até 5 dias. Se o pedido estiver dentro do prazo de arrependimento, o reembolso é feito no mesmo cartão e pode levar até 2 faturas pra aparecer, conforme o banco.',
+        ],
+      }).catch(() => {});
+      await enviarEmailBasico(env, {
+        destinatario: EMAIL_ADMIN,
+        assunto: `Pedido de cancelamento — ${p.nome}`,
+        tituloBotao: 'Abrir admin',
+        linkBotao: 'https://oseupsico.com.br/admin/psicologos.html',
+        paragrafos: [`<strong>${escapeHtml(p.nome)}</strong> (${escapeHtml(p.email)}) pediu cancelamento. Validade atual: ${p.licenca_validade_ate || '—'}.`,
+          `Motivo: ${escapeHtml(String(motivo || '—').slice(0, 500))}`],
+      }).catch(() => {});
+      return json({ ok: true });
+    }
+
+    // Reembolso integral pelo admin: estorna o pedido inteiro no cartão (via
+    // Asaas) e tira o perfil do ar na hora. O webhook PAYMENT_REFUNDED
+    // chega depois e faz o mesmo — por isso a suspensão aqui é idempotente.
+    const reembolsoMatch = pathname.match(/^\/api\/admin\/psicologos\/(\d+)\/reembolso$/);
+    if (reembolsoMatch && request.method === 'POST') {
+      if (!autenticadoAdmin(request, env)) return json({ ok: false }, 401);
+      await initDB(env.DB);
+      const psicologoId = reembolsoMatch[1];
+      const p = await env.DB.prepare('SELECT licenca_grupo_liberado, licenca_validade_ate FROM psicologos WHERE id = ?').bind(psicologoId).first();
+      if (!p?.licenca_grupo_liberado) return json({ ok: false, error: 'Esse psicólogo não tem pedido pago pra reembolsar.' }, 400);
+      try {
+        await asaasFetch(env, `/installments/${p.licenca_grupo_liberado}/refund`, { method: 'POST', body: JSON.stringify({}) });
+      } catch (e) {
+        return json({ ok: false, error: 'O Asaas recusou o reembolso: ' + e.message }, 502);
+      }
+      await env.DB.prepare(
+        `UPDATE psicologos SET licenca_status = 'suspensa', licenca_validade_ate = date('now', '-1 day'), licenca_observacoes = ? WHERE id = ?`
+      ).bind(`Reembolsado em ${formatarDataISO(new Date())}`, psicologoId).run();
+      await env.DB.prepare(
+        `INSERT INTO licenca_historico (psicologo_id, acao, validade_anterior, validade_nova, observacao) VALUES (?, 'reembolso', ?, date('now', '-1 day'), ?)`
+      ).bind(psicologoId, p.licenca_validade_ate, `Pedido ${p.licenca_grupo_liberado}`).run();
+      return json({ ok: true });
     }
 
     // Webhook do Asaas — configurado no painel deles (Integrações → Webhooks)
@@ -2311,12 +2527,18 @@ export default {
 
       const grupoId = pagamento.installment || pagamento.subscription || null;
 
+      // Cobrança removida no Asaas (ex.: o psicólogo cancelou um pedido não
+      // pago) chega com o status antigo (PENDING) + deleted=true. Sem isto o
+      // webhook reabria como "pendente" a linha que a gente tinha marcado
+      // como cancelada.
+      const statusFinal = (evento === 'PAYMENT_DELETED' || pagamento.deleted === true) ? 'DELETED' : pagamento.status;
+
       await env.DB.prepare(
         `INSERT INTO pagamentos (psicologo_id, asaas_payment_id, asaas_subscription_id, valor, status, forma_pagamento, invoice_url, vencimento, pago_em, payload)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(asaas_payment_id) DO UPDATE SET status = excluded.status, pago_em = excluded.pago_em, atualizado_em = datetime('now'), payload = excluded.payload`
       ).bind(
-        psicologo.id, pagamento.id, grupoId, pagamento.value, pagamento.status,
+        psicologo.id, pagamento.id, grupoId, pagamento.value, statusFinal,
         pagamento.billingType, pagamento.invoiceUrl, pagamento.dueDate,
         (evento === 'PAYMENT_CONFIRMED' || evento === 'PAYMENT_RECEIVED') ? formatarDataISO(new Date()) : null,
         JSON.stringify(body)
@@ -2561,6 +2783,13 @@ export default {
     const agoraUTC = new Date();
     const horaLocal = (agoraUTC.getUTCHours() - 3 + 24) % 24;
     const horaLocalStr = String(horaLocal).padStart(2, '0') + ':00';
+
+    // Avisos de vencimento da assinatura: janela de 10h às 12h (Brasília) —
+    // 3 chances no mesmo dia caso o envio falhe; a tabela avisos_licenca
+    // impede e-mail duplicado.
+    if (horaLocal >= 10 && horaLocal <= 12) {
+      try { await avisarVencimentos(env); } catch (e) { console.error('avisarVencimentos:', e.message); }
+    }
 
     const { results: psicologos } = await env.DB.prepare(
       `SELECT id, nome, email FROM psicologos

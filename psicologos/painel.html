@@ -664,8 +664,30 @@
 
     const STATUS_PAGAMENTO_LABEL = {
       PENDING: 'Aguardando pagamento', RECEIVED: 'Pago', CONFIRMED: 'Pago',
-      OVERDUE: 'Vencido', REFUNDED: 'Estornado',
+      OVERDUE: 'Vencido', REFUNDED: 'Estornado', CREDIT_CARD_CAPTURE_REFUSED: 'Cartão recusado',
     };
+    const brl = v => 'R$ ' + Number(v).toFixed(2).replace('.', ',');
+    const dataBR = iso => (iso ? iso.split('-').reverse().join('/') : '—');
+
+    // Cards dos planos + aceite dos termos. O valor total e o uso do limite do
+    // cartão aparecem ANTES do clique (transparência de preço e de condição de
+    // pagamento — Decreto 7.962/2013), não só na fatura.
+    function htmlPlanos(planos) {
+      return '<div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:14px;">' + planos.map(p => `
+        <div style="border:1.5px solid #F0EDE4;border-radius:14px;padding:20px;min-width:220px;flex:1;">
+          <h3 style="margin:0 0 4px;">Plano ${p.nome}</h3>
+          <p style="font-size:1.3rem;font-weight:800;color:#1A1A1A;margin-bottom:2px;">${p.duracao_meses}x de ${brl(p.valor_parcela)}</p>
+          <p style="font-size:0.8rem;color:#666;margin-bottom:4px;">no cartão de crédito, sem juros — total ${brl(p.valor_parcela * p.duracao_meses)}</p>
+          <p style="font-size:0.78rem;color:#999;margin-bottom:14px;">Seu perfil fica no ar por ${p.duracao_meses} meses. O valor total é aprovado de uma vez no limite do cartão; o banco divide em ${p.duracao_meses} faturas.</p>
+          <button type="button" class="btn btn--yellow btn-plano" style="width:100%;justify-content:center;" disabled onclick="escolherPlano(${p.id}, this)">Assinar →</button>
+        </div>
+      `).join('') + `</div>
+        <label style="display:flex;align-items:flex-start;gap:8px;font-size:0.85rem;color:#444;cursor:pointer;margin-bottom:10px;">
+          <input type="checkbox" id="aceite-termos" onchange="document.querySelectorAll('.btn-plano').forEach(b => b.disabled = !this.checked)" style="margin-top:3px;flex-shrink:0;" />
+          <span>Li e aceito os <a href="/psicologos/termos.html" target="_blank" rel="noopener" style="text-decoration:underline;">Termos de Adesão</a>, incluindo a política de cancelamento e reembolso.</span>
+        </label>
+        <p id="assinatura-erro" style="color:#991B1B;font-size:0.85rem;"></p>`;
+    }
 
     async function carregarAssinatura() {
       const el = document.getElementById('assinatura-conteudo');
@@ -681,48 +703,52 @@
 
         const hoje = new Date().toISOString().slice(0, 10);
         const licencaOk = dados.licenca_validade_ate && dados.licenca_validade_ate >= hoje;
-        const ultimoPagamento = dados.pagamentos?.[0];
-        const pagamentoPendente = ultimoPagamento && ultimoPagamento.status === 'PENDING' ? ultimoPagamento : null;
+        const pagamentos = (dados.pagamentos || []).filter(pg => pg.status !== 'DELETED');
+        const pagamentoPendente = pagamentos.find(pg => pg.status === 'PENDING');
 
         let html = '';
 
-        if (!dados.plano) {
-          // Nunca assinou — mostra os planos disponíveis pra escolher.
-          html += '<div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:20px;">' + planos.map(p => `
-            <div style="border:1.5px solid #F0EDE4;border-radius:14px;padding:20px;min-width:220px;flex:1;">
-              <h3 style="margin:0 0 4px;">${p.nome}</h3>
-              <p style="font-size:1.3rem;font-weight:800;color:#1A1A1A;margin-bottom:2px;">R$ ${Number(p.valor_parcela).toFixed(2).replace('.', ',')}<span style="font-size:0.78rem;font-weight:400;color:#999;">/mês</span></p>
-              <p style="font-size:0.8rem;color:#666;margin-bottom:14px;">Compromisso de ${p.duracao_meses} meses, cobrado mensalmente.</p>
-              <button type="button" class="btn btn--yellow" style="width:100%;justify-content:center;" onclick="escolherPlano(${p.id}, this)">Assinar →</button>
-            </div>
-          `).join('') + '</div>';
-          html += '<p id="assinatura-erro" style="color:#991B1B;font-size:0.85rem;"></p>';
-        } else if (pagamentoPendente) {
+        if (dados.pendente) {
+          // Pedido criado e ainda não pago. Dá pra pagar agora ou cancelar e
+          // recomeçar (trocar de plano, cartão recusado, desistência).
           html += `
-            <div class="osp-alert osp-alert--aviso" style="margin-bottom:16px;">⏳ Pagamento do plano <strong>${dados.plano.nome}</strong> aguardando confirmação.</div>
-            <a href="${pagamentoPendente.invoice_url}" target="_blank" rel="noopener" class="btn btn--yellow">Pagar agora (R$ ${Number(pagamentoPendente.valor).toFixed(2).replace('.', ',')}) →</a>
-            <p style="font-size:0.8rem;color:#999;margin-top:10px;">Escolha Pix, boleto ou cartão na página de pagamento. Assim que confirmar, seu perfil volta a aparecer na busca automaticamente — pode levar alguns minutos.</p>
+            <div class="osp-alert osp-alert--aviso" style="margin-bottom:16px;">⏳ Pedido do plano <strong>${dados.plano.nome}</strong> aguardando pagamento${dados.plano ? ` — ${dados.plano.duracao_meses}x de ${brl(dados.plano.valor_parcela)} no cartão (total ${brl(dados.plano.valor_parcela * dados.plano.duracao_meses)})` : ''}.</div>
+            ${pagamentoPendente ? `<a href="${pagamentoPendente.invoice_url}" target="_blank" rel="noopener" class="btn btn--yellow">Pagar com cartão →</a>` : ''}
+            <button type="button" class="btn btn--outline-black" style="margin-left:8px;" onclick="cancelarPedidoPendente(this)">Cancelar este pedido</button>
+            <p style="font-size:0.8rem;color:#999;margin-top:10px;">Assim que o pagamento for confirmado, seu perfil entra no ar automaticamente — pode levar alguns minutos. Se o cartão for recusado, cancele o pedido e tente de novo.</p>
+            <p id="assinatura-erro" style="color:#991B1B;font-size:0.85rem;"></p>
           `;
+        } else if (!dados.plano || dados.pode_renovar) {
+          // Nunca assinou, ou está na janela de renovação (últimos 30 dias / vencida).
+          if (dados.plano) {
+            html += `<div class="${licencaOk ? 'osp-alert osp-alert--aviso' : 'osp-alert osp-alert--erro'}" style="margin-bottom:16px;">
+              ${licencaOk ? '🔔' : '⚠️'} Plano <strong>${dados.plano.nome}</strong> ${licencaOk ? 'vence' : 'venceu'} em ${dataBR(dados.licenca_validade_ate)}. A assinatura <strong>não renova sozinha</strong> — escolha abaixo para renovar${licencaOk ? '; o novo período começa quando o atual terminar' : ''}.
+            </div>`;
+          }
+          html += htmlPlanos(planos);
         } else {
           html += `
-            <div class="${licencaOk ? 'osp-alert osp-alert--sucesso' : 'osp-alert osp-alert--erro'}" style="margin-bottom:16px;">
-              ${licencaOk ? '✅' : '⚠️'} Plano <strong>${dados.plano.nome}</strong> — R$ ${Number(dados.plano.valor_parcela).toFixed(2).replace('.', ',')}/mês
-              ${dados.licenca_validade_ate ? ` · válido até ${dados.licenca_validade_ate}` : ''}
+            <div class="${licencaOk ? 'osp-alert osp-alert--sucesso' : 'osp-alert osp-alert--erro'}" style="margin-bottom:12px;">
+              ${licencaOk ? '✅' : '⚠️'} Plano <strong>${dados.plano.nome}</strong> · válido até ${dataBR(dados.licenca_validade_ate)}
               ${dados.licenca_status === 'inadimplente' ? ' · <strong>pagamento em atraso</strong>' : ''}
+              ${dados.licenca_status === 'suspensa' ? ' · <strong>suspensa</strong> — fale com o suporte' : ''}
             </div>
+            <p style="font-size:0.82rem;color:#777;">A assinatura não renova automaticamente. Você receberá e-mails de aviso antes do vencimento, e a renovação abre ${30} dias antes.</p>
+            <p style="font-size:0.82rem;margin-top:8px;"><a href="#" onclick="solicitarCancelamento();return false;" style="color:#991B1B;text-decoration:underline;">Solicitar cancelamento / reembolso</a></p>
+            <p id="assinatura-erro" style="color:#991B1B;font-size:0.85rem;"></p>
           `;
         }
 
-        if (dados.pagamentos?.length) {
+        if (pagamentos.length) {
           html += `
             <h3 style="margin-top:22px;">Histórico de pagamentos</h3>
             <div style="overflow-x:auto;">
               <table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:8px;">
                 <thead><tr style="text-align:left;color:#999;"><th style="padding:6px 8px;">Vencimento</th><th style="padding:6px 8px;">Valor</th><th style="padding:6px 8px;">Status</th><th></th></tr></thead>
-                <tbody>${dados.pagamentos.map(pg => `
+                <tbody>${pagamentos.map(pg => `
                   <tr style="border-top:1px solid #F0EDE4;">
-                    <td style="padding:6px 8px;">${pg.vencimento || '—'}</td>
-                    <td style="padding:6px 8px;">R$ ${Number(pg.valor).toFixed(2).replace('.', ',')}</td>
+                    <td style="padding:6px 8px;">${dataBR(pg.vencimento)}</td>
+                    <td style="padding:6px 8px;">${brl(pg.valor)}</td>
                     <td style="padding:6px 8px;">${STATUS_PAGAMENTO_LABEL[pg.status] || pg.status}</td>
                     <td style="padding:6px 8px;">${pg.status === 'PENDING' && pg.invoice_url ? `<a href="${pg.invoice_url}" target="_blank" rel="noopener">Pagar →</a>` : ''}</td>
                   </tr>`).join('')}
@@ -741,21 +767,50 @@
     async function escolherPlano(planoId, btn) {
       const erroEl = document.getElementById('assinatura-erro');
       if (erroEl) erroEl.textContent = '';
+      const aceitou = document.getElementById('aceite-termos')?.checked === true;
+      if (!aceitou) { if (erroEl) erroEl.textContent = 'Marque o aceite dos Termos de Adesão para continuar.'; return; }
       btn.disabled = true;
-      btn.textContent = 'Criando assinatura...';
+      btn.textContent = 'Criando pedido...';
       try {
         const res = await fetch('/api/psicologos/me/assinatura', {
           method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-          body: JSON.stringify({ plano_id: planoId }),
+          body: JSON.stringify({ plano_id: planoId, aceite_termos: true }),
         });
         const data = await res.json();
-        if (!data.ok) { if (erroEl) erroEl.textContent = data.error || 'Erro ao criar assinatura.'; btn.disabled = false; btn.textContent = 'Assinar →'; return; }
+        if (!data.ok) { if (erroEl) erroEl.textContent = data.error || 'Erro ao criar o pedido.'; btn.disabled = false; btn.textContent = 'Assinar →'; return; }
         if (data.invoice_url) window.open(data.invoice_url, '_blank');
         carregarAssinatura();
       } catch {
         if (erroEl) erroEl.textContent = 'Erro de conexão.';
         btn.disabled = false; btn.textContent = 'Assinar →';
       }
+    }
+
+    async function cancelarPedidoPendente(btn) {
+      if (!confirm('Cancelar este pedido? Nada será cobrado. Você poderá escolher um plano de novo.')) return;
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/psicologos/me/assinatura/pendente', { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+        const data = await res.json();
+        if (!data.ok) { const e = document.getElementById('assinatura-erro'); if (e) e.textContent = data.error || 'Erro ao cancelar.'; btn.disabled = false; return; }
+        carregarAssinatura();
+      } catch { btn.disabled = false; }
+    }
+
+    async function solicitarCancelamento() {
+      const motivo = prompt('Pedido de cancelamento da assinatura. Quer contar o motivo? (opcional)', '');
+      if (motivo === null) return;
+      if (!confirm('Confirmar o pedido de cancelamento? Você receberá a resposta por e-mail conforme os Termos de Adesão.')) return;
+      const erroEl = document.getElementById('assinatura-erro');
+      try {
+        const res = await fetch('/api/psicologos/me/assinatura/cancelar', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ motivo }),
+        });
+        const data = await res.json();
+        if (!data.ok) { if (erroEl) erroEl.textContent = data.error || 'Erro ao enviar o pedido.'; return; }
+        alert('Pedido recebido. Enviamos a confirmação para o seu e-mail.');
+      } catch { if (erroEl) erroEl.textContent = 'Erro de conexão.'; }
     }
 
     /* ══════════════ Agenda: calendário Dia/Semana/Mês ══════════════ */

@@ -319,9 +319,24 @@
             <button onclick="renovarLicenca(${p.id}, 30)">+30 dias</button>
             <button onclick="renovarLicenca(${p.id}, 365)">+1 ano</button>
             <button onclick="suspenderLicenca(${p.id})">Suspender</button>
+            ${p.licenca_grupo_liberado ? `<button onclick="reembolsar(${p.id}, '${p.nome.replace(/'/g, '')}')" style="color:#991B1B;">Reembolsar</button>` : ''}
           </td>
         </tr>`;
       }).join('');
+    }
+
+    // Estorna o pedido INTEIRO no cartão (Asaas) e tira o perfil do ar na hora.
+    // Usar dentro do prazo de arrependimento dos Termos (7 dias) ou em caso de
+    // falha da plataforma. Não dá pra reembolsar só uma parcela.
+    async function reembolsar(id, nome) {
+      if (!confirm(`Reembolsar o pedido inteiro de ${nome} no cartão?\n\nO valor é devolvido ao cliente, debitado do seu saldo no Asaas, e o perfil sai do ar agora.`)) return;
+      const res = await fetch(`/api/admin/psicologos/${id}/reembolso`, {
+        method: 'POST', headers: { Authorization: 'Bearer ' + token },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!data.ok) { alert(data.error || 'Erro ao reembolsar.'); return; }
+      alert('Reembolso solicitado ao Asaas. O estorno pode levar até 10 dias úteis pra aparecer na fatura do cliente.');
+      carregarPsicologos();
     }
 
     async function renovarLicenca(id, dias) {
