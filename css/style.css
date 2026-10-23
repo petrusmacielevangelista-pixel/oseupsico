@@ -1512,3 +1512,126 @@ ul { list-style: none; }
   box-shadow: 0 8px 32px rgba(245,197,24,0.15);
   transform: translateY(-4px);
 }
+
+/* ── Painel do WhatsApp no computador ─────────────────────────────
+   No desktop o wa.me cai no WhatsApp Web e a pessoa trava no QR do
+   login. Este painel entrega o QR da conversa e o número direto. */
+
+.wa-pc {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.wa-pc[hidden] { display: none; }
+
+.wa-pc__fundo {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.55);
+}
+
+.wa-pc__caixa {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 32px 28px 26px;
+  text-align: center;
+  font-family: var(--font-body);
+}
+
+.wa-pc__caixa h3 {
+  font-family: var(--font-display);
+  color: var(--black);
+  font-size: 1.3rem;
+  margin: 0 0 10px;
+}
+
+.wa-pc__texto {
+  color: var(--text-mid);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.wa-pc__fechar {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  line-height: 1;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.wa-pc__fechar:hover { color: var(--black); }
+
+.wa-pc__qr {
+  display: flex;
+  justify-content: center;
+  min-height: 190px;
+  align-items: center;
+}
+
+.wa-pc__qr img, .wa-pc__qr canvas {
+  border-radius: var(--radius-sm);
+}
+
+.wa-pc__ou {
+  color: var(--text-light);
+  font-size: 0.85rem;
+  margin: 20px 0 8px;
+}
+
+.wa-pc__numero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--yellow-light);
+  border: 1px solid var(--yellow);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.wa-pc__fone {
+  font-family: var(--font-display);
+  color: var(--black);
+  font-size: 1.05rem;
+  letter-spacing: 0.3px;
+}
+
+.wa-pc__copiar {
+  background: var(--yellow);
+  color: var(--black);
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 7px 16px;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wa-pc__copiar:hover { background: var(--yellow-dark); }
+
+.wa-pc__web {
+  display: inline-block;
+  margin-top: 18px;
+  color: var(--text-mid);
+  font-size: 0.88rem;
+  text-decoration: underline;
+}
+
+.wa-pc__web:hover { color: var(--black); }

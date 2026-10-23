@@ -17,10 +17,152 @@
     init();
   }
 
+  // De onde a pessoa veio e de que aparelho. A marca vai no começo do texto
+  // pré-preenchido do link e a Sara a remove antes de a pessoa ver
+  // (separarOrigem, no worker do bot). Formato: duas letras de origem — og
+  // anúncio, ob blog, oi instagram, os site, op perfil — mais uma terceira
+  // opcional de dispositivo: m celular, d computador. Então [ogm] é anúncio no
+  // celular. Se o dispositivo não for detectado, sai [og], que o bot também
+  // aceita.
+  // Guardamos a origem em sessionStorage porque a pessoa pode navegar pelo site
+  // antes de clicar, e aí os parâmetros da campanha já saíram da URL. O
+  // dispositivo não precisa disso — é lido na hora.
+  const ORIGEM_CHAVE = 'osp_origem';
+
+  function origemDoVisitante() {
+    try {
+      const p = new URLSearchParams(location.search);
+      const fonte = (p.get('utm_source') || '').toLowerCase();
+      let marca = null;
+      if (p.get('gclid') || fonte === 'google') marca = 'og';
+      else if (fonte === 'instagram') marca = 'oi';
+      else if (fonte === 'blog') marca = 'ob';
+      if (marca) sessionStorage.setItem(ORIGEM_CHAVE, marca);
+      return marca || sessionStorage.getItem(ORIGEM_CHAVE) || 'os';
+    } catch (e) {
+      return 'os';
+    }
+  }
+
+  // Ponteiro grosso é toque: celular ou tablet. O Google Ads separa tablet de
+  // celular, mas a conta não tem tráfego de tablet, então os dois caem em "m".
+  function dispositivoDoVisitante() {
+    try {
+      return matchMedia('(pointer: coarse)').matches ? 'm' : 'd';
+    } catch (e) {
+      return '';
+    }
+  }
+
   function waLink() {
     const n = CFG.brand?.whatsapp || '';
-    const m = encodeURIComponent(CFG.brand?.whatsappMessage || '');
-    return `https://wa.me/${n}?text=${m}`;
+    const marca = origemDoVisitante() + dispositivoDoVisitante();
+    const texto = `[${marca}] ${CFG.brand?.whatsappMessage || ''}`;
+    return `https://wa.me/${n}?text=${encodeURIComponent(texto)}`;
+  }
+
+  // ── Passagem para o WhatsApp no computador ─────────────────────
+  // No celular o wa.me abre o aplicativo com a mensagem pronta. No computador
+  // ele abre o WhatsApp Web, que exige estar logado ou escanear QR — e quem não
+  // está logado desiste ali. Medido entre 13 e 23/10/2026: 61% dos cliques de
+  // celular viraram conversa contra 22% dos de computador, e o computador não
+  // gerou nenhum lead em 11 dias. Então no computador abrimos um painel com QR
+  // e o número, em vez de jogar a pessoa direto no Web.
+  //
+  // O evento de conversão continua disparando normal: o ouvinte do gtag está
+  // registrado no mesmo elemento e roda independente do preventDefault daqui.
+
+  const QR_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+  let qrPromessa = null;
+
+  // Carrega a biblioteca do QR só quando alguém no computador clica — não pesa
+  // no carregamento da página, que é onde a gente precisa de velocidade.
+  function carregarQr() {
+    if (window.QRCode) return Promise.resolve(true);
+    if (!qrPromessa) {
+      qrPromessa = new Promise(resolve => {
+        const s = document.createElement('script');
+        s.src = QR_CDN;
+        s.onload = () => resolve(true);
+        s.onerror = () => resolve(false);
+        document.head.appendChild(s);
+      });
+    }
+    return qrPromessa;
+  }
+
+  function montaPainelWa() {
+    const painel = document.createElement('div');
+    painel.className = 'wa-pc';
+    painel.hidden = true;
+    painel.innerHTML = `
+      <div class="wa-pc__fundo"></div>
+      <div class="wa-pc__caixa" role="dialog" aria-modal="true" aria-labelledby="wa-pc-titulo">
+        <button class="wa-pc__fechar" type="button" aria-label="Fechar">&times;</button>
+        <h3 id="wa-pc-titulo">Falar no WhatsApp</h3>
+        <p class="wa-pc__texto">Aponte a câmera do celular para o código e a conversa abre com a mensagem pronta.</p>
+        <div class="wa-pc__qr"></div>
+        <p class="wa-pc__ou">ou salve o número</p>
+        <div class="wa-pc__numero">
+          <strong class="wa-pc__fone"></strong>
+          <button class="wa-pc__copiar" type="button">Copiar</button>
+        </div>
+        <a class="wa-pc__web" target="_blank" rel="noopener noreferrer">Já uso o WhatsApp Web — abrir por aqui</a>
+      </div>`;
+    document.body.appendChild(painel);
+
+    const fechar = () => { painel.hidden = true; document.body.style.overflow = ''; };
+    painel.querySelector('.wa-pc__fechar').addEventListener('click', fechar);
+    painel.querySelector('.wa-pc__fundo').addEventListener('click', fechar);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') fechar(); });
+
+    painel.querySelector('.wa-pc__copiar').addEventListener('click', function () {
+      const fone = painel.querySelector('.wa-pc__fone').textContent;
+      navigator.clipboard?.writeText(fone).then(() => {
+        this.textContent = 'Copiado!';
+        setTimeout(() => { this.textContent = 'Copiar'; }, 2000);
+      }).catch(() => { this.textContent = fone; });
+    });
+
+    return painel;
+  }
+
+  let painelWa = null;
+
+  function abrirPainelWa(link) {
+    if (!painelWa) painelWa = montaPainelWa();
+    painelWa.querySelector('.wa-pc__fone').textContent = formatPhone(CFG.brand?.whatsapp);
+    painelWa.querySelector('.wa-pc__web').href = link;
+    painelWa.hidden = false;
+    document.body.style.overflow = 'hidden';
+
+    const caixaQr = painelWa.querySelector('.wa-pc__qr');
+    if (caixaQr.dataset.link === link) return;
+    caixaQr.innerHTML = '';
+    carregarQr().then(ok => {
+      if (!ok || !window.QRCode) {
+        // Sem a biblioteca o painel ainda serve: número, cópia e link do Web.
+        caixaQr.remove();
+        const ou = painelWa.querySelector('.wa-pc__ou');
+        if (ou) ou.textContent = 'Mande uma mensagem para';
+        return;
+      }
+      caixaQr.dataset.link = link;
+      new window.QRCode(caixaQr, {
+        text: link, width: 190, height: 190,
+        colorDark: '#1A1A1A', colorLight: '#FFFFFF',
+      });
+    });
+  }
+
+  function initWhatsAppPc() {
+    if (dispositivoDoVisitante() !== 'd') return;
+    document.querySelectorAll('.js-wa').forEach(el => {
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        abrirPainelWa(this.href && this.href !== '#' ? this.href : waLink());
+      });
+    });
   }
 
   function set(sel, html) {
@@ -285,6 +427,9 @@
     renderCta();
     initNavbar();
     initTracking();
+    // Depois do initTracking, para o ouvinte do gtag já estar registrado
+    // quando o nosso preventDefault entrar em cena.
+    initWhatsAppPc();
     observe();
 
     const statsBar = document.querySelector('.stats-bar');
